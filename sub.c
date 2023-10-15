@@ -1379,7 +1379,7 @@ void DeviceInfoSet( ER result, UB pno, UB step, UB sts )
 	if( pio_BIN(I_DOORSW1) )		devsts |= BIT4;
 	if( result == ER_LIQERR )		devsts |= BIT5;
 	if( result == ER_LIQTUMARI )	devsts |= BIT6;
-	//testsss
+
 	
 	if( DeviceStatusGet() != devsts )	flg = SET;
 	if( DeviceProtcolNoGet() != pno )	flg = SET;
