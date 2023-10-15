@@ -1,0 +1,370 @@
+SH SERIES C/C++ Compiler (V.9.04.03.000)                                                         07-Sep-2023 20:41:36  PAGE    1
+
+************ OBJECT LISTING ************
+
+FILE NAME: C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskio.c
+
+SCT OFFSET   CODE       C LABEL     INSTRUCTION OPERAND    COMMENT
+
+              tskio.c          1    /******************************************************************************
+              tskio.c          2    * 入出力監視タスク                                                            *
+              tskio.c          3    *                                                                             *
+              tskio.c          4    * File name : tskio.c                                                         *
+              tskio.c          5    *                                                                             *
+              tskio.c          6    * Copyright (c) 2018 NICHIRYO Co., Ltd.                                       *
+              tskio.c          7    *                                                                             *
+              tskio.c          8    ******************************************************************************/
+              tskio.c          9    #include <kernel.h>
+              tskio.c         10    #include "sh7237.h"
+              tskio.c         11    #include "iodefine.h"
+              tskio.c         12    #include "define.h"
+              tskio.c         13    #include "datastruct.h"
+              tskio.c         14    #include "sub.h"
+              tskio.c         15    #include "tskio.h"
+              tskio.c         16    #include "automachine.h"
+              tskio.c         17    
+              tskio.c         18    
+              tskio.c         19    //*************************************
+              tskio.c         20    // 関数定義
+              tskio.c         21    //*************************************
+              tskio.c         22    static void CountSet(T_CMD_MSG* mrcv);
+              tskio.c         23    static void CountProc();
+              tskio.c         24    
+              tskio.c         25    
+              tskio.c         26    //*************************************
+              tskio.c         27    // テーブル
+              tskio.c         28    //*************************************
+              tskio.c         29    
+              tskio.c         30    
+              tskio.c         31    //*************************************
+              tskio.c         32    // データ定義
+              tskio.c         33    //*************************************
+              tskio.c         34    // カウント監視
+              tskio.c         35    static    ST_IOCOUNT          iocnt[MAX_CH+1];// 2020/2/12 １はじまり対応
+              tskio.c         36    
+              tskio.c         37    
+              tskio.c         38    
+              tskio.c         39    /***********************************************************************
+              tskio.c         40    * ｘｘｘ
+              tskio.c         41    * 
+              tskio.c         42    * [概要]
+              tskio.c         43    * ｘｘｘ
+              tskio.c         44    * 
+              tskio.c         45    * 
+              tskio.c         46    ***********************************************************************/
+              tskio.c         47    TASK TskIo( void )
+P   00000000              _TskIo:                          ; function: TskIo
+                                                           ; frame size=4
+    00000000 7FFC                   ADD         #-4,R15
+    00000002 E602                   MOV         #2,R6      ; H'00000002
+    00000004 E500                   MOV         #0,R5      ; H'00000000
+              tskio.c         48    {
+              tskio.c         49        T_CMD_MSG*  msg;
+              tskio.c         50      ER          err;
+              tskio.c         51    
+              tskio.c         52      memset( &iocnt,  CLR,  sizeof( iocnt ) );
+    00000006 D433                   MOV.L       L31+2,R4   ; __$iocnt
+    00000008 D233                   MOV.L       L31+6,R2   ; _memset
+    0000000A 420B                   JSR         @R2
+    0000000C 4618                   SHLL8       R6
+    0000000E DE33                   MOV.L       L31+10,R14 ; _v4_trcv_mbx
+    00000010 DC33                   MOV.L       L31+14,R12 ; L33
+    00000012 DD34                   MOV.L       L31+18,R13 ; _api_rel_mpf
+    00000014              L11:
+              tskio.c         53    
+              tskio.c         54      for( ;; )
+              tskio.c         55        {
+              tskio.c         56            // コマンド待ち
+              tskio.c         57            err = trcv_mbx( ID_MBX_IO, (T_MSG**)&msg, DLY_1M );
+    00000014 E601                   MOV         #1,R6      ; H'00000001
+    00000016 E407                   MOV         #7,R4      ; H'00000007
+    00000018 4E0B                   JSR         @R14
+    0000001A 65F3                   MOV         R15,R5
+              tskio.c         58    
+              tskio.c         59          if( err == E_TMOUT )
+    0000001C 88CE                   CMP/EQ      #-50,R0
+    0000001E 8F04                   BF/S        L13
+    00000020 64F2                   MOV.L       @R15,R4    ; msg
+              tskio.c         60          {
+              tskio.c         61              // カウント処理
+              tskio.c         62              CountProc(msg);
+    00000022 B02A                   BSR         __$CountProc
+    00000024 0009                   NOP
+    00000026 AFF5                   BRA         L11
+    00000028 0009                   NOP
+    0000002A              L13:
+              tskio.c         63              continue;
+              tskio.c         64          }
+              tskio.c         65          else
+              tskio.c         66          {
+              tskio.c         67              // メッセージ処理
+              tskio.c         68              CountSet(msg);
+    0000002A B007                   BSR         __$CountSet
+    0000002C 0009                   NOP
+    0000002E 67F2                   MOV.L       @R15,R7    ; msg
+              tskio.c         69          }
+              tskio.c         70          
+              tskio.c         71          RelMpf( ID_MPF_IO, (VP)msg );// メモリ解放
+    00000030 E606                   MOV         #6,R6      ; H'00000006
+    00000032 E547                   MOV         #71,R5     ; H'00000047
+    00000034 4D0B                   JSR         @R13
+    00000036 64C3                   MOV         R12,R4
+    00000038 AFEC                   BRA         L11
+    0000003A 0009                   NOP
+              tskio.c         72        }
+              tskio.c         73    }
+              tskio.c         74    
+              tskio.c         75    /***********************************************************************
+              tskio.c         76    * 
+              tskio.c         77    * [概要]  カウント設定処理
+              tskio.c         78    * [引数]  メッセージデータ
+              tskio.c         79    * [戻値]  －
+              tskio.c         80    * 
+              tskio.c         81    ***********************************************************************/
+              tskio.c         82    static void CountSet(T_CMD_MSG* mrcv)
+    0000003C              __$CountSet:                     ; function: __$CountSet
+                                                           ; frame size=8
+    0000003C 4EF0                   MOVMU.L     R14,@-R15
+              tskio.c         83    {
+              tskio.c         84      UB      msg;
+              tskio.c         85      UB      ch;
+              tskio.c         86    
+              tskio.c         87      msg = mrcv->msgdata.msgid;
+              tskio.c         88      ch  = mrcv->msgdata.inf;
+              tskio.c         89    
+              tskio.c         90      if( msg == ID_MSG_CNT_START )
+    0000003E 3041801B               MOVU.B      @(27,R4),R0; (mrcv)->msgid
+    00000042 3441801C               MOVU.B      @(28,R4),R4; (mrcv)->inf
+    00000046 2008                   TST         R0,R0
+    00000048 8908                   BT          L17
+    0000004A 8801                   CMP/EQ      #1,R0
+    0000004C 8B13                   BF          L18
+    0000004E 4408                   SHLL2       R4
+    00000050 E600                   MOV         #0,R6      ; H'00000000
+              tskio.c         91      {
+              tskio.c         92          iocnt[ch].sts   = SET;
+              tskio.c         93          iocnt[ch].cnt   = CLR;
+              tskio.c         94    
+              tskio.c         95          iocnt[ch].now = GetInputDat(ch);
+              tskio.c         96          iocnt[ch].old = iocnt[ch].now;
+              tskio.c         97      }
+              tskio.c         98      
+              tskio.c         99      if( msg == ID_MSG_CNT_STOP )
+              tskio.c        100      {
+              tskio.c        101          iocnt[ch].sts   = CLR;
+    00000052 D220                   MOV.L       L31+2,R2   ; __$iocnt
+    00000054 4400                   SHLL        R4
+    00000056 6043                   MOV         R4,R0
+    00000058 A00D                   BRA         L18
+    0000005A 0264                   MOV.B       R6,@(R0,R2); iocnt[].sts
+    0000005C              L17:
+    0000005C 6E43                   MOV         R4,R14
+    0000005E E101                   MOV         #1,R1      ; H'00000001
+    00000060 4E08                   SHLL2       R14
+    00000062 E500                   MOV         #0,R5      ; H'00000000
+    00000064 4E00                   SHLL        R14
+    00000066 D61B                   MOV.L       L31+2,R6   ; __$iocnt
+    00000068 3E6C                   ADD         R6,R14
+    0000006A 2E10                   MOV.B       R1,@R14    ; iocnt[].sts
+    0000006C D71E                   MOV.L       L31+22,R7  ; _GetInputDat
+    0000006E 470B                   JSR         @R7
+    00000070 1E51                   MOV.L       R5,@(4,R14); iocnt[].cnt
+    00000072 80E2                   MOV.B       R0,@(2,R14); iocnt[].now
+    00000074 80E1                   MOV.B       R0,@(1,R14); iocnt[].old
+    00000076              L18:
+    00000076 4EF4                   MOVMU.L     @R15+,R14
+              tskio.c        102      }
+              tskio.c        103    }
+    00000078 006B                   RTS/N
+              tskio.c        104    
+              tskio.c        105    /***********************************************************************
+              tskio.c        106    * 
+              tskio.c        107    * [概要]  カウント設定処理
+              tskio.c        108    * [引数]  メッセージデータ
+              tskio.c        109    * [戻値]  －
+              tskio.c        110    * 
+              tskio.c        111    ***********************************************************************/
+              tskio.c        112    static void CountProc()
+    0000007A              __$CountProc:                    ; function: __$CountProc
+                                                           ; frame size=16
+    0000007A 4CF0                   MOVMU.L     R12,@-R15
+              tskio.c        113    {
+              tskio.c        114      INT     Loop;
+              tskio.c        115    
+              tskio.c        116    // 負荷が大きいので実装入力ＣＨのみ、監視
+              tskio.c        117    //    for( Loop = 0; Loop < MAX_CH; Loop++ )
+              tskio.c        118      for( Loop = MIN_CH; Loop <= INMAX; Loop++ )
+    0000007C ED0A                   MOV         #10,R13    ; H'0000000A
+    0000007E EC01                   MOV         #1,R12     ; H'00000001
+    00000080 DE1A                   MOV.L       L31+26,R14 ; H'00000008+__$iocnt
+    00000082              L21:
+              tskio.c        119      {
+              tskio.c        120          // カウント対象？
+              tskio.c        121          if( iocnt[Loop].sts == SET )
+    00000082 60E0                   MOV.B       @R14,R0    ; iocnt[].sts
+    00000084 8801                   CMP/EQ      #1,R0
+    00000086 8B0F                   BF          L23
+              tskio.c        122          {
+              tskio.c        123              iocnt[Loop].old = iocnt[Loop].now;
+    00000088 84E2                   MOV.B       @(2,R14),R0; iocnt[].now
+    0000008A 64C3                   MOV         R12,R4
+              tskio.c        124              iocnt[Loop].now = GetInputDat(Loop);
+    0000008C D216                   MOV.L       L31+22,R2  ; _GetInputDat
+    0000008E 420B                   JSR         @R2
+    00000090 80E1                   MOV.B       R0,@(1,R14); iocnt[].old
+    00000092 660C                   EXTU.B      R0,R6
+    00000094 6063                   MOV         R6,R0
+    00000096 80E2                   MOV.B       R0,@(2,R14); iocnt[].now
+              tskio.c        125    
+              tskio.c        126              // Ｌ→Ｈ（前回Ｌ、現在Ｈ）
+              tskio.c        127              if( (!iocnt[Loop].old)&&( iocnt[Loop].now ) )
+    00000098 84E1                   MOV.B       @(1,R14),R0; iocnt[].old
+    0000009A 2008                   TST         R0,R0
+    0000009C 8B04                   BF          L23
+    0000009E 2668                   TST         R6,R6
+    000000A0 8902                   BT          L23
+              tskio.c        128              {
+              tskio.c        129                  iocnt[Loop].cnt++;
+    000000A2 52E1                   MOV.L       @(4,R14),R2; iocnt[].cnt
+    000000A4 7201                   ADD         #1,R2
+    000000A6 1E21                   MOV.L       R2,@(4,R14); iocnt[].cnt
+    000000A8              L23:
+    000000A8 4D10                   DT          R13
+    000000AA 7E08                   ADD         #8,R14
+    000000AC 8FE9                   BF/S        L21
+    000000AE 7C01                   ADD         #1,R12
+    000000B0 4CF4                   MOVMU.L     @R15+,R12
+              tskio.c        130              }
+              tskio.c        131          }
+              tskio.c        132      }
+              tskio.c        133    }
+    000000B2 006B                   RTS/N
+              tskio.c        134    
+              tskio.c        135    /***********************************************************************
+              tskio.c        136    * 
+              tskio.c        137    * [概要]  カウント数取得
+              tskio.c        138    * [引数]  ch:入力ch
+              tskio.c        139    * [戻値]  －
+              tskio.c        140    * 
+              tskio.c        141    ***********************************************************************/
+              tskio.c        142    UINT GetCount(UB ch)
+    000000B4              _GetCount:                       ; function: GetCount
+                                                           ; frame size=0
+              tskio.c        143    {
+              tskio.c        144      UINT    count = CLR;
+              tskio.c        145    
+              tskio.c        146      if(( ch >= MIN_CH )&&( ch <= MAX_CH ))  // 2020/2/12 １はじまり対応
+    000000B4 654C                   EXTU.B      R4,R5
+    000000B6 E101                   MOV         #1,R1      ; H'00000001
+    000000B8 3513                   CMP/GE      R1,R5
+    000000BA 6643                   MOV         R4,R6
+    000000BC 8F08                   BF/S        L29
+    000000BE E200                   MOV         #0,R2      ; H'00000000
+    000000C0 E43F                   MOV         #63,R4     ; H'0000003F
+    000000C2 3547                   CMP/GT      R4,R5
+    000000C4 8904                   BT          L29
+    000000C6 606C                   EXTU.B      R6,R0
+    000000C8 4008                   SHLL2       R0
+              tskio.c        147      {
+              tskio.c        148          count = iocnt[ch].cnt;
+    000000CA D509                   MOV.L       L31+30,R5  ; H'00000004+__$iocnt
+    000000CC 4000                   SHLL        R0
+    000000CE 025E                   MOV.L       @(R0,R5),R2; iocnt[].cnt
+    000000D0              L29:
+              tskio.c        149      }
+              tskio.c        150      
+              tskio.c        151      return( count );
+              tskio.c        152    }
+    000000D0 027B                   RTV/N       R2
+    000000D2              L31:
+    000000D2 00000002               .RES.W      1
+    000000D4 <00000000>             .DATA.L     __$iocnt
+    000000D8 <00000000>             .DATA.L     _memset
+    000000DC <00000000>             .DATA.L     _v4_trcv_mbx
+    000000E0 <00000000>             .DATA.L     L33
+    000000E4 <00000000>             .DATA.L     _api_rel_mpf
+    000000E8 <00000000>             .DATA.L     _GetInputDat
+    000000EC <00000008>             .DATA.L     H'00000008+__$iocnt
+    000000F0 <00000004>             .DATA.L     H'00000004+__$iocnt
+              tskio.c        153    
+              tskio.c        154    
+C   00000000              L33:
+    00000000 433A5C576F             .SDATA      "C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskio.c"
+             726B537061   
+             63655C5175   
+             69636B4765   
+             6E655C536F   
+             66745F4669   
+             726D5C5175   
+             69636B4765   
+             6E655F5072   
+             6F6A656374   
+             5C74736B69   
+             6F2E63       
+    0000003A 00                     .DATA.B     H'00
+B   00000000              __$iocnt:                        ; static: __$iocnt
+    00000000 00000004               .RES.L      128
+SH SERIES C/C++ Compiler (V.9.04.03.000)                                                         07-Sep-2023 20:41:36  PAGE    1
+
+
+******** STATISTICS INFORMATION ********
+
+
+********** ERROR INFORMATION ***********
+
+NUMBER OF ERRORS:           0
+NUMBER OF WARNINGS:         0
+
+
+
+
+******* SOURCE LINE INFORMATION ********
+
+COMPILED SOURCE LINE:      154
+
+
+
+******* SECTION SIZE INFORMATION *******
+
+PROGRAM  SECTION (P):                                 000000F4 Byte(s)
+CONSTANT SECTION (C):                                 0000003B Byte(s)
+DATA     SECTION (D):                                 00000000 Byte(s)
+BSS      SECTION (B):                                 00000200 Byte(s)
+
+TOTAL PROGRAM  SECTION: 000000F4 Byte(s)
+TOTAL CONSTANT SECTION: 0000003B Byte(s)
+TOTAL DATA     SECTION: 00000000 Byte(s)
+TOTAL BSS      SECTION: 00000200 Byte(s)
+
+    TOTAL PROGRAM SIZE: 0000032F Byte(s)
+
+
+
+********** LABEL INFORMATION ***********
+
+NUMBER OF EXTERNAL REFERENCE SYMBOLS:            4
+NUMBER OF EXTERNAL DEFINITION SYMBOLS:           2
+NUMBER OF INTERNAL/EXTERNAL SYMBOLS:            15
+
+
+
+*** COMMAND PARAMETER ***
+
+-subcommand=C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene_Hew\ROM_Big\tskio.shc
+-cpu=sh2a
+-include="C:\NORTi\INC","C:\NORTi\INC\Dummy","C:\NORTi\INC","C:\NORTi\LIB"
+-object="C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene_Hew\ROM_Big\tskio.obj"
+-debug
+-listfile="C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene_Hew\ROM_Big\tskio.lst"
+-show=source,tab=4
+-gbr=auto
+-chgincpath
+-errorpath
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskio.c"
+-global_volatile=0
+-opt_range=all
+-infinite_loop=0
+-del_vacant_loop=0
+-struct_alloc=1
+-lang=c
+-nologo

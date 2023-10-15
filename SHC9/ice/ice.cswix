@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Settings CompactMode="1">
+	<NormalLayout>
+		<CommandBars Schema="36">
+			<Layout>
+				<DockState Version="36" ScreenSize="1920, 1080" Count="4">
+					<BarInfo0 BarId="1" MRUWidth="32767"/>
+					<BarInfo1 BarId="151" MRUWidth="32767" PointPos="0, 25"/>
+					<BarInfo2 BarId="152" Visible="0" MRUWidth="32767"/>
+					<BarInfo3 BarId="153" Visible="0" MRUWidth="32767"/>
+				</DockState>
+				<DockBars>
+					<DockBar0 Count="9" Id1="1" Id3="151" Id5="152" Id7="153"/>
+				</DockBars>
+			</Layout>
+		</CommandBars>
+		<Shortcuts Schema="36">
+			<Shortcut Id="57665" Key="Ctrl+E"/>
+			<Shortcut Id="57665" Key="Ctrl+Shift+End"/>
+			<Shortcut Id="57665" Key="Ctrl+F1"/>
+			<Shortcut Id="1700" Key="F1"/>
+			<Shortcut Id="1331" Key="Shift+F3"/>
+			<Shortcut Id="1332" Key="F9"/>
+			<Shortcut Id="1333" Key="Ctrl+U"/>
+			<Shortcut Id="1333" Key="Ctrl+Q"/>
+			<Shortcut Id="1333" Key="Ctrl+F3"/>
+			<Shortcut Id="1309" Key="F4"/>
+			<Shortcut Id="1301" Key="F5"/>
+			<Shortcut Id="1302" Key="F2"/>
+			<Shortcut Id="1306" Key="F8"/>
+			<Shortcut Id="1307" Key="F10"/>
+			<Shortcut Id="1103" Key="Ctrl+C"/>
+			<Shortcut Id="1103" Key="Ctrl+Ins"/>
+			<Shortcut Id="57635" Key="Shift+Del"/>
+			<Shortcut Id="57635" Key="Ctrl+X"/>
+			<Shortcut Id="1104" Key="Ctrl+V"/>
+			<Shortcut Id="1104" Key="Shift+Ins"/>
+			<Shortcut Id="1101" Key="Alt+Backspace"/>
+			<Shortcut Id="1102" Key="Ctrl+Z"/>
+			<Shortcut Id="57600" Key="Ctrl+N"/>
+			<Shortcut Id="57601" Key="Ctrl+O"/>
+			<Shortcut Id="57607" Key="Ctrl+P"/>
+			<Shortcut Id="1011" Key="Shift+F8"/>
+			<Shortcut Id="1008" Key="Ctrl+S"/>
+			<Shortcut Id="1123" Key="Ctrl+F5"/>
+			<Shortcut Id="1119" Key="Shift+F5"/>
+			<Shortcut Id="57680" Key="F6"/>
+			<Shortcut Id="57681" Key="Shift+F6"/>
+		</Shortcuts>
+		<Options Schema="36" AlwaysShowFullMenus="0" ShowFullAfterDelay="1" ToolBarScreenTips="1" ToolBarAccelTips="0" LargeIcons="0" Animation="0"/>
+		<DockingPane>
+			<Summary Panes="20" TopContainer="8" Client="13"/>
+			<Pane-1 Type="0" DockingCX="200" DockingCY="120" Title="ファイルリスト\nファイルリスト\n" ID="2001" DockingHolder="12" LastHolder="12"/>
+			<Pane-2 Type="0" DockingCX="200" DockingCY="120" Title="コマンド ウィンドウ\nコマンド ウィンドウ\n" ID="2181" Options="1" DockingHolder="14" LastHolder="14"/>
+			<Pane-3 Type="0" DockingCX="200" DockingCY="250" Title="ウォッチ\nウォッチ\n" ID="2081" DockingHolder="16" FloatingHolder="7" LastHolder="16"/>
+			<Pane-4 Type="0" DockingCX="200" DockingCY="250" Title="ダンプ 1\nダンプ 1\n" ID="2041" DockingHolder="17" FloatingHolder="20" LastHolder="17"/>
+			<Pane-5 Type="3" WindowRectTopPos="483" WindowRectBottomPos="733" WindowRectLeftPos="1528" WindowRectRightPos="1728" TopContaner="6"/>
+			<Pane-6 Type="2" DockingCX="200" DockingCY="250" Horiz="1" Panes="1" Pane-1="7"/>
+			<Pane-7 Type="1" DockingCX="200" DockingCY="250" Panes="0"/>
+			<Pane-8 Type="2" DockingCX="1623" Panes="1" Pane-1="9"/>
+			<Pane-9 Type="2" DockingCY="540" Horiz="1" Panes="2" Pane-1="10" Pane-2="15"/>
+			<Pane-10 Type="2" DockingCX="1289" Panes="2" Pane-1="11" Pane-2="14"/>
+			<Pane-11 Type="2" DockingCY="646" Horiz="1" Panes="2" Pane-1="12" Pane-2="13"/>
+			<Pane-12 Type="1" DockingCX="200" DockingCY="120" Panes="1" Selected="1" Pane-1="1"/>
+			<Pane-13 Type="4" DockingCX="1085"/>
+			<Pane-14 Type="1" DockingCX="200" DockingCY="120" Panes="1" Selected="2" Pane-1="2"/>
+			<Pane-15 Type="2" DockingCX="330" DockingCY="794" Panes="2" Pane-1="16" Pane-2="17"/>
+			<Pane-16 Type="1" DockingCX="330" DockingCY="326" Panes="1" Selected="3" Pane-1="3"/>
+			<Pane-17 Type="1" DockingCX="200" DockingCY="464" Panes="1" Selected="4" Pane-1="4"/>
+			<Pane-18 Type="3" WindowRectTopPos="507" WindowRectBottomPos="757" WindowRectLeftPos="1397" WindowRectRightPos="1597" TopContaner="19"/>
+			<Pane-19 Type="2" DockingCX="200" DockingCY="250" Horiz="1" Panes="1" Pane-1="20"/>
+			<Pane-20 Type="1" DockingCX="200" DockingCY="250" Panes="0"/>
+		</DockingPane>
+	</NormalLayout>
+</Settings>

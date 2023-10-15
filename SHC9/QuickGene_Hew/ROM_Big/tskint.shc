@@ -1,0 +1,17 @@
+-cpu=sh2a
+-include="C:\NORTi\INC","C:\NORTi\INC\Dummy","C:\NORTi\INC","C:\NORTi\LIB"
+-object="C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene_Hew\ROM_Big\tskint.obj"
+-debug
+-listfile="C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene_Hew\ROM_Big\tskint.lst"
+-show=source,tab=4
+-gbr=auto
+-chgincpath
+-errorpath
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskint.c"
+-global_volatile=0
+-opt_range=all
+-infinite_loop=0
+-del_vacant_loop=0
+-struct_alloc=1
+-lang=c
+-nologo

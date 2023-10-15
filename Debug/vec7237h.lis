@@ -1,0 +1,470 @@
+*** SuperH RISC engine ASSEMBLER V.7.01.02.000 ***    09/08/23 13:46:37                                                  PAGE     1
+PROGRAM NAME =
+
+    1                               1     ;****************************************************************************
+    2                               2     ;* SHCベクタテーブル設定（SH7237)                                           *
+    3                               3     ;*                                                                          *
+    4                               4     ;*  File name : vec7237h.asm                                                *
+    5                               5     ;*                                                                          *
+    6                               6     ;*                                                                          *
+    7                               7     ;*                                                                          *
+    8                               8     ;****************************************************************************
+    9                               9     
+   10                              10     ;* スタックポインタ初期値の指定は、STACK_ENDセクションで行っています。
+   11                              11     ;* リンカにて、STACK_ENDセクションを定義してください。
+   12                              12     ;* STACK_ENDセクションの開始アドレスが、SP初期値となります。
+   13                              13     ;  START VECT/00000000,P,C,D/00000600,R,B,STACK/0C000400,STACK_END/0D000000
+   14                              14     
+   15 00000000                     15             .section STACK_END,DATA     ; スタック領域最終アドレス+1
+   16                              16     _INIT_STACK: .define "(STARTOF STACK_END)"
+   17                              17     
+   18                              18     ;* 外部参照
+   19                              19     
+   20                              20             .import __INIT              ; Cの初期設定ルーチン
+   21                              21             .import _ini_cpu            ; CPU内蔵周辺の初期化
+   22                              22     
+   23                              23     ;* リセットベクタ
+   24                              24     
+   25                              25             ; SDRAMへコードをローディングする場合、VECTセクションをSDRAM先頭に定義。
+   26                              26             ; ROM上のコードをそのまま動作させる場合、0番地に定義。
+   27                              27     
+   28 00000000                     28             .section VECT,CODE
+   29                              29             .export _RST_VECT
+   30 00000000                     30     _RST_VECT:
+   31                              31             ; パワーオンリセット
+   32 00000000 00000000            32             .data.l _RESET - (STARTOF VECT) ; PC初期値
+   33 00000004 00000000            33             .data.l (STARTOF STACK_END)             ; SP初期値
+   34                              34             ; マニュアルリセット
+   35 00000008 00000000            35             .data.l _RESET - (STARTOF VECT) ; PC初期値
+   36 0000000C 00000000            36             .data.l (STARTOF STACK_END)             ; SP初期値
+   37                              37     
+   38                              38     ;* 割込みベクタテーブル
+   39                              39     
+   40                              40             ; 割込みベクタを直接ROMに定義する場合は、アセンブル時にROMVECマクロを
+   41                              41             ; 定義し、割込みハンドラのシンボルをここに書き加えてください。
+   42                              42             ; def_inh や cre_isr システムコールを用いる場合、この定義は不要です。
+   43                              43     
+   44                              44           .aifdef ROMVEC
+   45                              45             .import _inthdr             ; 周期タイマ割込みハンドラ
+   46                              46             .import _int_sio0_er        ; シリアルチャネル0 受信エラー割込みハンドラ
+   47                              47             .import _int_sio0_rx        ; シリアルチャネル0 受信割込みハンドラ
+   48                              48             .import _int_irq4           ; シリアルチャネル0 受信割込みハンドラ
+   49                              49             .import _int_sio1_er        ; シリアルチャネル1 受信エラー割込みハンドラ
+   50                              50             .import _int_sio1_rx        ; シリアルチャネル1 受信割込みハンドラ
+   51                              51             .import _int_sio2_er        ; シリアルチャネル2 受信エラー割込みハンドラ
+   52                              52             .import _int_sio2_rx        ; シリアルチャネル2 受信割込みハンドラ
+   53                              53     ;5/11        .import _int_sio3_er        ; シリアルチャネル3 受信エラー割込みハンドラ
+   54                              54     ;5/11        .import _int_sio3_rx        ; シリアルチャネル3 受信割込みハンドラ
+   55                              55     
+   56                              56             .data.l -1                  ;   4: 一般不当命令
+   57                              57             .data.l -1                  ;   5: Reserved
+*** SuperH RISC engine ASSEMBLER V.7.01.02.000 ***    09/08/23 13:46:37                                                  PAGE     2
+PROGRAM NAME =
+
+   58                              58             .data.l -1                  ;   6: スロット不当命令
+   59                              59             .data.l -1                  ;   7: Reserved
+   60                              60             .data.l -1                  ;   8: Reserved
+   61                              61             .data.l -1                  ;   9: CPUアドレスエラー
+   62                              62             .data.l -1                  ;  10: DMACアドレスエラー
+   63                              63             .data.l -1                  ;  11: NMI
+   64                              64             .data.l -1                  ;  12: UBC
+   65                              65             .data.l -1                  ;  13: Reserved
+   66                              66             .data.l -1                  ;  14: HUDI
+   67                              67             .data.l -1                  ;  15: バンクオーバフロー
+   68                              68             .data.l -1                  ;  16: バンクアンダフロー
+   69                              69             .data.l -1                  ;  17: 整数除算例外 (0除算)
+   70                              70             .data.l -1                  ;  18: 整数除算例外 (オーバフロー)
+   71                              71             .data.l -1                  ;  19: Reserved
+   72                              72             .data.l -1                  ;  20: Reserved
+   73                              73             .data.l -1                  ;  21: Reserved
+   74                              74             .data.l -1                  ;  22: Reserved
+   75                              75             .data.l -1                  ;  23: Reserved
+   76                              76             .data.l -1                  ;  24: Reserved
+   77                              77             .data.l -1                  ;  25: Reserved
+   78                              78             .data.l -1                  ;  26: Reserved
+   79                              79             .data.l -1                  ;  27: Reserved
+   80                              80             .data.l -1                  ;  28: Reserved
+   81                              81             .data.l -1                  ;  29: Reserved
+   82                              82             .data.l -1                  ;  30: Reserved
+   83                              83             .data.l -1                  ;  31: Reserved
+   84                              84             .data.l -1                  ;  32:
+   85                              85             .data.l -1                  ;  33:
+   86                              86             .data.l -1                  ;  34:
+   87                              87             .data.l -1                  ;  35:
+   88                              88             .data.l -1                  ;  36:
+   89                              89             .data.l -1                  ;  37:
+   90                              90             .data.l -1                  ;  38:
+   91                              91             .data.l -1                  ;  39:
+   92                              92             .data.l -1                  ;  40:
+   93                              93             .data.l -1                  ;  41:
+   94                              94             .data.l -1                  ;  42:
+   95                              95             .data.l -1                  ;  43:
+   96                              96             .data.l -1                  ;  44:
+   97                              97             .data.l -1                  ;  45:
+   98                              98             .data.l -1                  ;  46:
+   99                              99             .data.l -1                  ;  47:
+  100                             100             .data.l -1                  ;  48:
+  101                             101             .data.l -1                  ;  49:
+  102                             102             .data.l -1                  ;  50:
+  103                             103             .data.l -1                  ;  51:
+  104                             104             .data.l -1                  ;  52:
+  105                             105             .data.l -1                  ;  53:
+  106                             106             .data.l -1                  ;  54:
+  107                             107             .data.l -1                  ;  55:
+  108                             108             .data.l -1                  ;  56:
+  109                             109             .data.l -1                  ;  57:
+  110                             110             .data.l -1                  ;  58:
+  111                             111             .data.l -1                  ;  59:
+  112                             112             .data.l -1                  ;  60:
+  113                             113             .data.l -1                  ;  61:
+  114                             114             .data.l -1                  ;  62:
+*** SuperH RISC engine ASSEMBLER V.7.01.02.000 ***    09/08/23 13:46:37                                                  PAGE     3
+PROGRAM NAME =
+
+  115                             115             .data.l -1                  ;  63:
+  116                             116             .data.l -1                  ;  64: IRQ0
+  117                             117             .data.l -1                  ;  65: IRQ1
+  118                             118             .data.l -1                  ;  66: IRQ2
+  119                             119             .data.l -1                  ;  67: IRQ3
+  120                             120             .data.l _int_irq4           ;  68: IRQ4
+  121                             121             .data.l -1                  ;  69: IRQ5
+  122                             122             .data.l -1                  ;  70: IRQ6
+  123                             123             .data.l -1                  ;  71: IRQ7
+  124                             124             .data.l -1                  ;  72:
+  125                             125             .data.l -1                  ;  73:
+  126                             126             .data.l -1                  ;  74:
+  127                             127             .data.l -1                  ;  75:
+  128                             128             .data.l -1                  ;  76:
+  129                             129             .data.l -1                  ;  77:
+  130                             130             .data.l -1                  ;  78:
+  131                             131             .data.l -1                  ;  79:
+  132                             132             .data.l -1                  ;  80:
+  133                             133             .data.l -1                  ;  81:
+  134                             134             .data.l -1                  ;  82:
+  135                             135             .data.l -1                  ;  83:
+  136                             136             .data.l -1                  ;  84:
+  137                             137             .data.l -1                  ;  85:
+  138                             138             .data.l -1                  ;  86:
+  139                             139             .data.l -1                  ;  87:
+  140                             140             .data.l -1                  ;  88:
+  141                             141             .data.l -1                  ;  89:
+  142                             142             .data.l -1                  ;  90:
+  143                             143             .data.l -1                  ;  91:
+  144                             144             .data.l -1                  ;  92: ADI0
+  145                             145             .data.l -1                  ;  93:
+  146                             146             .data.l -1                  ;  94:
+  147                             147             .data.l -1                  ;  95:
+  148                             148             .data.l -1                  ;  96: ADI1
+  149                             149             .data.l -1                  ;  97:
+  150                             150             .data.l -1                  ;  98:
+  151                             151             .data.l -1                  ;  99:
+  152                             152             .data.l -1                  ; 100: ADI2
+  153                             153             .data.l -1                  ; 101:
+  154                             154             .data.l -1                  ; 102:
+  155                             155             .data.l -1                  ; 103:
+  156                             156             .data.l -1                  ; 104: ERS_0
+  157                             157             .data.l -1                  ; 105: OVR_0
+  158                             158             .data.l -1                  ; 106: RM0_0、RM1_0
+  159                             159             .data.l -1                  ; 107: SLE_0
+  160                             160             .data.l -1                  ; 108: DEI0
+  161                             161             .data.l -1                  ; 109: HEI0
+  162                             162             .data.l -1                  ; 110:
+  163                             163             .data.l -1                  ; 111:
+  164                             164             .data.l -1                  ; 112: DEI1
+  165                             165             .data.l -1                  ; 113: HEI1
+  166                             166             .data.l -1                  ; 114:
+  167                             167             .data.l -1                  ; 115:
+  168                             168             .data.l -1                  ; 116: DEI2
+  169                             169             .data.l -1                  ; 117: HEI2
+  170                             170             .data.l -1                  ; 118:
+  171                             171             .data.l -1                  ; 119:
+*** SuperH RISC engine ASSEMBLER V.7.01.02.000 ***    09/08/23 13:46:37                                                  PAGE     4
+PROGRAM NAME =
+
+  172                             172             .data.l -1                  ; 120: DEI3
+  173                             173             .data.l -1                  ; 121: HEI3
+  174                             174             .data.l -1                  ; 122:
+  175                             175             .data.l -1                  ; 123:
+  176                             176             .data.l -1                  ; 124: DEI4
+  177                             177             .data.l -1                  ; 125: HEI4
+  178                             178             .data.l -1                  ; 126:
+  179                             179             .data.l -1                  ; 127:
+  180                             180             .data.l -1                  ; 128: DEI5
+  181                             181             .data.l -1                  ; 129: HEI5
+  182                             182             .data.l -1                  ; 130:
+  183                             183             .data.l -1                  ; 131:
+  184                             184             .data.l -1                  ; 132: DEI6
+  185                             185             .data.l -1                  ; 133: HEI6
+  186                             186             .data.l -1                  ; 134:
+  187                             187             .data.l -1                  ; 135:
+  188                             188             .data.l -1                  ; 136: DEI7
+  189                             189             .data.l -1                  ; 137: HEI7
+  190                             190             .data.l -1                  ; 138:
+  191                             191             .data.l -1                  ; 139:
+  192                             192             .data.l _inthdr             ; 140: CMI0
+  193                             193             .data.l -1                  ; 141:
+  194                             194             .data.l -1                  ; 142:
+  195                             195             .data.l -1                  ; 143:
+  196                             196             .data.l -1                  ; 144: CMI1
+  197                             197             .data.l -1                  ; 145:
+  198                             198             .data.l -1                  ; 146:
+  199                             199             .data.l -1                  ; 147:
+  200                             200             .data.l -1                  ; 148: CMI
+  201                             201             .data.l -1                  ; 149:
+  202                             202             .data.l -1                  ; 150:
+  203                             203             .data.l -1                  ; 151:
+  204                             204             .data.l -1                  ; 152: ITI
+  205                             205             .data.l -1                  ; 153:
+  206                             206             .data.l -1                  ; 154: USBRXI
+  207                             207             .data.l -1                  ; 155: USBTXI
+  208                             208             .data.l -1                  ; 156: TGI0A
+  209                             209             .data.l -1                  ; 157: TGI0B
+  210                             210             .data.l -1                  ; 158: TGI0C
+  211                             211             .data.l -1                  ; 159: TGI0D
+  212                             212             .data.l -1                  ; 160: TCI0V
+  213                             213             .data.l -1                  ; 161: TGI0E
+  214                             214             .data.l -1                  ; 162: TGI0F
+  215                             215             .data.l -1                  ; 163:
+  216                             216             .data.l -1                  ; 164: TGI1A
+  217                             217             .data.l -1                  ; 165: TGI1B
+  218                             218             .data.l -1                  ; 166:
+  219                             219             .data.l -1                  ; 167:
+  220                             220             .data.l -1                  ; 168: TCI1V
+  221                             221             .data.l -1                  ; 169: TCI1U
+  222                             222             .data.l -1                  ; 170:
+  223                             223             .data.l -1                  ; 171:
+  224                             224             .data.l -1                  ; 172: TGI2A
+  225                             225             .data.l -1                  ; 173: TGI2B
+  226                             226             .data.l -1                  ; 174:
+  227                             227             .data.l -1                  ; 175:
+  228                             228             .data.l -1                  ; 176: TCI2V
+*** SuperH RISC engine ASSEMBLER V.7.01.02.000 ***    09/08/23 13:46:37                                                  PAGE     5
+PROGRAM NAME =
+
+  229                             229             .data.l -1                  ; 177: TCI2U
+  230                             230             .data.l -1                  ; 178:
+  231                             231             .data.l -1                  ; 179:
+  232                             232             .data.l -1                  ; 180: TGI3A
+  233                             233             .data.l -1                  ; 181: TGI3B
+  234                             234             .data.l -1                  ; 182: TGI3C
+  235                             235             .data.l -1                  ; 183: TGI3D
+  236                             236             .data.l -1                  ; 184: TCI3V
+  237                             237             .data.l -1                  ; 185:
+  238                             238             .data.l -1                  ; 186:
+  239                             239             .data.l -1                  ; 187:
+  240                             240             .data.l -1                  ; 188: TGI4A
+  241                             241             .data.l -1                  ; 189: TGI4B
+  242                             242             .data.l -1                  ; 190: TGI4C
+  243                             243             .data.l -1                  ; 191: TGI4D
+  244                             244             .data.l -1                  ; 192: TCI4V
+  245                             245             .data.l -1                  ; 193:
+  246                             246             .data.l -1                  ; 194:
+  247                             247             .data.l -1                  ; 195:
+  248                             248             .data.l -1                  ; 196: TGI5U
+  249                             249             .data.l -1                  ; 197: TGI5V
+  250                             250             .data.l -1                  ; 198: TGI5W
+  251                             251             .data.l -1                  ; 199:
+  252                             252             .data.l -1                  ; 200: OEI1
+  253                             253             .data.l -1                  ; 201: OEI2
+  254                             254             .data.l -1                  ; 202:
+  255                             255             .data.l -1                  ; 203:
+  256                             256             .data.l -1                  ; 204: TGI3A
+  257                             257             .data.l -1                  ; 205: TGI3B
+  258                             258             .data.l -1                  ; 206: TGI3C
+  259                             259             .data.l -1                  ; 207: TGI3D
+  260                             260             .data.l -1                  ; 208: TCI3V
+  261                             261             .data.l -1                  ; 209:
+  262                             262             .data.l -1                  ; 210:
+  263                             263             .data.l -1                  ; 211:
+  264                             264             .data.l -1                  ; 212: TGI4A
+  265                             265             .data.l -1                  ; 213: TGI4B
+  266                             266             .data.l -1                  ; 214: TGI4C
+  267                             267             .data.l -1                  ; 215: TGI4D
+  268                             268             .data.l -1                  ; 216: TCI4V
+  269                             269             .data.l -1                  ; 217:
+  270                             270             .data.l -1                  ; 218:
+  271                             271             .data.l -1                  ; 219:
+  272                             272             .data.l -1                  ; 220: TGI5U
+  273                             273             .data.l -1                  ; 221: TGI5V
+  274                             274             .data.l -1                  ; 222: TGI5W
+  275                             275             .data.l -1                  ; 223:
+  276                             276             .data.l -1                  ; 224: OEI3
+  277                             277             .data.l -1                  ; 225:
+  278                             278             .data.l -1                  ; 226: USI0
+  279                             279             .data.l -1                  ; 227: USI1
+  280                             280             .data.l -1                  ; 228: STPI
+  281                             281             .data.l -1                  ; 229: NAKI
+  282                             282             .data.l -1                  ; 230: RXI
+  283                             283             .data.l -1                  ; 231: TXI
+  284                             284             .data.l -1                  ; 232: TEI
+  285                             285             .data.l -1                  ; 233: SSERI
+*** SuperH RISC engine ASSEMBLER V.7.01.02.000 ***    09/08/23 13:46:37                                                  PAGE     6
+PROGRAM NAME =
+
+  286                             286             .data.l -1                  ; 234: SSRXI
+  287                             287             .data.l -1                  ; 235: SSTXI
+  288                             288             .data.l -1                  ; 236: ERI4
+  289                             289             .data.l -1                  ; 237: RXI4
+  290                             290             .data.l -1                  ; 238: TXI4
+  291                             291             .data.l -1                  ; 239: TEI4
+  292                             292             .data.l _int_sio0_er        ; 240: ERI0
+  293                             293             .data.l _int_sio0_rx        ; 241: RXI0
+  294                             294             .data.l -1                  ; 242: TXI0
+  295                             295             .data.l -1                  ; 243: TEI0
+  296                             296             .data.l _int_sio1_er        ; 244: ERI1
+  297                             297             .data.l _int_sio1_rx        ; 245: RXI1
+  298                             298             .data.l -1                  ; 246: TXI1
+  299                             299             .data.l -1                  ; 247: TEI1
+  300                             300             .data.l _int_sio2_er        ; 248: ERI2
+  301                             301             .data.l _int_sio2_rx        ; 249: RXI2
+  302                             302             .data.l -1                  ; 250: TXI2
+  303                             303             .data.l -1                  ; 251: TEI2
+  304                             304             .data.l -1                  ; 252: BRI3
+  305                             305             .data.l -1                  ; 253: ERI3
+  306                             306             .data.l -1                  ; 254: RXI3
+  307                             307     ;5/11        .data.l _int_sio3_er        ; 253: ERI3
+  308                             308     ;5/11        .data.l _int_sio3_rx        ; 254: RXI3
+  309                             309             .data.l -1                  ; 255: TXI3
+  310                             310           .aendi
+  311                             311     
+  312                             312     ;* リセット処理
+  313                             313     
+  314                             314             .export _RESET
+  315 00000400                    315             .org H'400
+  316 00000400                    316     _RESET:
+  317                             317             ; リスタートを考慮して割込みマスクレベルを最高に
+  318 00000400 0002               318             stc     sr,r0
+  319 00000402 CBF0               319             or      #H'F0,r0
+  320 00000404 400E               320             ldc     r0,sr
+  321                             321     
+  322 00000406 D205               322             mov.l   ini_cpu,r2
+  323 00000408 420B               323             jsr     @r2
+  324 0000040A 0009               324             nop
+  325                             325     
+  326                             326             ; リスタートを考慮してスタックポインタ初期化
+  327 0000040C DF01               327             mov.l   INIT_STACK,sp
+  328                             328     
+  329                             329             ; Cの初期化ルーチンへ
+  330 0000040E D202               330             mov.l   INIT,r2
+  331 00000410 422B               331             jmp     @r2
+  332 00000412 0009               332             nop
+  333                             333     
+  334                             334     ;* 参照アドレス/データ値
+  335                             335     
+  336 00000414                    336             .align  4
+  337 00000414 00000000           337     INIT_STACK:     .data.l (STARTOF STACK_END) ; スタック領域終わりのアドレス
+  338 00000418 00000000           338     INIT:           .data.l __INIT
+  339 0000041C 00000000           339     ini_cpu:        .data.l _ini_cpu
+  340                             340     
+  341                             341     ;* 各セクションのアドレス
+  342                             342     
+*** SuperH RISC engine ASSEMBLER V.7.01.02.000 ***    09/08/23 13:46:37                                                  PAGE     7
+PROGRAM NAME =
+
+  343 00000000                    343             .section P,CODE,ALIGN=4
+  344 00000000                    344             .section D,DATA,ALIGN=4     ; 初期化データ領域(ROM)
+  345 00000000                    345             .section R,DATA,ALIGN=4     ; 初期化データ領域(RAM)
+  346 00000000                    346             .section B,DATA,ALIGN=4     ; 未初期化データ領域(RAM)
+  347 00000000                    347             .section STACK,DATA,ALIGN=4 ; スタック領域(RAM)
+  348 00000000 00000002           348             .res.w  1
+  349 00000000                    349             .section C,DATA,ALIGN=4     ; 定数領域(ROM)
+  350 00000000                    350             .align  4
+  351 00000000 00000000           351     __P_BGN     .data.l (STARTOF P)
+  352 00000004 00000000           352     __P_END     .data.l (STARTOF P)+(SIZEOF P)
+  353 00000008 00000000           353     __C_BGN     .data.l (STARTOF C)
+  354 0000000C 00000000           354     __C_END     .data.l (STARTOF C)+(SIZEOF C)
+  355 00000010 00000000           355     __D_ROM     .data.l (STARTOF D)
+  356 00000014 00000000           356     __D_BGN     .data.l (STARTOF R)
+  357 00000018 00000000           357     __D_END     .data.l (STARTOF R)+(SIZEOF R)
+  358 0000001C 00000000           358     __B_BGN     .data.l (STARTOF B)
+  359 00000020 00000000           359     __B_END     .data.l (STARTOF B)+(SIZEOF B)
+  360 00000024 00000000           360     __VECT_BGN  .data.l (STARTOF VECT)
+  361                             361             .export __P_BGN
+  362                             362             .export __P_END
+  363                             363             .export __C_BGN
+  364                             364             .export __C_END
+  365                             365             .export __D_ROM
+  366                             366             .export __D_BGN
+  367                             367             .export __D_END
+  368                             368             .export __B_BGN
+  369                             369             .export __B_END
+  370                             370             .export __VECT_BGN
+  371                             371     
+  372                             372     ; [ROM上のコードで実行する場合]
+  373                             373     ;
+  374                             374     ; ROM先頭┌──────────┐
+  375                             375     ;        │ 割込みベクタ(VECT) │
+  376                             376     ;        ├──────────┤
+  377                             377     ;        │   プログラム領域   │
+  378                             378     ;        │        (P)         │
+  379                             379     ;        ├──────────┤
+  380                             380     ;        │      定数領域      │
+  381                             381     ;        │        (C)         │
+  382                             382     ;        ├──────────┤
+  383                             383     ;        │  初期化データ領域  │──┐
+  384                             384     ;        │        (D)         │    │_INITSCT() でコピー
+  385                             385     ;        ├──────────┤    ｜
+  386                             386     ;         ～                  ～     ｜
+  387                             387     ; RAM先頭┌──────────┐    ｜
+  388                             388     ;        │  初期化データ領域  │←─┘
+  389                             389     ;        │        (R)         │
+  390                             390     ;        ├──────────┤
+  391                             391     ;        │ 未初期化データ領域 │←─ _INITSCT()で0クリア
+  392                             392     ;        │        (B)         │
+  393                             393     ;        ├──────────┤
+  394                             394     ;        │    スタック領域    │
+  395                             395     ;        │      (STACK)       │
+  396                             396     ;         ～                  ～
+  397                             397     ;SP初期値└──────────┘STACK_END
+  398                             398     
+  399                             399             .end
+*** SuperH RISC engine ASSEMBLER V.7.01.02.000 ***    09/08/23 13:46:37                                                  PAGE     8
+PROGRAM NAME =
+
+  *****TOTAL ERRORS       0
+  *****TOTAL WARNINGS     0
+*** SuperH RISC engine ASSEMBLER V.7.01.02.000 ***    09/08/23 13:46:37                                                  PAGE     9
+
+*** CROSS REFERENCE LIST
+
+NAME                             SECTION  ATTR VALUE             SEQUENCE
+
+B                                B        SCT  00000000    346*  358   359   359 
+C                                C        SCT  00000000    349*  353   354   354 
+D                                D        SCT  00000000    344*  355 
+INIT                             VECT          00000418    330   338*
+INIT_STACK                       VECT          00000414    327   337*
+P                                P        SCT  00000000    343*  351   352   352 
+R                                R        SCT  00000000    345*  356   357   357 
+STACK                            STACK    SCT  00000000    347*
+STACK_END                        STACK_EN SCT  00000000     15*   33    36   337 
+VECT                             VECT     SCT  00000000     28*   32    35   360 
+_RESET                           VECT     EXPT 00000400     32    35   314   316*
+_RST_VECT                        VECT     EXPT 00000000     29    30*
+__B_BGN                          C        EXPT 0000001C    358*  368 
+__B_END                          C        EXPT 00000020    359*  369 
+__C_BGN                          C        EXPT 00000008    353*  363 
+__C_END                          C        EXPT 0000000C    354*  364 
+__D_BGN                          C        EXPT 00000014    356*  366 
+__D_END                          C        EXPT 00000018    357*  367 
+__D_ROM                          C        EXPT 00000010    355*  365 
+__INIT                                    IMPT 00000000     20   338 
+__P_BGN                          C        EXPT 00000000    351*  361 
+__P_END                          C        EXPT 00000004    352*  362 
+__VECT_BGN                       C        EXPT 00000024    360*  370 
+_ini_cpu                                  IMPT 00000000     21   339 
+ini_cpu                          VECT          0000041C    322   339*
+*** SuperH RISC engine ASSEMBLER V.7.01.02.000 ***    09/08/23 13:46:37                                                  PAGE    10
+
+*** SECTION DATA LIST
+
+SECTION                          ATTRIBUTE    SIZE             START
+
+STACK_END                        REL-DATA    000000000        
+VECT                             REL-CODE    000000420        
+P                                REL-CODE    000000000        
+D                                REL-DATA    000000000        
+R                                REL-DATA    000000000        
+B                                REL-DATA    000000000        
+STACK                            REL-DATA    000000002        
+C                                REL-DATA    000000028        

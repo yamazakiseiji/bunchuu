@@ -1,0 +1,1167 @@
+SH SERIES C/C++ Compiler (V.9.02.00.003)                                                         08-Sep-2023 13:46:37  PAGE    1
+
+************ OBJECT LISTING ************
+
+FILE NAME: C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\tsktmpcnt.c
+
+SCT OFFSET   CODE       C LABEL     INSTRUCTION OPERAND    COMMENT
+
+           tsktmpcnt.          1    /******************************************************************************
+           tsktmpcnt.          2    * 温調器制御タスク                                                            *
+           tsktmpcnt.          3    *                                                                             *
+           tsktmpcnt.          4    * File name : tsktmp.c                                                        *
+           tsktmpcnt.          5    *                                                                             *
+           tsktmpcnt.          6    * Copyright (c) 2023 NICHIRYO Co., Ltd.                                       *
+           tsktmpcnt.          7    *                                                                             *
+           tsktmpcnt.          8    ******************************************************************************/
+           tsktmpcnt.          9    #include <kernel.h>
+           tsktmpcnt.         10    #include "sh7237.h"
+           tsktmpcnt.         11    #include "iodefine.h"
+           tsktmpcnt.         12    #include "define.h"
+           tsktmpcnt.         13    #include "datastruct.h"
+           tsktmpcnt.         14    #include "tskcmd.h"
+           tsktmpcnt.         15    #include "sub.h"
+           tsktmpcnt.         16    #include "automachine.h"
+           tsktmpcnt.         17    #include "tsktmpcnt.h"
+           tsktmpcnt.         18    #include "tblchr.h"
+           tsktmpcnt.         19    
+           tsktmpcnt.         20    //*************************************
+           tsktmpcnt.         21    // define
+           tsktmpcnt.         22    //*************************************
+           tsktmpcnt.         23    #define   FZ110               1                   // 0:RS232C,1:RS485
+           tsktmpcnt.         24    #define   SCI_16C554A_ADDR    0x0C00F000          // シリアル（16C554_A）アドレス
+           tsktmpcnt.         25    #define   SCI_16C554B_ADDR    0x0C00F008          // シリアル（16C554_B）アドレス
+           tsktmpcnt.         26    #define   SCI_16C554C_ADDR    0x0C00F010          // シリアル（16C554_C）アドレス
+           tsktmpcnt.         27    #define   SCI_16C554D_ADDR    0x0C00F018          // シリアル（16C554_D）アドレス
+           tsktmpcnt.         28    #define   TMPDATA_SIZE        8                   // 
+           tsktmpcnt.         29    #define   BUFF_MAX            16                  // 
+           tsktmpcnt.         30    #define   SEND_SIZE           8                   // 
+           tsktmpcnt.         31    #define   RECV_SIZE           8                   // 
+           tsktmpcnt.         32    //#define SLAVE_ADR           0x00                // 
+           tsktmpcnt.         33    #define   SLAVE_ADR           0x01                // // Leagic追加2023.8.22
+           tsktmpcnt.         34    #define   FC_TMPGET           0x03                // 
+           tsktmpcnt.         35    #define   FC_TMPSET           0x06                // 
+           tsktmpcnt.         36    #define   RECV_TOUT           1000                // 
+           tsktmpcnt.         37    #define   RTS_WAIT            2                   // 
+           tsktmpcnt.         38    #define   DAT_WAIT            10                  // 
+           tsktmpcnt.         39    #define   TMPGET_RCVSIZE      7                   // 
+           tsktmpcnt.         40    #define   TMPSET_RCVSIZE      8                   // 
+           tsktmpcnt.         41    //#define TIMEOUT_RCV         1000000             // // Leagic追加2023.8.25
+           tsktmpcnt.         42    #define TIMEOUT_RCV           2000000             // // Leagic追加2023.8.25
+           tsktmpcnt.         43                                                  // ※500000で試しましたが通信NGでした。
+           tsktmpcnt.         44    
+           tsktmpcnt.         45    
+           tsktmpcnt.         46    
+           tsktmpcnt.         47    //*************************************
+           tsktmpcnt.         48    // 内部関数
+           tsktmpcnt.         49    //*************************************
+           tsktmpcnt.         50    static void TmpCntInit();
+           tsktmpcnt.         51    static void check_main_serial_initialize( void );
+           tsktmpcnt.         52    static void TmpCntrlReq( T_CMD_MSG* mrcv );
+           tsktmpcnt.         53    static ER   TmpRecvProc( unsigned char msgid, unsigned short *temp );
+           tsktmpcnt.         54    static void TmpSendDataMake( unsigned char msgid,unsigned char dat );
+           tsktmpcnt.         55    static ER   TmpDataSend( unsigned char *buf, unsigned char siz );
+           tsktmpcnt.         56    static ER   TmpDataRecv( unsigned char *buf, unsigned char *siz );
+           tsktmpcnt.         57           void TmpDataSet( unsigned char tmpdat );
+           tsktmpcnt.         58    unsigned char TmpDataGet();
+           tsktmpcnt.         59    static unsigned short CrcCal(unsigned char *buf,unsigned char siz);
+           tsktmpcnt.         60    
+           tsktmpcnt.         61    
+           tsktmpcnt.         62    //*************************************
+           tsktmpcnt.         63    // データ定義
+           tsktmpcnt.         64    //*************************************
+           tsktmpcnt.         65    typedef struct {
+           tsktmpcnt.         66      unsigned char dat;
+           tsktmpcnt.         67      unsigned char step;
+           tsktmpcnt.         68      unsigned char req;
+           tsktmpcnt.         69      unsigned char dmy;
+           tsktmpcnt.         70    }ST_TMPDAT;
+           tsktmpcnt.         71    
+           tsktmpcnt.         72    static ST_TMPDAT tmp;
+           tsktmpcnt.         73    static unsigned char  txbuf[BUFF_MAX];
+           tsktmpcnt.         74    static unsigned char  rxbuf[BUFF_MAX+100];
+           tsktmpcnt.         75    static unsigned char  rxcnt;
+           tsktmpcnt.         76    static unsigned char  tempdat_bk[2];// [0]new,[1]old
+           tsktmpcnt.         77    static    UB              bufwk[CMD_BUFSIZ];                          // 
+           tsktmpcnt.         78    
+           tsktmpcnt.         79    volatile struct   St16550 *p16C554;
+           tsktmpcnt.         80      T_CMD_MSG*  msg;
+           tsktmpcnt.         81    
+           tsktmpcnt.         82    /******************************************************************************
+           tsktmpcnt.         83    * 
+           tsktmpcnt.         84    * [概要]  
+           tsktmpcnt.         85    * [引数]  
+           tsktmpcnt.         86    * [戻値]  
+           tsktmpcnt.         87    * 
+           tsktmpcnt.         88    ******************************************************************************/
+           tsktmpcnt.         89    TASK TskTmpCnt( void )
+P   00000000              _TskTmpCnt:                      ; function: TskTmpCnt
+                                                           ; frame size=0
+           tsktmpcnt.         90    {
+           tsktmpcnt.         91      ER          err;
+           tsktmpcnt.         92    
+           tsktmpcnt.         93      TmpCntInit();
+    00000000 B013                   BSR         __$TmpCntInit
+    00000002 0009                   NOP
+    00000004 DD8B                   MOV.L       L102,R13   ; _msg
+    00000006 DE8C                   MOV.L       L102+4,R14 ; _v4_trcv_mbx
+    00000008 DB8C                   MOV.L       L102+8,R11 ; L104
+    0000000A DC8D                   MOV.L       L102+12,R12; _api_rel_mpf
+    0000000C              L11:
+           tsktmpcnt.         94      
+           tsktmpcnt.         95      for( ;; )
+           tsktmpcnt.         96      {
+           tsktmpcnt.         97            err = rcv_mbx( ID_MBX_TMPCNT, (T_MSG**)&msg );
+    0000000C E6FF                   MOV         #-1,R6     ; H'FFFFFFFF
+    0000000E E40E                   MOV         #14,R4     ; H'0000000E
+    00000010 4E0B                   JSR         @R14
+    00000012 65D3                   MOV         R13,R5
+           tsktmpcnt.         98          if( E_OK != err )       continue;
+    00000014 2008                   TST         R0,R0
+    00000016 8BF9                   BF          L11
+           tsktmpcnt.         99    
+           tsktmpcnt.        100          TmpCntrlReq(msg);
+    00000018 B028                   BSR         __$TmpCntrlReq
+    0000001A 64D2                   MOV.L       @R13,R4    ; msg
+    0000001C 67D2                   MOV.L       @R13,R7    ; msg
+           tsktmpcnt.        101    
+           tsktmpcnt.        102          // メモリ解放
+           tsktmpcnt.        103          RelMpf( ID_MPF_TMPCNT, (VP)msg );
+    0000001E E60D                   MOV         #13,R6     ; H'0000000D
+    00000020 E567                   MOV         #103,R5    ; H'00000067
+    00000022 4C0B                   JSR         @R12
+    00000024 64B3                   MOV         R11,R4
+    00000026 AFF1                   BRA         L11
+    00000028 0009                   NOP
+           tsktmpcnt.        104      }
+           tsktmpcnt.        105    }
+           tsktmpcnt.        106    /******************************************************************************
+           tsktmpcnt.        107    * 
+           tsktmpcnt.        108    * [概要]  初期化
+           tsktmpcnt.        109    * [引数]  
+           tsktmpcnt.        110    * [戻値]  
+           tsktmpcnt.        111    * 
+           tsktmpcnt.        112    ******************************************************************************/
+           tsktmpcnt.        113    static void TmpCntInit()
+    0000002A              __$TmpCntInit:                   ; function: __$TmpCntInit
+                                                           ; frame size=4
+    0000002A 4F22                   STS.L       PR,@-R15
+    0000002C E604                   MOV         #4,R6      ; H'00000004
+           tsktmpcnt.        114    {
+           tsktmpcnt.        115      memset( &tmp.dat,   CLR,    sizeof( ST_TMPDAT ) );
+    0000002E D485                   MOV.L       L102+16,R4 ; __$tmp
+    00000030 D285                   MOV.L       L102+20,R2 ; _memset
+    00000032 420B                   JSR         @R2
+    00000034 E500                   MOV         #0,R5      ; H'00000000
+           tsktmpcnt.        116      check_main_serial_initialize();
+    00000036 4F26                   LDS.L       @R15+,PR
+           tsktmpcnt.        117      
+           tsktmpcnt.        118    }
+           tsktmpcnt.        119    //==============================================================================
+           tsktmpcnt.        120    //    Function    : check_main_serial_initialize
+           tsktmpcnt.        121    //    Description : メイン基板のシリアル検査の初期化
+           tsktmpcnt.        122    //    Parameters  : なし
+           tsktmpcnt.        123    //    Return      : なし
+           tsktmpcnt.        124    //    Note        : 
+           tsktmpcnt.        125    //    Global      : 
+           tsktmpcnt.        126    //==============================================================================
+           tsktmpcnt.        127    void  check_main_serial_initialize( void )
+    00000038              __$check_main_serial_initialize: ; function: __$check_main_serial_initialize
+                                                           ; frame size=0
+           tsktmpcnt.        128    {
+           tsktmpcnt.        129    #if FZ110 == 0
+           tsktmpcnt.        130      //----------------------------------
+           tsktmpcnt.        131      // ・16C554A
+           tsktmpcnt.        132      //----------------------------------
+           tsktmpcnt.        133      p16C554 = (struct St16550 *)SCI_16C554A_ADDR;
+           tsktmpcnt.        134      p16C554->REG3.LCR = 0x80 | 0x1B;            // ラインコントロール with デバイザ
+           tsktmpcnt.        135    //    p16C554->REG0.DLL = 0x20;                   // ボーレート : 4.9152MHz / 9600  / 16 = 32
+           tsktmpcnt.        136    //    p16C554->REG0.DLL = 0x10;                   // ボーレート : 4.9152MHz / 19200 / 16 = 16
+           tsktmpcnt.        137      p16C554->REG0.DLL = 0x08;                   // ボーレート : 4.9152MHz / 38400 / 16 = 8
+           tsktmpcnt.        138      p16C554->REG1.DLH = 0x00;                   // STOP = 1
+           tsktmpcnt.        139      p16C554->REG3.LCR = 0x00 | 0x1B;            // ラインコントロール
+           tsktmpcnt.        140      p16C554->REG2.FCR = 0x00;                   // FIFOディセーブル
+           tsktmpcnt.        141      p16C554->REG1.IER = 0x00;                   // 割り込み未使用
+           tsktmpcnt.        142    
+           tsktmpcnt.        143      p16C554->REG4.BIT.RTS = 0;
+           tsktmpcnt.        144      dly_tsk(RTS_WAIT);
+           tsktmpcnt.        145      
+           tsktmpcnt.        146    #else
+           tsktmpcnt.        147      //----------------------------------
+           tsktmpcnt.        148      // ・16C554D
+           tsktmpcnt.        149      //----------------------------------
+           tsktmpcnt.        150      p16C554 = (struct St16550 *)SCI_16C554D_ADDR;
+    00000038 D184                   MOV.L       L102+24,R1 ; H'0C00F018
+           tsktmpcnt.        151      p16C554->REG3.LCR = 0x80 | 0x1B;            // ラインコントロール with デバイザ
+    0000003A E09B                   MOV         #-101,R0   ; H'FFFFFF9B
+    0000003C D284                   MOV.L       L102+28,R2 ; _p16C554
+    0000003E 2212                   MOV.L       R1,@R2     ; p16C554
+           tsktmpcnt.        152    //    p16C554->REG0.DLL = 0x20;                   // ボーレート : 4.9152MHz / 9600 / 16 = 32
+           tsktmpcnt.        153      p16C554->REG0.DLL = 0x08;                   // ボーレート : 4.9152MHz / 38400 / 16 = 8
+    00000040 E508                   MOV         #8,R5      ; H'00000008
+    00000042 8013                   MOV.B       R0,@(3,R1) ; (p16C554)->LCR
+           tsktmpcnt.        154      p16C554->REG1.DLH = 0x00;                   // STOP = 1
+    00000044 E700                   MOV         #0,R7      ; H'00000000
+    00000046 6073                   MOV         R7,R0
+    00000048 6422                   MOV.L       @R2,R4     ; p16C554
+    0000004A 2450                   MOV.B       R5,@R4     ; (p16C554)->DLL
+    0000004C 6522                   MOV.L       @R2,R5     ; p16C554
+    0000004E 8051                   MOV.B       R0,@(1,R5) ; (p16C554)->DLH
+           tsktmpcnt.        155      p16C554->REG3.LCR = 0x00 | 0x1B;            // ラインコントロール
+    00000050 E01B                   MOV         #27,R0     ; H'0000001B
+    00000052 6122                   MOV.L       @R2,R1     ; p16C554
+    00000054 8013                   MOV.B       R0,@(3,R1) ; (p16C554)->LCR
+           tsktmpcnt.        156      p16C554->REG2.FCR = 0x00;                   // FIFOディセーブル
+    00000056 6073                   MOV         R7,R0
+    00000058 6422                   MOV.L       @R2,R4     ; p16C554
+    0000005A 8042                   MOV.B       R0,@(2,R4) ; (p16C554)->FCR
+           tsktmpcnt.        157      p16C554->REG1.IER = 0x00;                   // 割り込み未使用
+    0000005C 6722                   MOV.L       @R2,R7     ; p16C554
+    0000005E 8071                   MOV.B       R0,@(1,R7) ; (p16C554)->IER
+           tsktmpcnt.        158      
+           tsktmpcnt.        159      p16C554->REG4.BIT.RTS = 0;
+    00000060 6622                   MOV.L       @R2,R6     ; p16C554
+    00000062 36190004               BCLR.B      #1,@(4,R6) ; (part of)(p16C554)->p16C554
+    00000066 D27B                   MOV.L       L102+32,R2 ; _v4_dly_tsk
+    00000068 422B                   JMP         @R2
+    0000006A E402                   MOV         #2,R4      ; H'00000002
+           tsktmpcnt.        160      dly_tsk(RTS_WAIT);
+           tsktmpcnt.        161    #endif
+           tsktmpcnt.        162    }
+           tsktmpcnt.        163    
+           tsktmpcnt.        164    /***********************************************************************
+           tsktmpcnt.        165    * 
+           tsktmpcnt.        166    * [概要]  コマンドリクエスト
+           tsktmpcnt.        167    * [引数]  data:コマンドリクエスト電文
+           tsktmpcnt.        168    * [戻値]  －
+           tsktmpcnt.        169    * 
+           tsktmpcnt.        170    ***********************************************************************/
+           tsktmpcnt.        171    static void TmpCntrlReq( T_CMD_MSG* mrcv )
+    0000006C              __$TmpCntrlReq:                  ; function: __$TmpCntrlReq
+                                                           ; frame size=364
+    0000006C 49F0                   MOVMU.L     R9,@-R15
+    0000006E 03F0FED8               MOVI20      #-296,R3   ; H'FFFFFED8
+    00000072 3F3C                   ADD         R3,R15
+    00000074 E000                   MOV         #0,R0      ; H'00000000
+           tsktmpcnt.        172    {
+           tsktmpcnt.        173      ER result = E_RECV_NONE;
+           tsktmpcnt.        174      ST_CNTLDATA   dbgdata;
+           tsktmpcnt.        175      unsigned char prid1;
+           tsktmpcnt.        176      unsigned char bcid;
+           tsktmpcnt.        177      unsigned char msgid;
+           tsktmpcnt.        178      unsigned char inf;
+           tsktmpcnt.        179      unsigned char inf2;
+           tsktmpcnt.        180      unsigned char dat;
+           tsktmpcnt.        181      unsigned short tempdat = CLR;
+           tsktmpcnt.        182      INT waittim;
+           tsktmpcnt.        183      
+           tsktmpcnt.        184      prid1  = mrcv->msgdata.prid1;
+           tsktmpcnt.        185      bcid  = mrcv->msgdata.bcid;
+           tsktmpcnt.        186      msgid = mrcv->msgdata.msgid;
+           tsktmpcnt.        187      inf   = mrcv->msgdata.inf;
+           tsktmpcnt.        188      inf2  = mrcv->msgdata.inf2;
+           tsktmpcnt.        189      
+           tsktmpcnt.        190      switch(msgid)
+    00000076 E59D                   MOV         #-99,R5    ; H'FFFFFF9D
+    00000078 0F05                   MOV.W       R0,@(R0,R15); tempdat
+    0000007A 655C                   EXTU.B      R5,R5
+    0000007C 3B41801B               MOVU.B      @(27,R4),R11; (mrcv)->msgid
+    00000080 31414018               MOV.B       @(24:12,R4),R1; (mrcv)->prid1
+    00000084 3B50                   CMP/EQ      R5,R11
+    00000086 3F110120               MOV.B       R1,@(288:12,R15); prid1
+    0000008A 3D41801A               MOVU.B      @(26,R4),R13; (mrcv)->bcid
+    0000008E 3941801C               MOVU.B      @(28,R4),R9; (mrcv)->inf
+    00000092 3A41801D               MOVU.B      @(29,R4),R10; (mrcv)->inf2
+    00000096 8D0F                   BT/S        L25
+    00000098 6C43                   MOV         R4,R12
+    0000009A 60B3                   MOV         R11,R0
+    0000009C 881A                   CMP/EQ      #26,R0
+    0000009E 890B                   BT          L25
+    000000A0 E69E                   MOV         #-98,R6    ; H'FFFFFF9E
+    000000A2 666C                   EXTU.B      R6,R6
+    000000A4 3B60                   CMP/EQ      R6,R11
+    000000A6 8907                   BT          L25
+    000000A8 881B                   CMP/EQ      #27,R0
+    000000AA 8905                   BT          L25
+    000000AC E29F                   MOV         #-97,R2    ; H'FFFFFF9F
+    000000AE 622C                   EXTU.B      R2,R2
+    000000B0 3B20                   CMP/EQ      R2,R11
+    000000B2 893E                   BT          L29
+    000000B4 A046                   BRA         L30
+    000000B6 0009                   NOP
+    000000B8              L25:
+           tsktmpcnt.        191      {
+           tsktmpcnt.        192      case ID_MSG_TMPSET:
+           tsktmpcnt.        193      case ID_MSG_TMPSET_HS:
+           tsktmpcnt.        194      case ID_MSG_TMPGET:
+           tsktmpcnt.        195      case ID_MSG_TMPGET_HS:
+           tsktmpcnt.        196          // 一度、温度データ取得
+           tsktmpcnt.        197          TmpSendDataMake( ID_MSG_TMPGET, 0 );
+    000000B8 EE9E                   MOV         #-98,R14   ; H'FFFFFF9E
+    000000BA E500                   MOV         #0,R5      ; H'00000000
+    000000BC 6EEC                   EXTU.B      R14,R14
+    000000BE B0D3                   BSR         __$TmpSendDataMake
+    000000C0 64E3                   MOV         R14,R4
+           tsktmpcnt.        198          result = TmpRecvProc( ID_MSG_TMPGET, &tempdat );
+    000000C2 65F3                   MOV         R15,R5
+    000000C4 B043                   BSR         __$TmpRecvProc
+    000000C6 64E3                   MOV         R14,R4
+           tsktmpcnt.        199          
+           tsktmpcnt.        200          if(
+    000000C8 E29D                   MOV         #-99,R2    ; H'FFFFFF9D
+    000000CA 622C                   EXTU.B      R2,R2
+    000000CC 3B20                   CMP/EQ      R2,R11
+    000000CE 8D03                   BT/S        L32
+    000000D0 6703                   MOV         R0,R7
+    000000D2 60B3                   MOV         R11,R0
+    000000D4 881A                   CMP/EQ      #26,R0
+    000000D6 8B07                   BF          L33
+    000000D8              L32:
+           tsktmpcnt.        201              ( msgid == ID_MSG_TMPSET )    ||
+           tsktmpcnt.        202              ( msgid == ID_MSG_TMPSET_HS )
+           tsktmpcnt.        203          )
+           tsktmpcnt.        204          {
+           tsktmpcnt.        205              dat  = mrcv->msgdata.data[0];
+           tsktmpcnt.        206              TmpSendDataMake( msgid, dat );
+    000000D8 35C14024               MOV.B       @(36:12,R12),R5; mrcv->data[]
+    000000DC B0C4                   BSR         __$TmpSendDataMake
+    000000DE 64B3                   MOV         R11,R4
+           tsktmpcnt.        207              result = TmpRecvProc( msgid, &tempdat );
+    000000E0 65F3                   MOV         R15,R5
+    000000E2 B034                   BSR         __$TmpRecvProc
+    000000E4 64B3                   MOV         R11,R4
+    000000E6 6703                   MOV         R0,R7
+    000000E8              L33:
+           tsktmpcnt.        208          }
+           tsktmpcnt.        209          
+           tsktmpcnt.        210          // 応答メッセージ作成
+           tsktmpcnt.        211          CmdMakeResponse(    &dbgdata,
+           tsktmpcnt.        212                              PARAM3,                                     // パラメータ数
+           tsktmpcnt.        213                              STRTBL_MSG[msgid],                          // コマンド文字列
+           tsktmpcnt.        214                              result,                                     // エラーコード
+           tsktmpcnt.        215    
+           tsktmpcnt.        216                              tempdat,                                    // 
+           tsktmpcnt.        217                              0,                                          // 
+           tsktmpcnt.        218                              0,                                          // 
+           tsktmpcnt.        219                              0,                                          // 
+           tsktmpcnt.        220                              0,                                          // 
+           tsktmpcnt.        221    
+           tsktmpcnt.        222                              0,                                          // 
+           tsktmpcnt.        223                              0,                                          // 
+           tsktmpcnt.        224                              0,                                          // 
+           tsktmpcnt.        225                              0,                                          // 
+           tsktmpcnt.        226                              0                                           // 
+           tsktmpcnt.        227                          );
+    000000E8 E600                   MOV         #0,R6      ; H'00000000
+    000000EA 2F66                   MOV.L       R6,@-R15
+    000000EC 2F66                   MOV.L       R6,@-R15
+    000000EE 2F66                   MOV.L       R6,@-R15
+    000000F0 2F66                   MOV.L       R6,@-R15
+    000000F2 2F66                   MOV.L       R6,@-R15
+    000000F4 2F66                   MOV.L       R6,@-R15
+    000000F6 2F66                   MOV.L       R6,@-R15
+    000000F8 2F66                   MOV.L       R6,@-R15
+    000000FA 2F66                   MOV.L       R6,@-R15
+    000000FC 34F19012               MOVU.W      @(36,R15),R4; tempdat
+    00000100 2F46                   MOV.L       R4,@-R15
+    00000102 60B3                   MOV         R11,R0
+    00000104 D254                   MOV.L       L102+36,R2 ; _STRTBL_MSG
+    00000106 4008                   SHLL2       R0
+    00000108 E503                   MOV         #3,R5      ; H'00000003
+    0000010A 062E                   MOV.L       @(R0,R2),R6; STRTBL_MSG[]
+    0000010C 64F3                   MOV         R15,R4
+    0000010E DC53                   MOV.L       L102+40,R12; _CmdMakeResponse
+    00000110 4C0B                   JSR         @R12
+    00000112 742C                   ADD         #44,R4
+    00000114 7F28                   ADD         #40,R15
+           tsktmpcnt.        228          
+           tsktmpcnt.        229          // 応答メッセージ送信
+           tsktmpcnt.        230          CmdEndResponse  (
+           tsktmpcnt.        231                              ID_TSK_TMPCNT,                              // ﾀｽｸID
+           tsktmpcnt.        232                              prid1,                                      // PROCID
+           tsktmpcnt.        233                              bcid,                                       // BCID
+           tsktmpcnt.        234                              msgid,                                      // ﾒｯｾｰｼﾞID
+           tsktmpcnt.        235                              inf,                                        // 情報1
+           tsktmpcnt.        236                              inf2,                                       // 情報2
+           tsktmpcnt.        237                              &dbgdata                                    // DATA
+           tsktmpcnt.        238                          );
+    00000116 6EF3                   MOV         R15,R14
+    00000118 7E04                   ADD         #4,R14
+    0000011A 2FE6                   MOV.L       R14,@-R15
+    0000011C 2FA6                   MOV.L       R10,@-R15
+    0000011E 2F96                   MOV.L       R9,@-R15
+    00000120 E40E                   MOV         #14,R4     ; H'0000000E
+    00000122 35F1412C               MOV.B       @(300:12,R15),R5; prid1
+    00000126 66D3                   MOV         R13,R6
+    00000128 D14D                   MOV.L       L102+44,R1 ; _CmdEndResponse
+    0000012A 410B                   JSR         @R1
+    0000012C 67B3                   MOV         R11,R7
+    0000012E A009                   BRA         L30
+    00000130 7F0C                   ADD         #12,R15
+    00000132              L29:
+           tsktmpcnt.        239          break;
+           tsktmpcnt.        240          
+           tsktmpcnt.        241          
+           tsktmpcnt.        242      case ID_MSG_TMPGETR:
+           tsktmpcnt.        243          TmpSendDataMake( ID_MSG_TMPGET, 0 );
+    00000132 E49E                   MOV         #-98,R4    ; H'FFFFFF9E
+    00000134 3F410124               MOV.B       R4,@(292:12,R15)
+    00000138 B096                   BSR         __$TmpSendDataMake
+    0000013A E500                   MOV         #0,R5      ; H'00000000
+    0000013C 34F14124               MOV.B       @(292:12,R15),R4
+           tsktmpcnt.        244          result = TmpRecvProc( ID_MSG_TMPGET, &tempdat );
+    00000140 B005                   BSR         __$TmpRecvProc
+    00000142 65F3                   MOV         R15,R5
+    00000144              L30:
+    00000144 03000128               MOVI20      #296,R3    ; H'00000128
+    00000148 3F3C                   ADD         R3,R15
+    0000014A 49F4                   MOVMU.L     @R15+,R9
+           tsktmpcnt.        245          break;
+           tsktmpcnt.        246          
+           tsktmpcnt.        247          
+           tsktmpcnt.        248      default:
+           tsktmpcnt.        249          break;
+           tsktmpcnt.        250      }
+           tsktmpcnt.        251    }
+    0000014C 006B                   RTS/N
+           tsktmpcnt.        252    /***********************************************************************
+           tsktmpcnt.        253    * 
+           tsktmpcnt.        254    * [概要]  コマンドリクエスト
+           tsktmpcnt.        255    * [引数]  
+           tsktmpcnt.        256    * [戻値]  温度データ
+           tsktmpcnt.        257    * [備考]  
+           tsktmpcnt.        258    *                            0  1  2  3  4  5  6  7
+           tsktmpcnt.        259    *   ID_MSG_TMPGE     [SEND] 01 03 00 00 00 02 C4 0B
+           tsktmpcnt.        260    *   ID_MSG_TMPGE     [RECV] 01 03 04 00 1B 8A 3D        ※[3][4]温度
+           tsktmpcnt.        261    * 
+           tsktmpcnt.        262    *   ID_MSG_TMPSET    [SEND] 01 06 00 2C 00 1C 49 CA
+           tsktmpcnt.        263    *   ID_MSG_TMPSET    [RECV] 01 06 00 2C 00 1C 49 CA
+           tsktmpcnt.        264    * 
+           tsktmpcnt.        265    ***********************************************************************/
+           tsktmpcnt.        266    static ER TmpRecvProc( unsigned char msgid, unsigned short *temp )
+    0000014E              __$TmpRecvProc:                  ; function: __$TmpRecvProc
+                                                           ; frame size=24
+    0000014E 4BF0                   MOVMU.L     R11,@-R15
+    00000150 7FFC                   ADD         #-4,R15
+           tsktmpcnt.        267    {
+           tsktmpcnt.        268      ER result = E_CONTINUE;
+           tsktmpcnt.        269      unsigned int timeoutflg = CLR;
+           tsktmpcnt.        270      unsigned char rxdat = CLR;
+           tsktmpcnt.        271      unsigned char i;
+           tsktmpcnt.        272      unsigned char size;
+           tsktmpcnt.        273    
+           tsktmpcnt.        274      memset( &rxbuf[0], CLR, sizeof( rxbuf ) );
+    00000152 6B53                   MOV         R5,R11
+    00000154 E674                   MOV         #116,R6    ; H'00000074
+    00000156 DC43                   MOV.L       L102+48,R12; __$rxbuf
+    00000158 E500                   MOV         #0,R5      ; H'00000000
+    0000015A 6D43                   MOV         R4,R13
+    0000015C D23A                   MOV.L       L102+20,R2 ; _memset
+    0000015E 420B                   JSR         @R2
+    00000160 64C3                   MOV         R12,R4
+           tsktmpcnt.        275      
+           tsktmpcnt.        276      // Leagic追加2023.8.25(Start)
+           tsktmpcnt.        277      result = TmpDataRecv( &rxbuf[0], &size );
+    00000162 65F3                   MOV         R15,R5
+    00000164 B0D5                   BSR         __$TmpDataRecv
+    00000166 64C3                   MOV         R12,R4
+    00000168 E79E                   MOV         #-98,R7    ; H'FFFFFF9E
+           tsktmpcnt.        278      
+           tsktmpcnt.        279      /* データ内容チェック */
+           tsktmpcnt.        280      if(
+    0000016A 61DC                   EXTU.B      R13,R1
+    0000016C 677C                   EXTU.B      R7,R7
+    0000016E 3170                   CMP/EQ      R7,R1
+    00000170 8D0D                   BT/S        L40
+    00000172 6E03                   MOV         R0,R14
+    00000174 E29F                   MOV         #-97,R2    ; H'FFFFFF9F
+    00000176 622C                   EXTU.B      R2,R2
+    00000178 3120                   CMP/EQ      R2,R1
+    0000017A 8908                   BT          L40
+    0000017C 6013                   MOV         R1,R0
+    0000017E 881B                   CMP/EQ      #27,R0
+    00000180 8905                   BT          L40
+    00000182 E29D                   MOV         #-99,R2    ; H'FFFFFF9D
+    00000184 622C                   EXTU.B      R2,R2
+    00000186 3120                   CMP/EQ      R2,R1
+    00000188 8901                   BT          L40
+    0000018A 881A                   CMP/EQ      #26,R0
+    0000018C 8B21                   BF          L44
+    0000018E              L40:
+    0000018E E7FF                   MOV         #-1,R7     ; H'FFFFFFFF
+           tsktmpcnt.        281              ( msgid == ID_MSG_TMPGET )    ||
+           tsktmpcnt.        282              ( msgid == ID_MSG_TMPGETR )   ||
+           tsktmpcnt.        283              ( msgid == ID_MSG_TMPGET_HS ) ||
+           tsktmpcnt.        284              ( msgid == ID_MSG_TMPSET )    ||
+           tsktmpcnt.        285              ( msgid == ID_MSG_TMPSET_HS ) 
+           tsktmpcnt.        286          ){
+           tsktmpcnt.        287          for( i = 0; i < size; i++ ){
+    00000190 E600                   MOV         #0,R6      ; H'00000000
+    00000192 34F18000               MOVU.B      @(0,R15),R4; size
+    00000196 A019                   BRA         L45
+    00000198 677C                   EXTU.B      R7,R7
+    0000019A              L46:
+           tsktmpcnt.        288              switch( i ){
+    0000019A 2008                   TST         R0,R0
+    0000019C 8903                   BT          L48
+    0000019E 8801                   CMP/EQ      #1,R0
+    000001A0 8908                   BT          L49
+    000001A2 A010                   BRA         L50
+    000001A4 0009                   NOP
+    000001A6              L48:
+           tsktmpcnt.        289                  case 0:// スレーブアドレス
+           tsktmpcnt.        290                      if( rxbuf[i] != SLAVE_ADR ){
+    000001A6 666C                   EXTU.B      R6,R6
+    000001A8 6063                   MOV         R6,R0
+    000001AA 00CC                   MOV.B       @(R0,R12),R0; rxbuf[]
+    000001AC 8801                   CMP/EQ      #1,R0
+    000001AE 8B09                   BF          L51
+    000001B0 A009                   BRA         L50
+    000001B2 0009                   NOP
+    000001B4              L49:
+           tsktmpcnt.        291                          result = E_TEMP_FAIL;
+           tsktmpcnt.        292                      }
+           tsktmpcnt.        293                  break;
+           tsktmpcnt.        294                  case 1:// ファンクションコード
+           tsktmpcnt.        295                      if( ( rxbuf[i] != FC_TMPGET ) && ( rxbuf[i] != FC_TMPSET ) ){
+    000001B4 666C                   EXTU.B      R6,R6
+    000001B6 6063                   MOV         R6,R0
+    000001B8 02CC                   MOV.B       @(R0,R12),R2; rxbuf[]
+    000001BA 602C                   EXTU.B      R2,R0
+    000001BC 8803                   CMP/EQ      #3,R0
+    000001BE 8902                   BT          L50
+    000001C0 8806                   CMP/EQ      #6,R0
+    000001C2 8900                   BT          L50
+    000001C4              L51:
+    000001C4 6E73                   MOV         R7,R14
+    000001C6              L50:
+           tsktmpcnt.        296                          result = E_TEMP_FAIL;
+           tsktmpcnt.        297                      }
+           tsktmpcnt.        298                  break;
+           tsktmpcnt.        299                  default:
+           tsktmpcnt.        300                      /* DO NOTHING */
+           tsktmpcnt.        301                  break;
+           tsktmpcnt.        302              }
+           tsktmpcnt.        303              if( result != E_SUCCESS ){
+    000001C6 2EE8                   TST         R14,R14
+    000001C8 8B03                   BF          L44
+    000001CA 7601                   ADD         #1,R6
+    000001CC              L45:
+    000001CC 606C                   EXTU.B      R6,R0
+    000001CE 3043                   CMP/GE      R4,R0
+    000001D0 8BE3                   BF          L46
+    000001D2              L44:
+           tsktmpcnt.        304                      /* 結果が失敗の場合判定処理を中断する */
+           tsktmpcnt.        305                  break;
+           tsktmpcnt.        306              }
+           tsktmpcnt.        307          }
+           tsktmpcnt.        308      }
+           tsktmpcnt.        309      /* データサイズチェック */
+           tsktmpcnt.        310      /* データ内容が合っていた場合のみ実行する */
+           tsktmpcnt.        311      if( result == E_SUCCESS ){
+    000001D2 2EE8                   TST         R14,R14
+    000001D4 8B2A                   BF          L55
+           tsktmpcnt.        312          if(
+    000001D6 E29D                   MOV         #-99,R2    ; H'FFFFFF9D
+    000001D8 622C                   EXTU.B      R2,R2
+    000001DA 3120                   CMP/EQ      R2,R1
+    000001DC 8902                   BT          L57
+    000001DE 6013                   MOV         R1,R0
+    000001E0 881A                   CMP/EQ      #26,R0
+    000001E2 8B06                   BF          L58
+    000001E4              L57:
+           tsktmpcnt.        313              ( msgid == ID_MSG_TMPSET )||
+           tsktmpcnt.        314              ( msgid == ID_MSG_TMPSET_HS )
+           tsktmpcnt.        315              )
+           tsktmpcnt.        316              {
+           tsktmpcnt.        317                  if( size == TMPSET_RCVSIZE )
+    000001E4 60F0                   MOV.B       @R15,R0    ; size
+    000001E6 EEFF                   MOV         #-1,R14    ; H'FFFFFFFF
+    000001E8 8808                   CMP/EQ      #8,R0
+    000001EA 8F02                   BF/S        L58
+    000001EC 6EEC                   EXTU.B      R14,R14
+           tsktmpcnt.        318                  {
+           tsktmpcnt.        319                      // ★CRCチェック記述。今は無条件に成功
+           tsktmpcnt.        320    
+           tsktmpcnt.        321                      *temp  = 0x0000;
+    000001EE EE00                   MOV         #0,R14     ; H'00000000
+    000001F0 2BE1                   MOV.W       R14,@R11   ; *(temp)
+    000001F2              L58:
+           tsktmpcnt.        322                      result = E_SUCCESS;
+           tsktmpcnt.        323                  }
+           tsktmpcnt.        324                  else{
+           tsktmpcnt.        325                      result = E_TEMP_FAIL;
+           tsktmpcnt.        326                  }
+           tsktmpcnt.        327              }
+           tsktmpcnt.        328          if(
+    000001F2 E79E                   MOV         #-98,R7    ; H'FFFFFF9E
+    000001F4 677C                   EXTU.B      R7,R7
+    000001F6 3170                   CMP/EQ      R7,R1
+    000001F8 8906                   BT          L61
+    000001FA E29F                   MOV         #-97,R2    ; H'FFFFFF9F
+    000001FC 622C                   EXTU.B      R2,R2
+    000001FE 3120                   CMP/EQ      R2,R1
+    00000200 8902                   BT          L61
+    00000202 6013                   MOV         R1,R0
+    00000204 881B                   CMP/EQ      #27,R0
+    00000206 8B11                   BF          L55
+    00000208              L61:
+           tsktmpcnt.        329              ( msgid == ID_MSG_TMPGET ) ||
+           tsktmpcnt.        330              ( msgid == ID_MSG_TMPGETR )||
+           tsktmpcnt.        331              ( msgid == ID_MSG_TMPGET_HS )
+           tsktmpcnt.        332              )
+           tsktmpcnt.        333              {
+           tsktmpcnt.        334                  if( size == TMPGET_RCVSIZE )
+    00000208 60F0                   MOV.B       @R15,R0    ; size
+    0000020A EEFF                   MOV         #-1,R14    ; H'FFFFFFFF
+    0000020C 8807                   CMP/EQ      #7,R0
+    0000020E 8F08                   BF/S        L64
+    00000210 6EEC                   EXTU.B      R14,R14
+           tsktmpcnt.        335                  {
+           tsktmpcnt.        336                      // ★CRCチェック記述。今は無条件に成功
+           tsktmpcnt.        337                      
+           tsktmpcnt.        338                      *temp = ( rxbuf[3] * 0x100 ) + rxbuf[4];
+    00000212 36C18003               MOVU.B      @(3,R12),R6; rxbuf[]
+    00000216 30C18004               MOVU.B      @(4,R12),R0; rxbuf[]
+    0000021A 4618                   SHLL8       R6
+           tsktmpcnt.        339                      result = E_SUCCESS;
+    0000021C EE00                   MOV         #0,R14     ; H'00000000
+    0000021E 360C                   ADD         R0,R6
+    00000220 2B61                   MOV.W       R6,@R11    ; *(temp)
+    00000222              L64:
+           tsktmpcnt.        340                  }
+           tsktmpcnt.        341                  else{
+           tsktmpcnt.        342                      result = E_TEMP_FAIL;
+           tsktmpcnt.        343                  }
+           tsktmpcnt.        344                  
+           tsktmpcnt.        345                  if( result == E_SUCCESS )
+    00000222 2EE8                   TST         R14,R14
+    00000224 8B02                   BF          L55
+           tsktmpcnt.        346                  {
+           tsktmpcnt.        347                      TmpDataSet(rxbuf[4]);
+    00000226 84C4                   MOV.B       @(4,R12),R0; rxbuf[]
+    00000228 B090                   BSR         _TmpDataSet
+    0000022A 6403                   MOV         R0,R4
+    0000022C              L55:
+           tsktmpcnt.        348                  }
+           tsktmpcnt.        349              }
+           tsktmpcnt.        350          
+           tsktmpcnt.        351      }
+           tsktmpcnt.        352      // Leagic追加2023.8.25(End)
+           tsktmpcnt.        353      
+           tsktmpcnt.        354      return( result );
+    0000022C 60E3                   MOV         R14,R0
+    0000022E 7F04                   ADD         #4,R15
+    00000230 4BF4                   MOVMU.L     @R15+,R11
+           tsktmpcnt.        355    }
+    00000232 006B                   RTS/N
+    00000234              L102:
+    00000234 <00000000>             .DATA.L     _msg
+    00000238 <00000000>             .DATA.L     _v4_trcv_mbx
+    0000023C <00000000>             .DATA.L     L104
+    00000240 <00000000>             .DATA.L     _api_rel_mpf
+    00000244 <00000000>             .DATA.L     __$tmp
+    00000248 <00000000>             .DATA.L     _memset
+    0000024C 0C00F018               .DATA.L     H'0C00F018
+    00000250 <00000000>             .DATA.L     _p16C554
+    00000254 <00000000>             .DATA.L     _v4_dly_tsk
+    00000258 <00000000>             .DATA.L     _STRTBL_MSG
+    0000025C <00000000>             .DATA.L     _CmdMakeResponse
+    00000260 <00000000>             .DATA.L     _CmdEndResponse
+    00000264 <00000000>             .DATA.L     __$rxbuf
+           tsktmpcnt.        356    /***********************************************************************
+           tsktmpcnt.        357    * 
+           tsktmpcnt.        358    * [概要]  
+           tsktmpcnt.        359    * [引数]  
+           tsktmpcnt.        360    * [戻値]  
+           tsktmpcnt.        361    * 
+           tsktmpcnt.        362    ***********************************************************************/
+           tsktmpcnt.        363    static void TmpSendDataMake( unsigned char msgid,unsigned char dat )
+    00000268              __$TmpSendDataMake:              ; function: __$TmpSendDataMake
+                                                           ; frame size=8
+    00000268 4EF0                   MOVMU.L     R14,@-R15
+    0000026A E69D                   MOV         #-99,R6    ; H'FFFFFF9D
+           tsktmpcnt.        364    {
+           tsktmpcnt.        365      switch(msgid)
+    0000026C 604C                   EXTU.B      R4,R0
+    0000026E 666C                   EXTU.B      R6,R6
+    00000270 3060                   CMP/EQ      R6,R0
+    00000272 8901                   BT          L74
+    00000274 881A                   CMP/EQ      #26,R0
+    00000276 8B0D                   BF          L75
+    00000278              L74:
+           tsktmpcnt.        366      {
+           tsktmpcnt.        367      case ID_MSG_TMPSET:
+           tsktmpcnt.        368      case ID_MSG_TMPSET_HS:
+           tsktmpcnt.        369          txbuf[0] = 0x01;// スレーブアドレス
+    00000278 DE4C                   MOV.L       L103,R14   ; __$txbuf
+           tsktmpcnt.        370          txbuf[1] = 0x06;// ファンクションコード
+           tsktmpcnt.        371          txbuf[2] = 0x00;// レジスタアドレス
+    0000027A E600                   MOV         #0,R6      ; H'00000000
+    0000027C E401                   MOV         #1,R4      ; H'00000001
+    0000027E E006                   MOV         #6,R0      ; H'00000006
+    00000280 2E40                   MOV.B       R4,@R14    ; txbuf[]
+    00000282 80E1                   MOV.B       R0,@(1,R14); txbuf[]
+    00000284 6063                   MOV         R6,R0
+    00000286 80E2                   MOV.B       R0,@(2,R14); txbuf[]
+           tsktmpcnt.        372          txbuf[3] = 0x2c;// レジスタアドレス
+    00000288 E02C                   MOV         #44,R0     ; H'0000002C
+    0000028A 80E3                   MOV.B       R0,@(3,R14); txbuf[]
+           tsktmpcnt.        373          txbuf[4] = 0x00;// 書込みデータ
+    0000028C 6063                   MOV         R6,R0
+    0000028E 80E4                   MOV.B       R0,@(4,R14); txbuf[]
+           tsktmpcnt.        374          txbuf[5] = dat; // 書込みデータ
+    00000290 A010                   BRA         L76
+    00000292 6053                   MOV         R5,R0
+    00000294              L75:
+    00000294 E69E                   MOV         #-98,R6    ; H'FFFFFF9E
+    00000296 666C                   EXTU.B      R6,R6
+    00000298 3060                   CMP/EQ      R6,R0
+    0000029A 8901                   BT          L78
+    0000029C 881B                   CMP/EQ      #27,R0
+    0000029E 8B12                   BF          L79
+    000002A0              L78:
+           tsktmpcnt.        375          break;
+           tsktmpcnt.        376          
+           tsktmpcnt.        377      case ID_MSG_TMPGET:
+           tsktmpcnt.        378      case ID_MSG_TMPGET_HS:
+           tsktmpcnt.        379          txbuf[0] = 0x01;// スレーブアドレス
+    000002A0 DE42                   MOV.L       L103,R14   ; __$txbuf
+    000002A2 E401                   MOV         #1,R4      ; H'00000001
+           tsktmpcnt.        380          txbuf[1] = 0x03;// ファンクションコード
+    000002A4 E003                   MOV         #3,R0      ; H'00000003
+    000002A6 2E40                   MOV.B       R4,@R14    ; txbuf[]
+    000002A8 80E1                   MOV.B       R0,@(1,R14); txbuf[]
+           tsktmpcnt.        381          txbuf[2] = 0x00;// レジスタアドレス
+    000002AA E000                   MOV         #0,R0      ; H'00000000
+    000002AC 80E2                   MOV.B       R0,@(2,R14); txbuf[]
+           tsktmpcnt.        382          txbuf[3] = 0x00;// レジスタアドレス
+    000002AE 80E3                   MOV.B       R0,@(3,R14); txbuf[]
+           tsktmpcnt.        383          txbuf[4] = 0x00;// 個数
+    000002B0 80E4                   MOV.B       R0,@(4,R14); txbuf[]
+           tsktmpcnt.        384          txbuf[5] = 0x01;// 個数
+    000002B2 6043                   MOV         R4,R0
+    000002B4              L76:
+           tsktmpcnt.        385          break;
+           tsktmpcnt.        386          
+           tsktmpcnt.        387      default:
+           tsktmpcnt.        388          return;
+           tsktmpcnt.        389      }
+           tsktmpcnt.        390    
+           tsktmpcnt.        391      CrcCal( &txbuf[0], 6 );
+    000002B4 80E5                   MOV.B       R0,@(5,R14); txbuf[]
+    000002B6 E506                   MOV         #6,R5      ; H'00000006
+    000002B8 B050                   BSR         __$CrcCal
+    000002BA 64E3                   MOV         R14,R4
+    000002BC E508                   MOV         #8,R5      ; H'00000008
+           tsktmpcnt.        392      TmpDataSend(&txbuf[0], SEND_SIZE);
+    000002BE 64E3                   MOV         R14,R4
+    000002C0 4EF4                   MOVMU.L     @R15+,R14
+    000002C2 A002                   BRA         __$TmpDataSend
+    000002C4 0009                   NOP
+    000002C6              L79:
+    000002C6 4EF4                   MOVMU.L     @R15+,R14
+    000002C8 006B                   RTS/N
+           tsktmpcnt.        393    }
+           tsktmpcnt.        394    /***********************************************************************
+           tsktmpcnt.        395    * 
+           tsktmpcnt.        396    * [概要]  
+           tsktmpcnt.        397    * [引数]  
+           tsktmpcnt.        398    * [戻値]  
+           tsktmpcnt.        399    * 
+           tsktmpcnt.        400    ***********************************************************************/
+           tsktmpcnt.        401    static ER TmpDataSend( unsigned char *buf, unsigned char siz )
+    000002CA              __$TmpDataSend:                  ; function: __$TmpDataSend
+                                                           ; frame size=20
+    000002CA 4BF0                   MOVMU.L     R11,@-R15
+    000002CC D238                   MOV.L       L103+4,R2  ; H'0C00F018
+           tsktmpcnt.        402    {
+           tsktmpcnt.        403      ER result = E_SUCCESS;
+           tsktmpcnt.        404      unsigned char loop;
+           tsktmpcnt.        405      unsigned char THRE;                         // Leagic追加2023.8.22
+           tsktmpcnt.        406      
+           tsktmpcnt.        407    #if FZ110 == 0
+           tsktmpcnt.        408      p16C554 = (struct St16550 *)SCI_16C554A_ADDR;//RS232C
+           tsktmpcnt.        409    #else
+           tsktmpcnt.        410      p16C554 = (struct St16550 *)SCI_16C554D_ADDR;//RS485
+    000002CE 6E43                   MOV         R4,R14
+    000002D0 DB38                   MOV.L       L103+8,R11 ; _p16C554
+    000002D2 2B22                   MOV.L       R2,@R11    ; p16C554
+    000002D4 E402                   MOV         #2,R4      ; H'00000002
+           tsktmpcnt.        411    #endif
+           tsktmpcnt.        412      p16C554->REG4.BIT.RTS = 1;
+    000002D6 32191004               BSET.B      #1,@(4,R2) ; (part of)(p16C554)->p16C554
+           tsktmpcnt.        413      dly_tsk(RTS_WAIT);
+    000002DA DC37                   MOV.L       L103+12,R12; _v4_dly_tsk
+    000002DC 4C0B                   JSR         @R12
+    000002DE 6D53                   MOV         R5,R13
+    000002E0 64DC                   EXTU.B      R13,R4
+           tsktmpcnt.        414      
+           tsktmpcnt.        415      // Leagic追加2023.8.22(Start)
+           tsktmpcnt.        416      for( loop = 0; loop < siz; loop++ )
+    000002E2 A009                   BRA         L81
+    000002E4 E600                   MOV         #0,R6      ; H'00000000
+    000002E6              L82:
+           tsktmpcnt.        417      {
+           tsktmpcnt.        418          THRE = p16C554->REG5.BIT.THRE;
+    000002E6 65B2                   MOV.L       @R11,R5    ; p16C554
+    000002E8 35593005               BLD.B       #5,@(5,R5) ; (part of)(p16C554)->p16C554
+    000002EC 8B02                   BF          L84
+           tsktmpcnt.        419          if( THRE == 1 ){
+           tsktmpcnt.        420              p16C554->REG0.THR = *buf;
+    000002EE 62E4                   MOV.B       @R14+,R2   ; *(buf)
+    000002F0 A001                   BRA         L85
+    000002F2 2520                   MOV.B       R2,@R5     ; (p16C554)->THR
+    000002F4              L84:
+           tsktmpcnt.        421              buf++;
+           tsktmpcnt.        422          }
+           tsktmpcnt.        423          else{
+           tsktmpcnt.        424              loop--;
+    000002F4 76FF                   ADD         #-1,R6
+    000002F6              L85:
+    000002F6 7601                   ADD         #1,R6
+    000002F8              L81:
+    000002F8 626C                   EXTU.B      R6,R2
+    000002FA 3243                   CMP/GE      R4,R2
+    000002FC 8BF3                   BF          L82
+           tsktmpcnt.        425          }
+           tsktmpcnt.        426      }
+           tsktmpcnt.        427      dly_tsk(10);
+    000002FE 4C0B                   JSR         @R12
+    00000300 E40A                   MOV         #10,R4     ; H'0000000A
+           tsktmpcnt.        428      // Leagic追加2023.8.22(End)
+           tsktmpcnt.        429      
+           tsktmpcnt.        430      p16C554->REG4.BIT.RTS = 0;
+    00000302 66B2                   MOV.L       @R11,R6    ; p16C554
+    00000304 36190004               BCLR.B      #1,@(4,R6) ; (part of)(p16C554)->p16C554
+    00000308 4C0B                   JSR         @R12
+    0000030A E402                   MOV         #2,R4      ; H'00000002
+           tsktmpcnt.        431      dly_tsk(RTS_WAIT);
+           tsktmpcnt.        432    
+           tsktmpcnt.        433      return( result );
+    0000030C E000                   MOV         #0,R0      ; H'00000000
+    0000030E 4BF4                   MOVMU.L     @R15+,R11
+           tsktmpcnt.        434    }
+    00000310 006B                   RTS/N
+           tsktmpcnt.        435    
+           tsktmpcnt.        436    /***********************************************************************
+           tsktmpcnt.        437    * 
+           tsktmpcnt.        438    * [概要]  
+           tsktmpcnt.        439    * [引数]  
+           tsktmpcnt.        440    * [戻値]  
+           tsktmpcnt.        441    * 
+           tsktmpcnt.        442    ***********************************************************************/
+           tsktmpcnt.        443    static ER TmpDataRecv( unsigned char *buf, unsigned char *siz )
+    00000312              __$TmpDataRecv:                  ; function: __$TmpDataRecv
+                                                           ; frame size=4
+    00000312 2FE6                   MOV.L       R14,@-R15
+           tsktmpcnt.        444    {
+           tsktmpcnt.        445      ER result = E_SUCCESS;
+           tsktmpcnt.        446      unsigned char DR;
+           tsktmpcnt.        447      unsigned char RDRF;
+           tsktmpcnt.        448      unsigned long timeoutflg = CLR;
+           tsktmpcnt.        449      unsigned char size = CLR;
+           tsktmpcnt.        450    #if 0
+           tsktmpcnt.        451    #ifdef DEBUG_TEMP_DEV
+           tsktmpcnt.        452      rxcnt = 0;
+           tsktmpcnt.        453    
+           tsktmpcnt.        454      rxbuf[rxcnt++] = 0x01;
+           tsktmpcnt.        455      rxbuf[rxcnt++] = 0x03;
+           tsktmpcnt.        456      rxbuf[rxcnt++] = 0x04;
+           tsktmpcnt.        457      rxbuf[rxcnt++] = 0x00;
+           tsktmpcnt.        458      rxbuf[rxcnt++] = 0x1B;
+           tsktmpcnt.        459      rxbuf[rxcnt++] = 0x8A;
+           tsktmpcnt.        460      *buf = 0x3D;
+           tsktmpcnt.        461      
+           tsktmpcnt.        462      return( E_SUCCESS );
+           tsktmpcnt.        463    #endif
+           tsktmpcnt.        464    #endif
+           tsktmpcnt.        465    
+           tsktmpcnt.        466      
+           tsktmpcnt.        467      
+           tsktmpcnt.        468      *buf = CLR;
+           tsktmpcnt.        469    
+           tsktmpcnt.        470    #if FZ110 == 0
+           tsktmpcnt.        471      p16C554 = (struct St16550 *)SCI_16C554A_ADDR;//RS232C
+           tsktmpcnt.        472    #else
+           tsktmpcnt.        473      p16C554 = (struct St16550 *)SCI_16C554D_ADDR;//RS485
+    00000314 D326                   MOV.L       L103+4,R3  ; H'0C00F018
+    00000316 E600                   MOV         #0,R6      ; H'00000000
+    00000318 D226                   MOV.L       L103+8,R2  ; _p16C554
+    0000031A 2460                   MOV.B       R6,@R4     ; *(buf)
+    0000031C 6163                   MOV         R6,R1
+    0000031E 07011E85               MOVI20S     #2000128,R7; H'001E8500
+    00000322 6E53                   MOV         R5,R14
+    00000324 2232                   MOV.L       R3,@R2     ; p16C554
+    00000326 7780                   ADD         #-128,R7
+    00000328              L88:
+           tsktmpcnt.        474    #endif
+           tsktmpcnt.        475    
+           tsktmpcnt.        476      // Leagic追加2023.8.25(Start)
+           tsktmpcnt.        477      while( 1 ){
+           tsktmpcnt.        478          DR = p16C554->REG5.BIT.DR;
+    00000328 6522                   MOV.L       @R2,R5     ; p16C554
+    0000032A 35093005               BLD.B       #0,@(5,R5) ; (part of)(p16C554)->p16C554
+    0000032E 8904                   BT          L90
+           tsktmpcnt.        479          if(!DR){
+           tsktmpcnt.        480              timeoutflg++;
+    00000330 7601                   ADD         #1,R6
+           tsktmpcnt.        481              if( timeoutflg >= TIMEOUT_RCV ){
+    00000332 3672                   CMP/HS      R7,R6
+    00000334 8906                   BT          L91
+    00000336 AFF7                   BRA         L88
+    00000338 0009                   NOP
+    0000033A              L90:
+           tsktmpcnt.        482                  result = E_SUCCESS;
+           tsktmpcnt.        483                  *siz = size; 
+           tsktmpcnt.        484                  break;
+           tsktmpcnt.        485              }
+           tsktmpcnt.        486          }
+           tsktmpcnt.        487          else{
+           tsktmpcnt.        488              timeoutflg = CLR;
+           tsktmpcnt.        489              *buf  = p16C554->REG0.RBR;
+    0000033A 6050                   MOV.B       @R5,R0     ; (p16C554)->RBR
+    0000033C E600                   MOV         #0,R6      ; H'00000000
+           tsktmpcnt.        490              buf++;
+           tsktmpcnt.        491              size++;
+    0000033E 7101                   ADD         #1,R1
+    00000340 AFF2                   BRA         L88
+    00000342 448B                   MOV.B       R0,@R4+    ; *(buf)
+    00000344              L91:
+    00000344 2E10                   MOV.B       R1,@R14    ; *(siz)
+           tsktmpcnt.        492          }
+           tsktmpcnt.        493      }
+           tsktmpcnt.        494      // Leagic追加2023.8.25(End)
+           tsktmpcnt.        495    
+           tsktmpcnt.        496      return( result );
+    00000346 E000                   MOV         #0,R0      ; H'00000000
+           tsktmpcnt.        497    }
+    00000348 000B                   RTS
+    0000034A 6EF6                   MOV.L       @R15+,R14
+           tsktmpcnt.        498    /***********************************************************************
+           tsktmpcnt.        499    * 
+           tsktmpcnt.        500    * [概要]  
+           tsktmpcnt.        501    * [引数]  
+           tsktmpcnt.        502    * [戻値]  
+           tsktmpcnt.        503    * 
+           tsktmpcnt.        504    ***********************************************************************/
+           tsktmpcnt.        505    void TmpDataSet( unsigned char tmpdat )
+    0000034C              _TmpDataSet:                     ; function: TmpDataSet
+                                                           ; frame size=0
+           tsktmpcnt.        506    {
+           tsktmpcnt.        507      tempdat_bk[1] = tempdat_bk[0];
+    0000034C D61B                   MOV.L       L103+16,R6 ; __$tempdat_bk
+    0000034E 6060                   MOV.B       @R6,R0     ; tempdat_bk[]
+    00000350 8061                   MOV.B       R0,@(1,R6) ; tempdat_bk[]
+           tsktmpcnt.        508      tempdat_bk[0] = tmpdat;
+           tsktmpcnt.        509      
+           tsktmpcnt.        510    }
+    00000352 000B                   RTS
+    00000354 2640                   MOV.B       R4,@R6     ; tempdat_bk[]
+           tsktmpcnt.        511    /***********************************************************************
+           tsktmpcnt.        512    * 
+           tsktmpcnt.        513    * [概要]  
+           tsktmpcnt.        514    * [引数]  
+           tsktmpcnt.        515    * [戻値]  
+           tsktmpcnt.        516    * 
+           tsktmpcnt.        517    ***********************************************************************/
+           tsktmpcnt.        518    unsigned char TmpDataGet()
+    00000356              _TmpDataGet:                     ; function: TmpDataGet
+                                                           ; frame size=0
+           tsktmpcnt.        519    {
+           tsktmpcnt.        520      return( tempdat_bk[0] );
+    00000356 D619                   MOV.L       L103+16,R6 ; __$tempdat_bk
+           tsktmpcnt.        521    }
+    00000358 000B                   RTS
+    0000035A 6060                   MOV.B       @R6,R0     ; tempdat_bk[]
+           tsktmpcnt.        522    
+           tsktmpcnt.        523    /***********************************************************************
+           tsktmpcnt.        524    * 
+           tsktmpcnt.        525    * [概要]  CRC計算
+           tsktmpcnt.        526    * [引数]  
+           tsktmpcnt.        527    * [戻値]  
+           tsktmpcnt.        528    * 
+           tsktmpcnt.        529    ***********************************************************************/
+           tsktmpcnt.        530    static unsigned short CrcCal(unsigned char *buf,unsigned char siz)
+    0000035C              __$CrcCal:                       ; function: __$CrcCal
+                                                           ; frame size=12
+    0000035C 2FC6                   MOV.L       R12,@-R15
+    0000035E 2FD6                   MOV.L       R13,@-R15
+    00000360 2FE6                   MOV.L       R14,@-R15
+           tsktmpcnt.        531    {
+           tsktmpcnt.        532      unsigned short CRC= 0xffff;
+    00000362 6D43                   MOV         R4,R13
+    00000364 E2FF                   MOV         #-1,R2     ; H'FFFFFFFF
+           tsktmpcnt.        533      unsigned char  crch;
+           tsktmpcnt.        534      unsigned char  crcl;
+           tsktmpcnt.        535      unsigned short next;
+           tsktmpcnt.        536      unsigned short carry;
+           tsktmpcnt.        537      unsigned short n;
+           tsktmpcnt.        538      unsigned char  loop;
+           tsktmpcnt.        539    
+           tsktmpcnt.        540      for( loop = 0; loop < siz; loop++ )
+    00000366 E100                   MOV         #0,R1      ; H'00000000
+    00000368 6C5C                   EXTU.B      R5,R12
+    0000036A 0700A001               MOVI20      #40961,R7  ; H'0000A001
+    0000036E A011                   BRA         L95
+    00000370 EE08                   MOV         #8,R14     ; H'00000008
+    00000372              L96:
+           tsktmpcnt.        541      {
+           tsktmpcnt.        542          next = (unsigned short) *buf;
+           tsktmpcnt.        543          CRC ^= next;
+    00000372 36D18000               MOVU.B      @(0,R13),R6; *(buf)
+           tsktmpcnt.        544          for (n = 0; n < 8; n++) 
+    00000376 E400                   MOV         #0,R4      ; H'00000000
+    00000378 226A                   XOR         R6,R2
+    0000037A              L97:
+           tsktmpcnt.        545          {
+           tsktmpcnt.        546              carry = CRC & 1;
+    0000037A 6023                   MOV         R2,R0
+    0000037C C901                   AND         #1,R0
+           tsktmpcnt.        547              CRC >>= 1;
+    0000037E 622D                   EXTU.W      R2,R2
+    00000380 4201                   SHLR        R2
+           tsktmpcnt.        548              if (carry) 
+    00000382 2008                   TST         R0,R0
+    00000384 8900                   BT          L99
+           tsktmpcnt.        549              {
+           tsktmpcnt.        550                  CRC ^= 0xA001;
+    00000386 227A                   XOR         R7,R2
+    00000388              L99:
+    00000388 7401                   ADD         #1,R4
+    0000038A 664D                   EXTU.W      R4,R6
+    0000038C 36E3                   CMP/GE      R14,R6
+    0000038E 8BF4                   BF          L97
+           tsktmpcnt.        551              }
+           tsktmpcnt.        552          }
+           tsktmpcnt.        553          buf++;
+    00000390 7D01                   ADD         #1,R13
+    00000392 7101                   ADD         #1,R1
+    00000394              L95:
+    00000394 661C                   EXTU.B      R1,R6
+    00000396 36C3                   CMP/GE      R12,R6
+    00000398 8BEB                   BF          L96
+           tsktmpcnt.        554      }
+           tsktmpcnt.        555      crch = (unsigned char)(CRC / 256);
+           tsktmpcnt.        556      crcl = (unsigned char)(CRC % 256);
+           tsktmpcnt.        557      
+           tsktmpcnt.        558      *buf = crcl;
+    0000039A 602D                   EXTU.W      R2,R0
+           tsktmpcnt.        559      buf++;
+           tsktmpcnt.        560      *buf = crch;
+    0000039C E6F8                   MOV         #-8,R6     ; H'FFFFFFF8
+    0000039E 2D00                   MOV.B       R0,@R13    ; *(buf)
+    000003A0 406C                   SHAD        R6,R0
+    000003A2 80D1                   MOV.B       R0,@(1,R13); *(buf)
+    000003A4 6EF6                   MOV.L       @R15+,R14
+    000003A6 6DF6                   MOV.L       @R15+,R13
+    000003A8 6CF6                   MOV.L       @R15+,R12
+           tsktmpcnt.        561    
+           tsktmpcnt.        562      return CRC;
+           tsktmpcnt.        563    }
+    000003AA 027B                   RTV/N       R2
+    000003AC              L103:
+    000003AC <00000000>             .DATA.L     __$txbuf
+    000003B0 0C00F018               .DATA.L     H'0C00F018
+    000003B4 <00000000>             .DATA.L     _p16C554
+    000003B8 <00000000>             .DATA.L     _v4_dly_tsk
+    000003BC <00000000>             .DATA.L     __$tempdat_bk
+C   00000000              L104:
+    00000000 433A5C5573             .SDATA      "C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\tsktmpcnt.c
+             6572735C53 +                       "
+             65696A6959   
+             616D617A61   
+             6B695C446F   
+             63756D656E   
+             74735C5175   
+             69636B6765   
+             6E655C536F   
+             66745F4669   
+             726D5C5175   
+             69636B4765   
+             6E655F5072   
+             6F6A656374   
+             325C74736B   
+             746D70636E   
+             742E63       
+    00000053 00                     .DATA.B     H'00
+B   00000000              _p16C554:                        ; static: p16C554
+    00000000 00000004               .RES.L      1
+    00000004              _msg:                            ; static: msg
+    00000004 00000004               .RES.L      1
+    00000008              __$tmp:                          ; static: __$tmp
+    00000008 00000001               .RES.B      4
+    0000000C              __$txbuf:                        ; static: __$txbuf
+    0000000C 00000001               .RES.B      16
+    0000001C              __$rxbuf:                        ; static: __$rxbuf
+    0000001C 00000001               .RES.B      116
+    00000090              __$rxcnt:                        ; static: __$rxcnt
+    00000090 00000001               .RES.B      1
+    00000091              __$tempdat_bk:                   ; static: __$tempdat_bk
+    00000091 00000001               .RES.B      2
+    00000093              __$bufwk:                        ; static: __$bufwk
+    00000093 00000001               .RES.B      60
+SH SERIES C/C++ Compiler (V.9.02.00.003)                                                         08-Sep-2023 13:46:37  PAGE    1
+
+
+******** STATISTICS INFORMATION ********
+
+
+********** ERROR INFORMATION ***********
+
+NUMBER OF ERRORS:           0
+NUMBER OF WARNINGS:         0
+
+
+
+
+******* SOURCE LINE INFORMATION ********
+
+COMPILED SOURCE LINE:      563
+
+
+
+******* SECTION SIZE INFORMATION *******
+
+PROGRAM  SECTION (P):                                 000003C0 Byte(s)
+CONSTANT SECTION (C):                                 00000054 Byte(s)
+DATA     SECTION (D):                                 00000000 Byte(s)
+BSS      SECTION (B):                                 000000CF Byte(s)
+
+TOTAL PROGRAM  SECTION: 000003C0 Byte(s)
+TOTAL CONSTANT SECTION: 00000054 Byte(s)
+TOTAL DATA     SECTION: 00000000 Byte(s)
+TOTAL BSS      SECTION: 000000CF Byte(s)
+
+    TOTAL PROGRAM SIZE: 000004E3 Byte(s)
+
+
+
+********** LABEL INFORMATION ***********
+
+NUMBER OF EXTERNAL REFERENCE SYMBOLS:            7
+NUMBER OF EXTERNAL DEFINITION SYMBOLS:           5
+NUMBER OF INTERNAL/EXTERNAL SYMBOLS:            50
+
+
+
+*** COMMAND PARAMETER ***
+
+-subcommand=C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\Debug\tsktmpcnt.shc
+-cpu=sh2a
+-include="C:\NORTi\INC","C:\NORTi\INC\Dummy","C:\NORTi\INC","C:\NORTi\LIB"
+-object="C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\Debug\tsktmpcnt.obj"
+-debug
+-listfile="C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\Debug\tsktmpcnt.lst"
+-show=source,tab=4
+-gbr=auto
+-chgincpath
+-errorpath
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\tsktmpcnt.c"
+-global_volatile=0
+-opt_range=all
+-infinite_loop=0
+-del_vacant_loop=0
+-struct_alloc=1
+-lang=c
+-nologo

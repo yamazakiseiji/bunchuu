@@ -1,0 +1,433 @@
+SH SERIES C/C++ Compiler (V.9.04.03.000)                                                         07-Sep-2023 14:07:47  PAGE    1
+
+************ OBJECT LISTING ************
+
+FILE NAME: C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\automachine.c
+
+SCT OFFSET   CODE       C LABEL     INSTRUCTION OPERAND    COMMENT
+
+           automachin          1    /******************************************************************************
+           automachin          2    * 自動装置固有情報                                                            *
+           automachin          3    *                                                                             *
+           automachin          4    * File name : automachine.c                                                   *
+           automachin          5    *                                                                             *
+           automachin          6    * Copyright (c) 2018 NICHIRYO Co., Ltd.                                       *
+           automachin          7    *                                                                             *
+           automachin          8    ******************************************************************************/
+           automachin          9    #include "define.h"
+           automachin         10    #include "automachine.h"
+           automachin         11    
+           automachin         12    
+           automachin         13    // *********************************
+           automachin         14    // システム情報
+           automachin         15    // *********************************
+           automachin         16      // ファームウェア名称("NCP" + "-" + JOB名  ※NCP:NM-CTRL-PCBの略)
+           automachin         17      //                        1234567890
+           automachin         18      const char FIRMWARE[] = {"NCP-QuickGene12S"};
+           automachin         19    
+           automachin         20      // バージョン             123456789012345
+           automachin         21      const char VER_INFO[] = {"Ver.0.99 rev.0907A"};
+           automachin         22      const char VER_INFO_TO_TP[] = {"0907A"};
+           automachin         23    
+           automachin         24      // エンコーダー有無情報  0:無、1:有
+           automachin         25      const char ENCODER_EXIST[8]  = 
+           automachin         26      {
+           automachin         27          0x00,                           // [0] DEVICE 07 - DEVICE 00
+           automachin         28          0x00,                           // [1] DEVICE 15 - DEVICE 08
+           automachin         29          0x00,                           // [2] DEVICE 23 - DEVICE 16
+           automachin         30          0x00,                           // [3] DEVICE 31 - DEVICE 24
+           automachin         31          0x00,                           // [4] DEVICE 39 - DEVICE 32
+           automachin         32          0x00,                           // [5] DEVICE 47 - DEVICE 40
+           automachin         33          0x00,                           // [6] DEVICE 55 - DEVICE 48
+           automachin         34          0x00                            // [7] DEVICE 63 - DEVICE 56
+           automachin         35      };
+           automachin         36    
+           automachin         37      const char USER_KURABOU[] = {"KURABO"};
+           automachin         38      const char PASS_KURABOU[] = {"1212"};
+           automachin         39    
+           automachin         40    
+           automachin         41    // *********************************
+           automachin         42    // デバイス割り当て情報
+           automachin         43    // *********************************
+           automachin         44    // 0x00:MNET-BCD4020FU
+           automachin         45    // 0x01:MNET-BCD4020FUA
+           automachin         46    // 0x02:MNET-D420(入力16ch)
+           automachin         47    // 0x03:MNET-D411(入力8ch,出力8ch)
+           automachin         48    // 0x04:MNET-D402(出力16ch)
+           automachin         49    // 0x05:MNET-D340(入力32ch)
+           automachin         50    // 0x06:MNET-D322(入力16ch,出力16ch)
+           automachin         51    // 0x07:MNET-D304(出力32ch)
+           automachin         52    // 0xFF:NONE
+           automachin         53    //
+           automachin         54    // 補足）
+           automachin         55    //      ------      分注Y0      分注Z                                                       ------         DEVICE 00 ～ DEVICE 07
+           automachin         56    //      ------      ------      ------      ------      ------      ------      ------      ------         DEVICE 08 ～ DEVICE 15
+           automachin         57    //      ------      ------      ------      ------      ------      ------      ------      ------         DEVICE 16 ～ DEVICE 23
+           automachin         58    //      ------      ------      ------      ------      ------      ------      ------      ------         DEVICE 24 ～ DEVICE 31
+           automachin         59      const char MNET_DRV_TYPE[32]  = 
+           automachin         60      {
+           automachin         61          PCD4611   , PCD4611   , BCD4020FUA, BCD4020FUA, BCD4020FUA, BCD4020FUA, NCPRSUNIT , NONE      , // DEVICE 00 ～ DEVICE 07 debug
+           automachin         62    //        NONE      , BCD4020FUA, BCD4020FUA, BCD4020FUA, BCD4020FUA, BCD4020FUA, BCD4020FUA, NONE      , // DEVICE 00 ～ DEVICE 07
+           automachin         63          NONE      , NONE      , NONE      , NONE      , NONE      , NONE      , NONE      , NONE      , // DEVICE 08 ～ DEVICE 15
+           automachin         64          NONE      , NONE      , NONE      , NONE      , NONE      , NONE      , NONE      , NONE      , // DEVICE 16 ～ DEVICE 23
+           automachin         65          NONE      , NONE      , NONE      , NONE      , NONE      , NONE      , NONE      , NONE        // DEVICE 24 ～ DEVICE 31
+           automachin         66      };
+           automachin         67    
+           automachin         68      // デバイス番号
+           automachin         69      volatile const unsigned char MNET_M204DUM_ASGN[32]  = 
+           automachin         70      {
+           automachin         71    //        NONE      , 1         , 2         , 3         , 4         , 5         , 6         , 7         , // DEVICE 00 ～ DEVICE 07
+           automachin         72          0         , 1         , 2         , 3         , 4         , 5         , 6         , 7         , // DEVICE 00 ～ DEVICE 07
+           automachin         73          NONE      , NONE      , NONE      , NONE      , NONE      , NONE      , NONE      , NONE      , // DEVICE 08 ～ DEVICE 15
+           automachin         74          NONE      , NONE      , NONE      , NONE      , NONE      , NONE      , NONE      , NONE      , // DEVICE 16 ～ DEVICE 23
+           automachin         75          NONE      , NONE      , NONE      , NONE      , NONE      , NONE      , NONE      , NONE        // DEVICE 24 ～ DEVICE 31
+           automachin         76      };
+           automachin         77    
+           automachin         78      // デバイス番号
+           automachin         79      volatile const unsigned char MNET_NO[32]  = 
+           automachin         80      {
+           automachin         81    //        NONE      , 1         , 2         , 3         , 4         , 5         , 6         , 7         , // DEVICE 00 ～ DEVICE 07
+           automachin         82          0         , 1         , 2         , 3         , 4         , 5         , 6         , 7         , // DEVICE 00 ～ DEVICE 07
+           automachin         83          NONE      , NONE      , NONE      , NONE      , NONE      , NONE      , NONE      , NONE      , // DEVICE 08 ～ DEVICE 15
+           automachin         84            NONE      , NONE      , NONE      , NONE      , NONE      , NONE      , NONE      , NONE      , // DEVICE 16 ～ DEVICE 23
+           automachin         85          NONE      , NONE      , NONE      , NONE      , NONE      , NONE      , NONE      , NONE        // DEVICE 24 ～ DEVICE 31
+           automachin         86      };
+           automachin         87    
+           automachin         88    
+           automachin         89    // *********************************
+           automachin         90    // Ｉ／Ｏポート割り当て情報
+           automachin         91    // *********************************
+           automachin         92      // Input Ch
+           automachin         93      const char INPUTCH_INFTBL[(MAX_CH+1)][3] = {
+           automachin         94      //  Device  Port    Bit
+           automachin         95          NONE,   NONE,   NONE,   // 0   空き
+           automachin         96          0   ,   0   ,   BIT0,   // 1 ドアスイッチ1
+           automachin         97          0   ,   0   ,   BIT1,   // 2 ドアスイッチ2
+           automachin         98          0   ,   0   ,   BIT2,   // 3  予備
+           automachin         99          0   ,   0   ,   BIT3,   // 4  予備
+           automachin        100          0   ,   0   ,   BIT4,   // 5  予備
+           automachin        101          0   ,   0   ,   BIT5,   // 6  予備
+           automachin        102          0   ,   0   ,   BIT6,   // 7  予備
+           automachin        103          0   ,   0   ,   BIT7,   // 8  予備
+           automachin        104          2   ,   2   ,   BIT4,   // 9  サンプルチューブ1有無センサ
+           automachin        105          2   ,   2   ,   BIT5,   // 10 サンプルチューブ2有無センサ
+           automachin        106          2   ,   2   ,   BIT6,   // 11 サンプルチューブ3有無センサ
+           automachin        107          2   ,   2   ,   BIT7,   // 12 サンプルチューブ4有無センサ
+           automachin        108          3   ,   2   ,   BIT4,   // 33 ジャミングセンサ1
+           automachin        109          3   ,   2   ,   BIT5,   // 35 チップセンサ1
+           automachin        110          3   ,   2   ,   BIT6,   // 15 サンプルチューブ7有無センサ
+           automachin        111          3   ,   2   ,   BIT7,   // 16 サンプルチューブ8有無センサ
+           automachin        112          4   ,   2   ,   BIT4,   // 17 トレイSW
+           automachin        113          4   ,   2   ,   BIT5,   // 36 チップセンサ2
+           automachin        114          4   ,   2   ,   BIT6,   // 19 温調ALM1
+           automachin        115          4   ,   2   ,   BIT7,   // 20 温調ALM2
+           automachin        116          5   ,   2   ,   BIT4,   // 51 STOPボタン
+           automachin        117          5   ,   2   ,   BIT5,   // 52 カスタムボタン
+           automachin        118          5   ,   2   ,   BIT6,   // 23 サンプルチューブ11有無センサ
+           automachin        119          5   ,   2   ,   BIT7,   // 24 サンプルチューブ12有無センサ
+           automachin        120          NONE,   NONE,   NONE,   // 25 
+           automachin        121          NONE,   NONE,   NONE,   // 26 
+           automachin        122          NONE,   NONE,   NONE,   // 27 
+           automachin        123          NONE,   NONE,   NONE,   // 28 
+           automachin        124          NONE,   NONE,   NONE,   // 29 
+           automachin        125          NONE,   NONE,   NONE,   // 30 
+           automachin        126          NONE,   NONE,   NONE,   // 31 
+           automachin        127          NONE,   NONE,   NONE,   // 32 
+           automachin        128          NONE,   NONE,   NONE,   // 33 
+           automachin        129          NONE,   NONE,   NONE,   // 34 
+           automachin        130          NONE,   NONE,   NONE,   // 35 
+           automachin        131          NONE,   NONE,   NONE,   // 36 
+           automachin        132          NONE,   NONE,   NONE,   // 37 
+           automachin        133          NONE,   NONE,   NONE,   // 38 
+           automachin        134          NONE,   NONE,   NONE,   // 39 
+           automachin        135          NONE,   NONE,   NONE,   // 40 
+           automachin        136          NONE,   NONE,   NONE,   // 41 
+           automachin        137          NONE,   NONE,   NONE,   // 42 
+           automachin        138          NONE,   NONE,   NONE,   // 43 
+           automachin        139          NONE,   NONE,   NONE,   // 44 
+           automachin        140          NONE,   NONE,   NONE,   // 45 
+           automachin        141          NONE,   NONE,   NONE,   // 46 
+           automachin        142          NONE,   NONE,   NONE,   // 47 
+           automachin        143          NONE,   NONE,   NONE,   // 48 
+           automachin        144          NONE,   NONE,   NONE,   // 49 
+           automachin        145          NONE,   NONE,   NONE,   // 50 
+           automachin        146          NONE,   NONE,   NONE,   // 51 
+           automachin        147          NONE,   NONE,   NONE,   // 52 
+           automachin        148          NONE,   NONE,   NONE,   // 53 
+           automachin        149          NONE,   NONE,   NONE,   // 54 
+           automachin        150          NONE,   NONE,   NONE,   // 55 
+           automachin        151          NONE,   NONE,   NONE,   // 56 
+           automachin        152          NONE,   NONE,   NONE,   // 57 
+           automachin        153          NONE,   NONE,   NONE,   // 58 
+           automachin        154          NONE,   NONE,   NONE,   // 59 
+           automachin        155          NONE,   NONE,   NONE,   // 60 
+           automachin        156          NONE,   NONE,   NONE,   // 61 
+           automachin        157          NONE,   NONE,   NONE,   // 62 
+           automachin        158          NONE,   NONE,   NONE    // 63 
+           automachin        159      };
+           automachin        160    
+           automachin        161      // Output Ch
+           automachin        162      const char OUTPUTCH_INFTBL[(MAX_CH+1)][3] = {
+           automachin        163      //  Device  Port    Bit
+           automachin        164          NONE,   NONE,   NONE,   // 0  空き
+           automachin        165          0   ,   0   ,   BIT0,   // 1  ダイアフラムポンプ
+           automachin        166          2   ,   3   ,   BIT1,   // 2  LED照明
+           automachin        167          2   ,   3   ,   BIT2,   // 3  UVランプ
+           automachin        168          3   ,   3   ,   BIT1,   // 4  ドアロック1
+           automachin        169          3   ,   3   ,   BIT2,   // 5  ドアロック2
+           automachin        170          4   ,   3   ,   BIT1,   // 6  DCファン
+           automachin        171          4   ,   3   ,   BIT2,   // 7  パトライト1
+           automachin        172          5   ,   3   ,   BIT1,   // 8  パトライト2
+           automachin        173          5   ,   3   ,   BIT2,   // 9  パトライトBz1
+           automachin        174          NONE,   NONE,   NONE,   // 10 
+           automachin        175          NONE,   NONE,   NONE,   // 11 
+           automachin        176          NONE,   NONE,   NONE,   // 12 
+           automachin        177          NONE,   NONE,   NONE,   // 13 
+           automachin        178          NONE,   NONE,   NONE,   // 14 
+           automachin        179          NONE,   NONE,   NONE,   // 15 
+           automachin        180          NONE,   NONE,   NONE,   // 16 
+           automachin        181          NONE,   NONE,   NONE,   // 17 
+           automachin        182          NONE,   NONE,   NONE,   // 18 
+           automachin        183          NONE,   NONE,   NONE,   // 19 
+           automachin        184          NONE,   NONE,   NONE,   // 20 
+           automachin        185          NONE,   NONE,   NONE,   // 21 
+           automachin        186          NONE,   NONE,   NONE,   // 22 
+           automachin        187          NONE,   NONE,   NONE,   // 23 
+           automachin        188          NONE,   NONE,   NONE,   // 24 
+           automachin        189          NONE,   NONE,   NONE,   // 25 
+           automachin        190          NONE,   NONE,   NONE,   // 26 
+           automachin        191          NONE,   NONE,   NONE,   // 27 
+           automachin        192          NONE,   NONE,   NONE,   // 28 
+           automachin        193          NONE,   NONE,   NONE,   // 29 
+           automachin        194          NONE,   NONE,   NONE,   // 30 
+           automachin        195          NONE,   NONE,   NONE,   // 31 
+           automachin        196          NONE,   NONE,   NONE,   // 32 
+           automachin        197          NONE,   NONE,   NONE,   // 33 
+           automachin        198          NONE,   NONE,   NONE,   // 34 
+           automachin        199          NONE,   NONE,   NONE,   // 35 
+           automachin        200          NONE,   NONE,   NONE,   // 36 
+           automachin        201          NONE,   NONE,   NONE,   // 37 
+           automachin        202          NONE,   NONE,   NONE,   // 38 
+           automachin        203          NONE,   NONE,   NONE,   // 39 
+           automachin        204          NONE,   NONE,   NONE,   // 40 
+           automachin        205          NONE,   NONE,   NONE,   // 41 
+           automachin        206          NONE,   NONE,   NONE,   // 42 
+           automachin        207          NONE,   NONE,   NONE,   // 43 
+           automachin        208          NONE,   NONE,   NONE,   // 44 
+           automachin        209          NONE,   NONE,   NONE,   // 45 
+           automachin        210          NONE,   NONE,   NONE,   // 46 
+           automachin        211          NONE,   NONE,   NONE,   // 47 
+           automachin        212          NONE,   NONE,   NONE,   // 48 
+           automachin        213          NONE,   NONE,   NONE,   // 49 
+           automachin        214          NONE,   NONE,   NONE,   // 50 
+           automachin        215          NONE,   NONE,   NONE,   // 51 
+           automachin        216          NONE,   NONE,   NONE,   // 52 
+           automachin        217          NONE,   NONE,   NONE,   // 53 
+           automachin        218          NONE,   NONE,   NONE,   // 54 
+           automachin        219          NONE,   NONE,   NONE,   // 55 
+           automachin        220          NONE,   NONE,   NONE,   // 56 
+           automachin        221          NONE,   NONE,   NONE,   // 57 
+           automachin        222          NONE,   NONE,   NONE,   // 58 
+           automachin        223          NONE,   NONE,   NONE,   // 59 
+           automachin        224          NONE,   NONE,   NONE,   // 60 
+           automachin        225          NONE,   NONE,   NONE,   // 61 
+           automachin        226          NONE,   NONE,   NONE,   // 62 
+           automachin        227          NONE,   NONE,   NONE    // 63 
+           automachin        228      };
+           automachin        229    
+           automachin        230    
+           automachin        231    
+           automachin        232    
+C   00000000              _FIRMWARE:                       ; static: FIRMWARE
+    00000000 4E43502D51             .SDATA      "NCP-QuickGene12S"
+             7569636B47   
+             656E653132   
+             53           
+    00000010 00                     .DATA.B     H'00
+    00000011              _VER_INFO:                       ; static: VER_INFO
+    00000011 5665722E30             .SDATA      "Ver.0.99 rev.0907A"
+             2E39392072   
+             65762E3039   
+             303741       
+    00000023 00                     .DATA.B     H'00
+    00000024              _VER_INFO_TO_TP:                 ; static: VER_INFO_TO_TP
+    00000024 3039303741             .SDATA      "0907A"
+    00000029 00                     .DATA.B     H'00
+    0000002A              _ENCODER_EXIST:                  ; static: ENCODER_EXIST
+    0000002A 0000000000             .DATA.B     H'00,H'00,H'00,H'00,H'00,H'00,H'00,H'00
+             000000       
+    00000032              _USER_KURABOU:                   ; static: USER_KURABOU
+    00000032 4B55524142             .SDATA      "KURABO"
+             4F           
+    00000038 00                     .DATA.B     H'00
+    00000039              _PASS_KURABOU:                   ; static: PASS_KURABOU
+    00000039 31323132               .SDATA      "1212"
+    0000003D 00                     .DATA.B     H'00
+    0000003E              _MNET_DRV_TYPE:                  ; static: MNET_DRV_TYPE
+    0000003E 0909010101             .DATA.B     H'09,H'09,H'01,H'01,H'01,H'01,H'0A,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,
+             010AFFFFFF +                       H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFF         
+    0000005E              _INPUTCH_INFTBL:                 ; static: INPUTCH_INFTBL
+    0000005E FFFFFF0000             .DATA.B     H'FF,H'FF,H'FF,H'00,H'00,H'01,H'00,H'00,H'02,H'00,H'00,H'04,H'00,H'00,H'08,H'00,
+             0100000200 +                       H'00,H'10,H'00,H'00,H'20,H'00,H'00,H'40,H'00,H'00,H'80,H'02,H'02,H'10,H'02,H'02,
+             0004000008 +                       H'20,H'02,H'02,H'40,H'02,H'02,H'80,H'03,H'02,H'10,H'03,H'02,H'20,H'03,H'02,H'40,
+             0000100000 +                       H'03,H'02,H'80,H'04,H'02,H'10,H'04,H'02,H'20,H'04,H'02,H'40,H'04,H'02,H'80,H'05,
+             2000004000 +                       H'02,H'10,H'05,H'02,H'20,H'05,H'02,H'40,H'05,H'02,H'80,H'FF,H'FF,H'FF,H'FF,H'FF,
+             0080020210 +                       H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,
+             0202200202 +                       H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,
+             4002028003 +                       H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,
+             0210030220 +                       H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,
+             0302400302 +                       H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,
+             8004021004 +                       H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,
+             0220040240 +                       H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF
+             0402800502   
+             1005022005   
+             0240050280   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFF         
+    0000011E              _OUTPUTCH_INFTBL:                ; static: OUTPUTCH_INFTBL
+    0000011E FFFFFF0000             .DATA.B     H'FF,H'FF,H'FF,H'00,H'00,H'01,H'02,H'03,H'02,H'02,H'03,H'04,H'03,H'03,H'02,H'03,
+             0102030202 +                       H'03,H'04,H'04,H'03,H'02,H'04,H'03,H'04,H'05,H'03,H'02,H'05,H'03,H'04,H'FF,H'FF,
+             0304030302 +                       H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,
+             0303040403 +                       H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,
+             0204030405 +                       H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,
+             0302050304 +                       H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,
+             FFFFFFFFFF +                       H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,
+             FFFFFFFFFF +                       H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,
+             FFFFFFFFFF +                       H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,
+             FFFFFFFFFF +                       H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,
+             FFFFFFFFFF +                       H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,
+             FFFFFFFFFF +                       H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFF         
+D   00000000              _MNET_M204DUM_ASGN:              ; static: MNET_M204DUM_ASGN
+    00000000 0001020304             .DATA.B     H'00,H'01,H'02,H'03,H'04,H'05,H'06,H'07,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,
+             050607FFFF +                       H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFF         
+    00000020              _MNET_NO:                        ; static: MNET_NO
+    00000020 0001020304             .DATA.B     H'00,H'01,H'02,H'03,H'04,H'05,H'06,H'07,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,
+             050607FFFF +                       H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF,H'FF
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFFFFFFFF   
+             FFFF         
+SH SERIES C/C++ Compiler (V.9.04.03.000)                                                         07-Sep-2023 14:07:47  PAGE    1
+
+
+******** STATISTICS INFORMATION ********
+
+
+********** ERROR INFORMATION ***********
+
+NUMBER OF ERRORS:           0
+NUMBER OF WARNINGS:         0
+
+
+
+
+******* SOURCE LINE INFORMATION ********
+
+COMPILED SOURCE LINE:      232
+
+
+
+******* SECTION SIZE INFORMATION *******
+
+PROGRAM  SECTION (P):                                 00000000 Byte(s)
+CONSTANT SECTION (C):                                 000001DE Byte(s)
+DATA     SECTION (D):                                 00000040 Byte(s)
+BSS      SECTION (B):                                 00000000 Byte(s)
+
+TOTAL PROGRAM  SECTION: 00000000 Byte(s)
+TOTAL CONSTANT SECTION: 000001DE Byte(s)
+TOTAL DATA     SECTION: 00000040 Byte(s)
+TOTAL BSS      SECTION: 00000000 Byte(s)
+
+    TOTAL PROGRAM SIZE: 0000021E Byte(s)
+
+
+
+********** LABEL INFORMATION ***********
+
+NUMBER OF EXTERNAL REFERENCE SYMBOLS:            0
+NUMBER OF EXTERNAL DEFINITION SYMBOLS:          11
+NUMBER OF INTERNAL/EXTERNAL SYMBOLS:            11
+
+
+
+*** COMMAND PARAMETER ***
+
+-subcommand=C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene_Hew\ROM_Big\automachine.shc
+-cpu=sh2a
+-include="C:\NORTi\INC","C:\NORTi\INC\Dummy","C:\NORTi\INC","C:\NORTi\LIB"
+-object="C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene_Hew\ROM_Big\automachine.obj"
+-debug
+-listfile="C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene_Hew\ROM_Big\automachine.lst"
+-show=source,tab=4
+-gbr=auto
+-chgincpath
+-errorpath
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\automachine.c"
+-global_volatile=0
+-opt_range=all
+-infinite_loop=0
+-del_vacant_loop=0
+-struct_alloc=1
+-lang=c
+-nologo

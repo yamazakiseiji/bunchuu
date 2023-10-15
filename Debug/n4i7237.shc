@@ -1,0 +1,17 @@
+-cpu=sh2a
+-include="C:\NORTi\INC","C:\NORTi\INC\Dummy","C:\NORTi\INC","C:\NORTi\LIB"
+-object="C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\Debug\n4i7237.obj"
+-debug
+-listfile="C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\Debug\n4i7237.lst"
+-show=source,tab=4
+-gbr=auto
+-chgincpath
+-errorpath
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\n4i7237.c"
+-global_volatile=0
+-opt_range=all
+-infinite_loop=0
+-del_vacant_loop=0
+-struct_alloc=1
+-lang=c
+-nologo

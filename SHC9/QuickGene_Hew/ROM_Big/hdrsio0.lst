@@ -1,0 +1,215 @@
+SH SERIES C/C++ Compiler (V.9.04.03.000)                                                         07-Sep-2023 20:41:32  PAGE    1
+
+************ OBJECT LISTING ************
+
+FILE NAME: C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\hdrsio0.c
+
+SCT OFFSET   CODE       C LABEL     INSTRUCTION OPERAND    COMMENT
+
+            hdrsio0.c          1    /******************************************************************************
+            hdrsio0.c          2    * ＰＣ通信ハンドラ(SIO0)                                                      *
+            hdrsio0.c          3    *                                                                             *
+            hdrsio0.c          4    * File name : hdrsio0.c                                                       *
+            hdrsio0.c          5    *                                                                             *
+            hdrsio0.c          6    * Copyright (c) 2018 NICHIRYO Co., Ltd.                                       *
+            hdrsio0.c          7    *                                                                             *
+            hdrsio0.c          8    ******************************************************************************/
+            hdrsio0.c          9    #include <kernel.h>
+            hdrsio0.c         10    #include "iodefine.h"
+            hdrsio0.c         11    #include "define.h"
+            hdrsio0.c         12    #include "hdrsio0.h"
+            hdrsio0.c         13    #include "datastruct.h"
+            hdrsio0.c         14    #include "sub.h"
+            hdrsio0.c         15    
+            hdrsio0.c         16    //static B dbgcnt;
+            hdrsio0.c         17    //static B dbgbuf[32];
+            hdrsio0.c         18    
+            hdrsio0.c         19    /*-----------------------------------------------------------------------------
+            hdrsio0.c         20      機能：受信エラー割り込みサービスルーチン
+            hdrsio0.c         21     ----------------------------------------------------------------------------*/
+            hdrsio0.c         22    void int_sio0_eri(void)
+P   00000000              _int_sio0_eri:                   ; function: int_sio0_eri
+                                                           ; frame size=12
+    00000000 4EF0                   MOVMU.L     R14,@-R15
+    00000002 7FFC                   ADD         #-4,R15
+            hdrsio0.c         23    {
+            hdrsio0.c         24      T_COM_CHAR  dat;
+            hdrsio0.c         25    
+            hdrsio0.c         26      dat.byte.type = COM_MTYP_ERR;
+            hdrsio0.c         27      if( SCI0.SCSSR.BIT.ORER )           // オーバーランエラー
+    00000004 EE80                   MOV         #-128,R14  ; H'FFFFFF80
+    00000006 E206                   MOV         #6,R2      ; H'00000006
+    00000008 4E18                   SHLL8       R14
+    0000000A 2F20                   MOV.B       R2,@R15    ; dat.byte.type
+    0000000C 3E593008               BLD.B       #5,@(8,R14)
+    00000010 8B03                   BF          L12
+            hdrsio0.c         28      {
+            hdrsio0.c         29          dat.byte.type = COM_MTYP_ORN;
+    00000012 E201                   MOV         #1,R2      ; H'00000001
+    00000014 2F20                   MOV.B       R2,@R15    ; dat.byte.type
+            hdrsio0.c         30          SCI0.SCSSR.BIT.ORER = 0;
+    00000016 3E590008               BCLR.B      #5,@(8,R14)
+    0000001A              L12:
+            hdrsio0.c         31      }
+            hdrsio0.c         32      if( SCI0.SCSSR.BIT.FER )            // フレーミングエラー
+    0000001A 3E493008               BLD.B       #4,@(8,R14)
+    0000001E 8B03                   BF          L14
+            hdrsio0.c         33      {
+            hdrsio0.c         34          dat.byte.type = COM_MTYP_FER;
+    00000020 E202                   MOV         #2,R2      ; H'00000002
+    00000022 2F20                   MOV.B       R2,@R15    ; dat.byte.type
+            hdrsio0.c         35          SCI0.SCSSR.BIT.FER = 0;
+    00000024 3E490008               BCLR.B      #4,@(8,R14)
+    00000028              L14:
+            hdrsio0.c         36      }
+            hdrsio0.c         37      if( SCI0.SCSSR.BIT.PER )            // パリティーエラー
+    00000028 3E393008               BLD.B       #3,@(8,R14)
+    0000002C 8B03                   BF          L16
+            hdrsio0.c         38      {
+            hdrsio0.c         39          dat.byte.type = COM_MTYP_PER;
+    0000002E E203                   MOV         #3,R2      ; H'00000003
+    00000030 2F20                   MOV.B       R2,@R15    ; dat.byte.type
+            hdrsio0.c         40          SCI0.SCSSR.BIT.PER = 0;
+    00000032 3E390008               BCLR.B      #3,@(8,R14)
+    00000036              L16:
+            hdrsio0.c         41      }
+            hdrsio0.c         42      // エラー送信
+            hdrsio0.c         43      dat.byte.data = SCI0.SCRDR;         // データは読み捨て
+    00000036 84EA                   MOV.B       @(10,R14),R0
+    00000038 E601                   MOV         #1,R6      ; H'00000001
+    0000003A E52C                   MOV         #44,R5     ; H'0000002C
+    0000003C 80F1                   MOV.B       R0,@(1,R15); dat.byte.data
+            hdrsio0.c         44      SndDtq( ID_DTQ_RXD, dat.data );
+    0000003E D40E                   MOV.L       L18+2,R4   ; L19
+    00000040 D20E                   MOV.L       L18+6,R2   ; _api_snd_dtq
+    00000042 420B                   JSR         @R2
+    00000044 67F2                   MOV.L       @R15,R7    ; dat.data
+            hdrsio0.c         45    
+            hdrsio0.c         46      SCI0.SCSSR.BIT.RDRF = 0;
+    00000046 3E690008               BCLR.B      #6,@(8,R14)
+    0000004A 7F04                   ADD         #4,R15
+    0000004C 4EF4                   MOVMU.L     @R15+,R14
+            hdrsio0.c         47    }
+    0000004E 006B                   RTS/N
+            hdrsio0.c         48    
+            hdrsio0.c         49    /*-----------------------------------------------------------------------------
+            hdrsio0.c         50      機能：受信データフル割り込みサービスルーチン
+            hdrsio0.c         51     ----------------------------------------------------------------------------*/
+            hdrsio0.c         52    void int_sio0_rxi(void)
+    00000050              _int_sio0_rxi:                   ; function: int_sio0_rxi
+                                                           ; frame size=12
+    00000050 4EF0                   MOVMU.L     R14,@-R15
+    00000052 7FFC                   ADD         #-4,R15
+            hdrsio0.c         53    {
+            hdrsio0.c         54        T_COM_CHAR  dat;
+            hdrsio0.c         55    
+            hdrsio0.c         56        dat.byte.type = COM_MTYP_CHR;
+            hdrsio0.c         57        dat.byte.data = SCI0.SCRDR;
+    00000054 EE80                   MOV         #-128,R14  ; H'FFFFFF80
+    00000056 E100                   MOV         #0,R1      ; H'00000000
+    00000058 4E18                   SHLL8       R14
+    0000005A 2F10                   MOV.B       R1,@R15    ; dat.byte.type
+    0000005C 84EA                   MOV.B       @(10,R14),R0
+    0000005E E601                   MOV         #1,R6      ; H'00000001
+    00000060 E53E                   MOV         #62,R5     ; H'0000003E
+    00000062 80F1                   MOV.B       R0,@(1,R15); dat.byte.data
+            hdrsio0.c         58      
+            hdrsio0.c         59    //    if( dbgcnt > 32 )   dbgcnt = 0;
+            hdrsio0.c         60    //    dbgbuf[dbgcnt] = dat.byte.data;
+            hdrsio0.c         61    //    dbgcnt++;
+            hdrsio0.c         62        SndDtq( ID_DTQ_RXD, dat.data );
+    00000064 D404                   MOV.L       L18+2,R4   ; L19
+    00000066 D205                   MOV.L       L18+6,R2   ; _api_snd_dtq
+    00000068 420B                   JSR         @R2
+    0000006A 67F2                   MOV.L       @R15,R7    ; dat.data
+            hdrsio0.c         63    
+            hdrsio0.c         64        SCI0.SCSSR.BIT.RDRF = 0;
+    0000006C 3E690008               BCLR.B      #6,@(8,R14)
+    00000070 7F04                   ADD         #4,R15
+    00000072 4EF4                   MOVMU.L     @R15+,R14
+            hdrsio0.c         65    
+            hdrsio0.c         66    }
+    00000074 006B                   RTS/N
+    00000076              L18:
+    00000076 00000002               .RES.W      1
+    00000078 <00000000>             .DATA.L     L19
+    0000007C <00000000>             .DATA.L     _api_snd_dtq
+            hdrsio0.c         67    
+C   00000000              L19:
+    00000000 433A5C576F             .SDATA      "C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\hdrsio0.c"
+             726B537061   
+             63655C5175   
+             69636B4765   
+             6E655C536F   
+             66745F4669   
+             726D5C5175   
+             69636B4765   
+             6E655F5072   
+             6F6A656374   
+             5C68647273   
+             696F302E63   
+    0000003C 00                     .DATA.B     H'00
+SH SERIES C/C++ Compiler (V.9.04.03.000)                                                         07-Sep-2023 20:41:32  PAGE    1
+
+
+******** STATISTICS INFORMATION ********
+
+
+********** ERROR INFORMATION ***********
+
+NUMBER OF ERRORS:           0
+NUMBER OF WARNINGS:         0
+
+
+
+
+******* SOURCE LINE INFORMATION ********
+
+COMPILED SOURCE LINE:       67
+
+
+
+******* SECTION SIZE INFORMATION *******
+
+PROGRAM  SECTION (P):                                 00000080 Byte(s)
+CONSTANT SECTION (C):                                 0000003D Byte(s)
+DATA     SECTION (D):                                 00000000 Byte(s)
+BSS      SECTION (B):                                 00000000 Byte(s)
+
+TOTAL PROGRAM  SECTION: 00000080 Byte(s)
+TOTAL CONSTANT SECTION: 0000003D Byte(s)
+TOTAL DATA     SECTION: 00000000 Byte(s)
+TOTAL BSS      SECTION: 00000000 Byte(s)
+
+    TOTAL PROGRAM SIZE: 000000BD Byte(s)
+
+
+
+********** LABEL INFORMATION ***********
+
+NUMBER OF EXTERNAL REFERENCE SYMBOLS:            1
+NUMBER OF EXTERNAL DEFINITION SYMBOLS:           2
+NUMBER OF INTERNAL/EXTERNAL SYMBOLS:             8
+
+
+
+*** COMMAND PARAMETER ***
+
+-subcommand=C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene_Hew\ROM_Big\hdrsio0.shc
+-cpu=sh2a
+-include="C:\NORTi\INC","C:\NORTi\INC\Dummy","C:\NORTi\INC","C:\NORTi\LIB"
+-object="C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene_Hew\ROM_Big\hdrsio0.obj"
+-debug
+-listfile="C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene_Hew\ROM_Big\hdrsio0.lst"
+-show=source,tab=4
+-gbr=auto
+-chgincpath
+-errorpath
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\hdrsio0.c"
+-global_volatile=0
+-opt_range=all
+-infinite_loop=0
+-del_vacant_loop=0
+-struct_alloc=1
+-lang=c
+-nologo

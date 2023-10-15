@@ -1,0 +1,940 @@
+SH SERIES C/C++ Compiler (V.9.04.03.000)                                                         07-Sep-2023 20:41:35  PAGE    1
+
+************ OBJECT LISTING ************
+
+FILE NAME: C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskint.c
+
+SCT OFFSET   CODE       C LABEL     INSTRUCTION OPERAND    COMMENT
+
+             tskint.c          1    /******************************************************************************
+             tskint.c          2    * ＩＮＴコマンド監視タスク                                                    *
+             tskint.c          3    *                                                                             *
+             tskint.c          4    * File name : tskint.c                                                        *
+             tskint.c          5    *                                                                             *
+             tskint.c          6    * Copyright (c) 2018 NICHIRYO Co., Ltd.                                       *
+             tskint.c          7    *                                                                             *
+             tskint.c          8    ******************************************************************************/
+             tskint.c          9    #include <kernel.h>
+             tskint.c         10    #include "sh7237.h"
+             tskint.c         11    #include "iodefine.h"
+             tskint.c         12    #include "define.h"
+             tskint.c         13    #include "datastruct.h"
+             tskint.c         14    #include "sub.h"
+             tskint.c         15    #include "tskint.h"
+             tskint.c         16    #include "automachine.h"
+             tskint.c         17    #include "tblchr.h"
+             tskint.c         18    #include "mnet.h"
+             tskint.c         19    #include "tskcmd.h"
+             tskint.c         20    
+             tskint.c         21    
+             tskint.c         22    //*************************************
+             tskint.c         23    // 関数定義
+             tskint.c         24    //*************************************
+             tskint.c         25    static void InttskInit();
+             tskint.c         26    static void IntInfoSet(T_CMD_MSG* mrcv);
+             tskint.c         27    static void IntProc();
+             tskint.c         28    static void IntTrgAction(ST_INTCNTL *cntl);
+             tskint.c         29    static BOOL MotStopChk( UB pm, UB trg );
+             tskint.c         30    static ER IntTrgChk(ST_INTCNTL *cntl);
+             tskint.c         31    
+             tskint.c         32    
+             tskint.c         33    //*************************************
+             tskint.c         34    // テーブル
+             tskint.c         35    //*************************************
+             tskint.c         36    
+             tskint.c         37    
+             tskint.c         38    //*************************************
+             tskint.c         39    // データ定義
+             tskint.c         40    //*************************************
+             tskint.c         41    static    UB                  ChDataOld[MAX_CH+1];                        // 2020/2/12 １はじまり対応
+             tskint.c         42    static    ST_INTCNTL          stCntl[MAX_CH+1];                           // 2020/2/12 １はじまり対応
+             tskint.c         43    static    ST_CNTLDATA         rspdat;
+             tskint.c         44    
+             tskint.c         45    /***********************************************************************
+             tskint.c         46    * ｘｘｘ
+             tskint.c         47    * 
+             tskint.c         48    * [概要]
+             tskint.c         49    * ｘｘｘ
+             tskint.c         50    * 
+             tskint.c         51    ***********************************************************************/
+             tskint.c         52    TASK TskInt( void )
+P   00000000              _TskInt:                         ; function: TskInt
+                                                           ; frame size=4
+    00000000 7FFC                   ADD         #-4,R15
+             tskint.c         53    {
+             tskint.c         54        T_CMD_MSG*  msg;
+             tskint.c         55      ER          err;
+             tskint.c         56    
+             tskint.c         57      InttskInit();                                                       // ＩＮＴコマンド情報初期化処理
+    00000002 B016                   BSR         __$InttskInit
+    00000004 0009                   NOP
+    00000006 DE80                   MOV.L       L64,R14    ; _v4_trcv_mbx
+    00000008 DC80                   MOV.L       L64+4,R12  ; L106
+    0000000A DD81                   MOV.L       L64+8,R13  ; _api_rel_mpf
+    0000000C              L11:
+             tskint.c         58      
+             tskint.c         59      for( ;; )
+             tskint.c         60        {
+             tskint.c         61            // コマンド待ち
+             tskint.c         62            err = trcv_mbx( ID_MBX_INT, (T_MSG**)&msg, DLY_1M );
+    0000000C E601                   MOV         #1,R6      ; H'00000001
+    0000000E E40B                   MOV         #11,R4     ; H'0000000B
+    00000010 4E0B                   JSR         @R14
+    00000012 65F3                   MOV         R15,R5
+             tskint.c         63    
+             tskint.c         64          if( err == E_TMOUT )
+    00000014 88CE                   CMP/EQ      #-50,R0
+    00000016 8B03                   BF          L13
+             tskint.c         65          {
+             tskint.c         66              // INT監視処理
+             tskint.c         67              IntProc();
+    00000018 B03D                   BSR         __$IntProc
+    0000001A 0009                   NOP
+    0000001C AFF6                   BRA         L11
+    0000001E 0009                   NOP
+    00000020              L13:
+             tskint.c         68              continue;
+             tskint.c         69          }
+             tskint.c         70          else
+             tskint.c         71          {
+             tskint.c         72              // INT情報セット
+             tskint.c         73              IntInfoSet(msg);
+    00000020 B021                   BSR         __$IntInfoSet
+    00000022 64F2                   MOV.L       @R15,R4    ; msg
+    00000024 67F2                   MOV.L       @R15,R7    ; msg
+             tskint.c         74          }
+             tskint.c         75          
+             tskint.c         76          RelMpf( ID_MPF_INT, (VP)msg );                                  // メモリ解放
+    00000026 E60A                   MOV         #10,R6     ; H'0000000A
+    00000028 E54C                   MOV         #76,R5     ; H'0000004C
+    0000002A 4D0B                   JSR         @R13
+    0000002C 64C3                   MOV         R12,R4
+    0000002E AFED                   BRA         L11
+    00000030 0009                   NOP
+             tskint.c         77        }
+             tskint.c         78    }
+             tskint.c         79    
+             tskint.c         80    /***********************************************************************
+             tskint.c         81    * 
+             tskint.c         82    * [概要]  ＩＮＴコマンド情報初期化処理
+             tskint.c         83    * [引数]  メッセージデータ
+             tskint.c         84    * [戻値]  －
+             tskint.c         85    * 
+             tskint.c         86    ***********************************************************************/
+             tskint.c         87    static void InttskInit()
+    00000032              __$InttskInit:                   ; function: __$InttskInit
+                                                           ; frame size=12
+    00000032 4DF0                   MOVMU.L     R13,@-R15
+    00000034 EDFF                   MOV         #-1,R13    ; H'FFFFFFFF
+    00000036 E609                   MOV         #9,R6      ; H'00000009
+             tskint.c         88    {
+             tskint.c         89      INT     Loop;
+             tskint.c         90    
+             tskint.c         91      memset( &stCntl,      DEFDAT,  sizeof( stCntl ) );
+    00000038 DE76                   MOV.L       L64+12,R14 ; __$stCntl
+    0000003A 6DDC                   EXTU.B      R13,R13
+    0000003C 4618                   SHLL8       R6
+    0000003E 64E3                   MOV         R14,R4
+    00000040 7E28                   ADD         #40,R14
+    00000042 D175                   MOV.L       L64+16,R1  ; _memset
+    00000044 410B                   JSR         @R1
+    00000046 65D3                   MOV         R13,R5
+    00000048 E640                   MOV         #64,R6     ; H'00000040
+             tskint.c         92      memset( &ChDataOld,   DEFDAT,  sizeof( ChDataOld ) );
+    0000004A D474                   MOV.L       L64+20,R4  ; __$ChDataOld
+    0000004C D772                   MOV.L       L64+16,R7  ; _memset
+    0000004E 470B                   JSR         @R7
+    00000050 65D3                   MOV         R13,R5
+    00000052 66E3                   MOV         R14,R6
+             tskint.c         93    
+             tskint.c         94      for( Loop = MIN_CH; Loop <= INMAX; Loop++ ) // 2020/2/12 １はじまり対応
+    00000054 E201                   MOV         #1,R2      ; H'00000001
+    00000056 E50A                   MOV         #10,R5     ; H'0000000A
+    00000058              L16:
+             tskint.c         95      {
+             tskint.c         96          stCntl[Loop].intinf.nn = Loop;
+    00000058 2620                   MOV.B       R2,@R6     ; stCntl[].nn
+    0000005A 7201                   ADD         #1,R2
+    0000005C 3257                   CMP/GT      R5,R2
+    0000005E 8FFB                   BF/S        L16
+    00000060 7624                   ADD         #36,R6
+    00000062 4DF4                   MOVMU.L     @R15+,R13
+             tskint.c         97      }
+             tskint.c         98    }
+    00000064 006B                   RTS/N
+             tskint.c         99    
+             tskint.c        100    /***********************************************************************
+             tskint.c        101    * 
+             tskint.c        102    * [概要]  ＩＮＴコマンド情報設定処理
+             tskint.c        103    * [引数]  メッセージデータ
+             tskint.c        104    * [戻値]  －
+             tskint.c        105    * 
+             tskint.c        106    ***********************************************************************/
+             tskint.c        107    static void IntInfoSet(T_CMD_MSG* mrcv)
+    00000066              __$IntInfoSet:                   ; function: __$IntInfoSet
+                                                           ; frame size=0
+             tskint.c        108    {
+             tskint.c        109      UB      ch;
+             tskint.c        110    
+             tskint.c        111      ch  = mrcv->msgdata.inf;
+             tskint.c        112    
+             tskint.c        113      stCntl[ch].tskid = mrcv->msgdata.tskid;
+    00000066 3241801C               MOVU.B      @(28,R4),R2; (mrcv)->inf
+    0000006A E024                   MOV         #36,R0     ; H'00000024
+    0000006C 5545                   MOV.L       @(20,R4),R5; (mrcv)->tskid
+    0000006E 4280                   MULR        R0,R2
+    00000070 D168                   MOV.L       L64+12,R1  ; __$stCntl
+    00000072 E620                   MOV         #32,R6     ; H'00000020
+    00000074 321C                   ADD         R1,R2
+    00000076 2250                   MOV.B       R5,@R2     ; stCntl[].tskid
+             tskint.c        114      stCntl[ch].prid1  = mrcv->msgdata.prid1;
+    00000078 30414018               MOV.B       @(24:12,R4),R0; (mrcv)->prid1
+    0000007C 8021                   MOV.B       R0,@(1,R2) ; stCntl[].prid1
+             tskint.c        115      stCntl[ch].bcid  = mrcv->msgdata.bcid;
+    0000007E 3041401A               MOV.B       @(26:12,R4),R0; (mrcv)->bcid
+    00000082 8022                   MOV.B       R0,@(2,R2) ; stCntl[].bcid
+             tskint.c        116      stCntl[ch].msgid = mrcv->msgdata.msgid;
+    00000084 3041401B               MOV.B       @(27:12,R4),R0; (mrcv)->msgid
+             tskint.c        117      
+             tskint.c        118      // memcpy(コピー先アドレス、コピー元アドレス、コピーサイズ)
+             tskint.c        119      memcpy( &stCntl[ch].intinf, &mrcv->msgdata.data[0], sizeof(ST_INTINF) );
+    00000088 7424                   ADD         #36,R4
+    0000008A 8023                   MOV.B       R0,@(3,R2) ; stCntl[].msgid
+    0000008C 7204                   ADD         #4,R2
+    0000008E 6543                   MOV         R4,R5
+    00000090 D763                   MOV.L       L64+24,R7  ; _memcpy
+    00000092 472B                   JMP         @R7
+    00000094 6423                   MOV         R2,R4
+             tskint.c        120    }
+             tskint.c        121    
+             tskint.c        122    /***********************************************************************
+             tskint.c        123    * 
+             tskint.c        124    * [概要]  ＩＮＴコマンド監視
+             tskint.c        125    * [引数]  メッセージデータ
+             tskint.c        126    * [戻値]  －
+             tskint.c        127    * 
+             tskint.c        128    ***********************************************************************/
+             tskint.c        129    static void IntProc()
+    00000096              __$IntProc:                      ; function: __$IntProc
+                                                           ; frame size=20
+    00000096 4BF0                   MOVMU.L     R11,@-R15
+    00000098 EBF1                   MOV         #-15,R11   ; H'FFFFFFF1
+             tskint.c        130    {
+             tskint.c        131      INT     Loop;
+             tskint.c        132      
+             tskint.c        133      for( Loop = MIN_CH; Loop <= MAX_CH; Loop++ )    // 2020/2/12 １はじまり対応
+    0000009A ED3F                   MOV         #63,R13    ; H'0000003F
+    0000009C 6BBC                   EXTU.B      R11,R11
+    0000009E EC24                   MOV         #36,R12    ; H'00000024
+    000000A0              L20:
+             tskint.c        134      {
+             tskint.c        135          // トリガ成立か？
+             tskint.c        136          if( IntTrgChk(&stCntl[Loop]) != E_CONTINUE )
+    000000A0 DE5C                   MOV.L       L64+12,R14 ; __$stCntl
+    000000A2 3ECC                   ADD         R12,R14
+    000000A4 B0EE                   BSR         __$IntTrgChk
+    000000A6 64E3                   MOV         R14,R4
+    000000A8 30B0                   CMP/EQ      R11,R0
+    000000AA 8901                   BT          L22
+             tskint.c        137          {
+             tskint.c        138              // トリガ成立時の処理実行
+             tskint.c        139              IntTrgAction( &stCntl[Loop] );
+    000000AC B005                   BSR         __$IntTrgAction
+    000000AE 64E3                   MOV         R14,R4
+    000000B0              L22:
+    000000B0 4D10                   DT          R13
+    000000B2 8FF5                   BF/S        L20
+    000000B4 7C24                   ADD         #36,R12
+    000000B6 4BF4                   MOVMU.L     @R15+,R11
+             tskint.c        140          }
+             tskint.c        141      }
+             tskint.c        142    }
+    000000B8 006B                   RTS/N
+             tskint.c        143    /***********************************************************************
+             tskint.c        144    * 
+             tskint.c        145    * [概要]  ＩＮＴコマンドトリガ成立時の処理実行
+             tskint.c        146    * [引数]  メッセージデータ
+             tskint.c        147    * [戻値]  －
+             tskint.c        148    * 
+             tskint.c        149    ***********************************************************************/
+             tskint.c        150    static void IntTrgAction(ST_INTCNTL *cntl)
+    000000BA              __$IntTrgAction:                 ; function: __$IntTrgAction
+                                                           ; frame size=60
+    000000BA 48F0                   MOVMU.L     R8,@-R15
+    000000BC 7FF0                   ADD         #-16,R15
+             tskint.c        151    {
+             tskint.c        152      UB inpHL;
+             tskint.c        153      INT     Loop;
+             tskint.c        154      INT     SubLoop;
+             tskint.c        155      INT     chloop;
+             tskint.c        156      UB      chno;
+             tskint.c        157      UB      motstop;
+             tskint.c        158      UB      outdat;
+             tskint.c        159      UB      outch;
+             tskint.c        160      UB      chkbit;
+             tskint.c        161      BOOL    stopflg;
+             tskint.c        162    
+             tskint.c        163      if( cntl->intinf.nn == DEFDAT )     return;
+    000000BE 8444                   MOV.B       @(4,R4),R0 ; (cntl)->nn
+    000000C0 E1FF                   MOV         #-1,R1     ; H'FFFFFFFF
+    000000C2 3010                   CMP/EQ      R1,R0
+    000000C4 8F02                   BF/S        L105
+    000000C6 2F42                   MOV.L       R4,@R15    ; cntl
+    000000C8 A085                   BRA         L26
+    000000CA 0009                   NOP
+    000000CC              L105:
+             tskint.c        164    
+             tskint.c        165      chloop = (MAX_CH / 8) + 1;
+             tskint.c        166    
+             tskint.c        167      // トリガ成立時の処理
+             tskint.c        168      for( Loop = 0; Loop < chloop; Loop++ )
+    000000CC E100                   MOV         #0,R1      ; H'00000000
+    000000CE E708                   MOV         #8,R7      ; H'00000008
+    000000D0 1F11                   MOV.L       R1,@(4,R15); Loop
+    000000D2 1F72                   MOV.L       R7,@(8,R15)
+    000000D4              L27:
+             tskint.c        169      {
+             tskint.c        170          chkbit = 0x01;
+             tskint.c        171          motstop = cntl->intinf.mmm[Loop] ;
+    000000D4 6EF2                   MOV.L       @R15,R14   ; cntl
+    000000D6 EC01                   MOV         #1,R12     ; H'00000001
+    000000D8 3E1C                   ADD         R1,R14
+    000000DA 84E8                   MOV.B       @(8,R14),R0; cntl->mmm[]
+             tskint.c        172          outdat  = cntl->intinf.dat[Loop] ;
+    000000DC 35E18010               MOVU.B      @(16,R14),R5; cntl->dat[]
+    000000E0 6803                   MOV         R0,R8
+             tskint.c        173          outch   = cntl->intinf.msk[Loop] ;
+    000000E2 39E14018               MOV.B       @(24:12,R14),R9; cntl->msk[]
+    000000E6 4108                   SHLL2       R1
+    000000E8 1F53                   MOV.L       R5,@(12,R15)
+    000000EA 4100                   SHLL        R1
+    000000EC EB08                   MOV         #8,R11     ; H'00000008
+    000000EE 6A13                   MOV         R1,R10
+    000000F0              L29:
+             tskint.c        174    
+             tskint.c        175          for( SubLoop = 0; SubLoop < 8; SubLoop++ )
+             tskint.c        176          {
+             tskint.c        177              // CH番号
+             tskint.c        178              chno = ( Loop * 8 ) + SubLoop + 1;
+             tskint.c        179              stopflg = MotStopChk( chno, cntl->intinf.trg ) ;
+    000000F0 6EF2                   MOV.L       @R15,R14   ; cntl
+    000000F2 64A3                   MOV         R10,R4
+    000000F4 7401                   ADD         #1,R4
+    000000F6 84E5                   MOV.B       @(5,R14),R0; (cntl)->trg
+             tskint.c        180              
+             tskint.c        181              // モータ停止( = 1 )
+             tskint.c        182              if(( motstop & chkbit ))
+    000000F8 6ECC                   EXTU.B      R12,R14
+    000000FA 6D43                   MOV         R4,R13
+    000000FC B06E                   BSR         __$MotStopChk
+    000000FE 6503                   MOV         R0,R5
+    00000100 28E8                   TST         R14,R8
+    00000102 8904                   BT          L31
+             tskint.c        183              {
+             tskint.c        184                  // 停止対象方向のモータか？
+             tskint.c        185                  if( stopflg == TRUE )
+    00000104 8801                   CMP/EQ      #1,R0
+    00000106 8B02                   BF          L31
+             tskint.c        186                  {
+             tskint.c        187                      motor_ABORT( chno );
+    00000108 D246                   MOV.L       L64+28,R2  ; _motor_ABORT
+    0000010A 420B                   JSR         @R2
+    0000010C 64DC                   EXTU.B      R13,R4
+    0000010E              L31:
+             tskint.c        188                  }
+             tskint.c        189              }
+             tskint.c        190    
+             tskint.c        191              // 出力対象( = 1 )
+             tskint.c        192              if(( outch & chkbit ))
+    0000010E 29E8                   TST         R14,R9
+    00000110 8909                   BT          L34
+    00000112 56F3                   MOV.L       @(12,R15),R6
+             tskint.c        193              {
+             tskint.c        194                  // 出力データＨ
+             tskint.c        195                  if(( outdat  & chkbit ))
+    00000114 64DC                   EXTU.B      R13,R4
+    00000116 D244                   MOV.L       L64+32,R2  ; _pio_BOUT
+    00000118 26E8                   TST         R14,R6
+    0000011A 8D03                   BT/S        L36
+    0000011C 0539                   MOVRT       R5
+             tskint.c        196                  {
+             tskint.c        197                      pio_BOUT( chno, TRUE );
+    0000011E 424B                   JSR/N       @R2
+    00000120 A001                   BRA         L34
+    00000122 0009                   NOP
+    00000124              L36:
+             tskint.c        198                  }
+             tskint.c        199                  // 出力データＬ
+             tskint.c        200                  else
+             tskint.c        201                  {
+             tskint.c        202                      pio_BOUT( chno, FALSE );
+    00000124 424B                   JSR/N       @R2
+    00000126              L34:
+             tskint.c        203                  }
+             tskint.c        204              }
+             tskint.c        205    
+             tskint.c        206              chkbit = ( chkbit << 1 );
+    00000126 4E20                   SHAL        R14
+    00000128 4B10                   DT          R11
+    0000012A 6AAC                   EXTU.B      R10,R10
+    0000012C 6CE3                   MOV         R14,R12
+    0000012E 8FDF                   BF/S        L29
+    00000130 7A01                   ADD         #1,R10
+    00000132 51F1                   MOV.L       @(4,R15),R1; Loop
+    00000134 57F2                   MOV.L       @(8,R15),R7
+    00000136 7101                   ADD         #1,R1
+    00000138 4710                   DT          R7
+    0000013A 1F11                   MOV.L       R1,@(4,R15); Loop
+    0000013C 8FCA                   BF/S        L27
+    0000013E 1F72                   MOV.L       R7,@(8,R15)
+             tskint.c        207          }
+             tskint.c        208      }
+             tskint.c        209    
+             tskint.c        210      // ブロックコマンドによる内部実行時はクリア
+             tskint.c        211      if( cntl->bcid != NO_DATA )
+    00000140 6EF2                   MOV.L       @R15,R14   ; cntl
+    00000142 E1FF                   MOV         #-1,R1     ; H'FFFFFFFF
+    00000144 84E2                   MOV.B       @(2,R14),R0; (cntl)->bcid
+    00000146 3010                   CMP/EQ      R1,R0
+    00000148 8902                   BT          L40
+             tskint.c        212      {
+             tskint.c        213          // トリガ条件成立したのでトリガクリア
+             tskint.c        214          cntl->intinf.trg = TRG_NM;
+    0000014A 6EF2                   MOV.L       @R15,R14   ; cntl
+    0000014C E000                   MOV         #0,R0      ; H'00000000
+    0000014E 80E5                   MOV.B       R0,@(5,R14); (cntl)->trg
+    00000150              L40:
+             tskint.c        215      }
+             tskint.c        216    
+             tskint.c        217      // 状態取得
+             tskint.c        218      inpHL = pio_BIN( cntl->intinf.nn );
+    00000150 6EF2                   MOV.L       @R15,R14   ; cntl
+    00000152 34E18004               MOVU.B      @(4,R14),R4; (cntl)->nn
+    00000156 D135                   MOV.L       L64+36,R1  ; _pio_BIN
+    00000158 414B                   JSR/N       @R1
+             tskint.c        219      
+             tskint.c        220      // レスポンス送信
+             tskint.c        221      // 応答メッセージ作成
+             tskint.c        222      CmdMakeResponseInt( &rspdat,
+             tskint.c        223                          PARAM3,                                 // パラメータ数
+             tskint.c        224                          STRTBL_MSG[ID_MSG_INTRPT],              // コマンド文字列
+             tskint.c        225                          cntl->intinf.nn,                        // 
+             tskint.c        226    
+             tskint.c        227                          inpHL                                   // 
+             tskint.c        228                      );
+    0000015A 640C                   EXTU.B      R0,R4
+    0000015C 2F46                   MOV.L       R4,@-R15
+    0000015E D534                   MOV.L       L64+40,R5  ; H'00000060+_STRTBL_MSG
+    00000160 37E18004               MOVU.B      @(4,R14),R7; (cntl)->nn
+    00000164 6652                   MOV.L       @R5,R6     ; STRTBL_MSG[]
+    00000166 D433                   MOV.L       L64+44,R4  ; __$rspdat
+    00000168 D833                   MOV.L       L64+48,R8  ; _CmdMakeResponseInt
+    0000016A 480B                   JSR         @R8
+    0000016C E503                   MOV         #3,R5      ; H'00000003
+    0000016E E1FF                   MOV         #-1,R1     ; H'FFFFFFFF
+             tskint.c        229    
+             tskint.c        230      // 基本コマンドの場合は以下の処理
+             tskint.c        231      if( cntl->bcid == NO_DATA )
+    00000170 36E18002               MOVU.B      @(2,R14),R6; (cntl)->bcid
+    00000174 611C                   EXTU.B      R1,R1
+    00000176 3610                   CMP/EQ      R1,R6
+    00000178 8F1C                   BF/S        L42
+    0000017A 7F04                   ADD         #4,R15
+             tskint.c        232      {
+             tskint.c        233          SendResponse( &rspdat );
+    0000017C D42D                   MOV.L       L64+44,R4  ; __$rspdat
+    0000017E D92F                   MOV.L       L64+52,R9  ; _SendResponse
+    00000180 490B                   JSR         @R9
+    00000182 6EF2                   MOV.L       @R15,R14   ; cntl
+             tskint.c        234    
+             tskint.c        235          // 
+             tskint.c        236          // CMDTSKに Interruptによる停止を通知する必要あり、関連する管理データをクリアするため
+             tskint.c        237          // 
+             tskint.c        238    
+             tskint.c        239          // 停止モータ情報をコピー
+             tskint.c        240          memcpy( &rspdat.rsp.buf[0], &cntl->intinf.mmm[0], 8 );
+    00000184 65E3                   MOV         R14,R5
+    00000186 7508                   ADD         #8,R5
+    00000188 D42D                   MOV.L       L64+56,R4  ; H'0000009C+__$rspdat
+    0000018A DA25                   MOV.L       L64+24,R10 ; _memcpy
+    0000018C 4A0B                   JSR         @R10
+    0000018E E608                   MOV         #8,R6      ; H'00000008
+             tskint.c        241          
+             tskint.c        242          // 応答メッセージ送信
+             tskint.c        243          CmdEndResponse  (
+             tskint.c        244                              ID_TSK_INT,
+             tskint.c        245                              cntl->prid1,
+             tskint.c        246                              NO_DATA,
+             tskint.c        247                              cntl->msgid,
+             tskint.c        248                              cntl->intinf.nn,
+             tskint.c        249                              NO_DATA,
+             tskint.c        250                              &rspdat
+             tskint.c        251                          );
+    00000190 D128                   MOV.L       L64+44,R1  ; __$rspdat
+    00000192 2F16                   MOV.L       R1,@-R15
+    00000194 EBFF                   MOV         #-1,R11    ; H'FFFFFFFF
+    00000196 6BBC                   EXTU.B      R11,R11
+    00000198 66B3                   MOV         R11,R6
+    0000019A 2FB6                   MOV.L       R11,@-R15
+    0000019C 30E18004               MOVU.B      @(4,R14),R0; (cntl)->nn
+    000001A0 2F06                   MOV.L       R0,@-R15
+    000001A2 E40B                   MOV         #11,R4     ; H'0000000B
+    000001A4 84E3                   MOV.B       @(3,R14),R0; (cntl)->msgid
+    000001A6 6703                   MOV         R0,R7
+    000001A8 84E1                   MOV.B       @(1,R14),R0; (cntl)->prid1
+    000001AA DC26                   MOV.L       L64+60,R12 ; _CmdEndResponse
+    000001AC 4C0B                   JSR         @R12
+    000001AE 6503                   MOV         R0,R5
+    000001B0 A011                   BRA         L26
+    000001B2 7F0C                   ADD         #12,R15
+    000001B4              L42:
+             tskint.c        252      }
+             tskint.c        253      // ＢＣコマンドの展開系のコマンドではない場合は以下の処理
+             tskint.c        254      else
+             tskint.c        255      {
+             tskint.c        256          // 応答メッセージ送信
+             tskint.c        257          CmdEndResponse  (
+             tskint.c        258                              ID_TSK_INT,
+             tskint.c        259                              cntl->prid1,
+             tskint.c        260                              cntl->bcid,
+             tskint.c        261                              cntl->msgid,
+             tskint.c        262                              cntl->intinf.nn,
+             tskint.c        263                              NO_DATA,
+             tskint.c        264                              &rspdat
+             tskint.c        265                          );
+    000001B4 D11F                   MOV.L       L64+44,R1  ; __$rspdat
+    000001B6 2F16                   MOV.L       R1,@-R15
+    000001B8 EDFF                   MOV         #-1,R13    ; H'FFFFFFFF
+    000001BA 6DDC                   EXTU.B      R13,R13
+    000001BC 2FD6                   MOV.L       R13,@-R15
+    000001BE 5EF2                   MOV.L       @(8,R15),R14; cntl
+    000001C0 30E18004               MOVU.B      @(4,R14),R0; (cntl)->nn
+    000001C4 2F06                   MOV.L       R0,@-R15
+    000001C6 E40B                   MOV         #11,R4     ; H'0000000B
+    000001C8 84E3                   MOV.B       @(3,R14),R0; (cntl)->msgid
+    000001CA 6703                   MOV         R0,R7
+    000001CC 84E1                   MOV.B       @(1,R14),R0; (cntl)->prid1
+    000001CE D81D                   MOV.L       L64+60,R8  ; _CmdEndResponse
+    000001D0 480B                   JSR         @R8
+    000001D2 6503                   MOV         R0,R5
+    000001D4 7F0C                   ADD         #12,R15
+    000001D6              L26:
+    000001D6 7F10                   ADD         #16,R15
+    000001D8 48F4                   MOVMU.L     @R15+,R8
+             tskint.c        266      }
+             tskint.c        267    
+             tskint.c        268    
+             tskint.c        269    
+             tskint.c        270    }
+    000001DA 006B                   RTS/N
+             tskint.c        271    
+             tskint.c        272    /***********************************************************************
+             tskint.c        273    * 
+             tskint.c        274    * [概要]  モータ停止チェック
+             tskint.c        275    * [引数]  pm:モータ、trg:トリガ
+             tskint.c        276    * [戻値]  TRUE:停止対象、FALSE:停止非対象
+             tskint.c        277    * 
+             tskint.c        278    ***********************************************************************/
+             tskint.c        279    static BOOL MotStopChk( UB pm, UB trg )
+    000001DC              __$MotStopChk:                   ; function: __$MotStopChk
+                                                           ; frame size=16
+    000001DC 4DF0                   MOVMU.L     R13,@-R15
+    000001DE 7FFC                   ADD         #-4,R15
+             tskint.c        280    {
+             tskint.c        281      BOOL result = FALSE;
+    000001E0 6E53                   MOV         R5,R14
+    000001E2 E5F1                   MOV         #-15,R5    ; H'FFFFFFF1
+    000001E4 644C                   EXTU.B      R4,R4
+    000001E6 ED00                   MOV         #0,R13     ; H'00000000
+    000001E8 655C                   EXTU.B      R5,R5
+             tskint.c        282      RSTS rsts;
+             tskint.c        283      UB   sdir;
+             tskint.c        284    
+             tskint.c        285      // RSTS取得
+             tskint.c        286      GetMotorRegister((UH)pm, RRG_RSTS, &rsts.UNID.data );
+    000001EA D117                   MOV.L       L64+64,R1  ; _GetMotorRegister
+    000001EC 410B                   JSR         @R1
+    000001EE 66F3                   MOV         R15,R6
+             tskint.c        287    
+             tskint.c        288      // 動作方向取得
+             tskint.c        289      sdir = ( rsts.UNID.BIT.SDIR )?  MINUS : PLUS;
+    000001F0 84F3                   MOV.B       @(3,R15),R0; (part of)rsts
+    000001F2 C810                   TST         #16,R0
+    000001F4 0239                   MOVRT       R2
+             tskint.c        290    
+             tskint.c        291      switch(trg)
+    000001F6 66EC                   EXTU.B      R14,R6
+    000001F8 E40F                   MOV         #15,R4     ; H'0000000F
+    000001FA 3646                   CMP/HI      R4,R6
+    000001FC 893E                   BT          L63
+    000001FE 4600                   SHLL        R6
+    00000200 C712                   MOVA        L65,R0
+    00000202 006D                   MOV.W       @(R0,R6),R0
+    00000204 0023                   BRAF        R0
+    00000206 0009                   NOP
+    00000208              L64:
+    00000208 <00000000>             .DATA.L     _v4_trcv_mbx
+    0000020C <00000000>             .DATA.L     L106
+    00000210 <00000000>             .DATA.L     _api_rel_mpf
+    00000214 <00000000>             .DATA.L     __$stCntl
+    00000218 <00000000>             .DATA.L     _memset
+    0000021C <00000000>             .DATA.L     __$ChDataOld
+    00000220 <00000000>             .DATA.L     _memcpy
+    00000224 <00000000>             .DATA.L     _motor_ABORT
+    00000228 <00000000>             .DATA.L     _pio_BOUT
+    0000022C <00000000>             .DATA.L     _pio_BIN
+    00000230 <00000060>             .DATA.L     H'00000060+_STRTBL_MSG
+    00000234 <00000000>             .DATA.L     __$rspdat
+    00000238 <00000000>             .DATA.L     _CmdMakeResponseInt
+    0000023C <00000000>             .DATA.L     _SendResponse
+    00000240 <0000009C>             .DATA.L     H'0000009C+__$rspdat
+    00000244 <00000000>             .DATA.L     _CmdEndResponse
+    00000248 <00000000>             .DATA.L     _GetMotorRegister
+    0000024C              L65:
+    0000024C 0074                   .DATA.W     L45-L64
+    0000024E 0072                   .DATA.W     L46-L64
+    00000250 0064                   .DATA.W     L51-L64
+    00000252 006C                   .DATA.W     L56-L64
+    00000254 0072                   .DATA.W     L47-L64
+    00000256 0064                   .DATA.W     L52-L64
+    00000258 006C                   .DATA.W     L57-L64
+    0000025A 0072                   .DATA.W     L48-L64
+    0000025C 0064                   .DATA.W     L53-L64
+    0000025E 006C                   .DATA.W     L58-L64
+    00000260 0072                   .DATA.W     L49-L64
+    00000262 0064                   .DATA.W     L54-L64
+    00000264 006C                   .DATA.W     L59-L64
+    00000266 0072                   .DATA.W     L50-L64
+    00000268 0064                   .DATA.W     L55-L64
+    0000026A 006C                   .DATA.W     L60-L64
+    0000026C              L51:
+    0000026C              L52:
+    0000026C              L53:
+    0000026C              L54:
+    0000026C              L55:
+             tskint.c        292      {
+             tskint.c        293          case TRG_NM:                                                    // 0  N ：通常入力設定(割込設定解除) 
+             tskint.c        294              // 対象なし
+             tskint.c        295              break;
+             tskint.c        296          case TRG_HD:                                                    // 1  HD：High入力状態の間、CW/CCW両方向共に一時停止
+             tskint.c        297          case TRG_LD:                                                    // 4  LD：Low入力状態の間、CW/CCW両方向共に一時停止
+             tskint.c        298          case TRG_UD:                                                    // 7  UD：立ち上がりエッジ検出時、CW/CCW両方向共に一時停止
+             tskint.c        299          case TRG_DD:                                                    // 10 DD：立ち下がりエッジ検出時、CW/CCW両方向共に一時停止
+             tskint.c        300          case TRG_ED:                                                    // 13 ED：立ち上がり／立ち下がりエッジ検出時、CW/CCW両方向共に一時停止
+             tskint.c        301              result = TRUE;
+             tskint.c        302              break;
+             tskint.c        303          case TRG_HP:                                                    // 2  H+：High入力状態の間、CW方向のみ一時停止
+             tskint.c        304          case TRG_LP:                                                    // 5  L+：Low入力状態の間、CW方向のみ一時停止
+             tskint.c        305          case TRG_UP:                                                    // 8  U+：立ち上がりエッジ検出時、CW方向のみ一時停止
+             tskint.c        306          case TRG_DP:                                                    // 11 D+：立ち下がりエッジ検出時、CW方向のみ一時停止
+             tskint.c        307          case TRG_EP:                                                    // 14 E+：立ち上がり／立ち下がりエッジ検出時、CW方向のみ一時停止
+             tskint.c        308              if( sdir == PLUS )  result = TRUE;
+    0000026C 2228                   TST         R2,R2
+    0000026E 8904                   BT          L67
+    00000270 A004                   BRA         L63
+    00000272 0009                   NOP
+    00000274              L56:
+    00000274              L57:
+    00000274              L58:
+    00000274              L59:
+    00000274              L60:
+             tskint.c        309              break;
+             tskint.c        310          case TRG_HM:                                                    // 3  H-：High入力状態の間、CCW方向のみ一時停止
+             tskint.c        311          case TRG_LM:                                                    // 6  L-：Low入力状態の間、CCW方向のみ一時停止
+             tskint.c        312          case TRG_UM:                                                    // 9  U-：立ち上がりエッジ検出時、CCW方向のみ一時停止
+             tskint.c        313          case TRG_DM:                                                    // 12 D-：立ち下がりエッジ検出時、CCW方向のみ一時停止
+             tskint.c        314          case TRG_EM:                                                    // 15 E-：立ち上がり／立ち下がりエッジ検出時、CCW方向のみ一時停止
+             tskint.c        315              if( sdir == MINUS ) result = TRUE;
+    00000274 6023                   MOV         R2,R0
+    00000276 8801                   CMP/EQ      #1,R0
+    00000278 8B00                   BF          L63
+    0000027A              L46:
+    0000027A              L47:
+    0000027A              L48:
+    0000027A              L49:
+    0000027A              L50:
+    0000027A              L67:
+    0000027A ED01                   MOV         #1,R13     ; H'00000001
+    0000027C              L45:
+    0000027C              L63:
+             tskint.c        316              break;
+             tskint.c        317      }
+             tskint.c        318      return( result);
+    0000027C 60D3                   MOV         R13,R0
+    0000027E 7F04                   ADD         #4,R15
+    00000280 4DF4                   MOVMU.L     @R15+,R13
+             tskint.c        319    }
+    00000282 006B                   RTS/N
+             tskint.c        320    
+             tskint.c        321    /***********************************************************************
+             tskint.c        322    * 
+             tskint.c        323    * [概要]  ＩＮＴコマンド監視
+             tskint.c        324    * [引数]  メッセージデータ
+             tskint.c        325    * [戻値]  －
+             tskint.c        326    * 
+             tskint.c        327    ***********************************************************************/
+             tskint.c        328    static ER IntTrgChk(ST_INTCNTL *cntl)
+    00000284              __$IntTrgChk:                    ; function: __$IntTrgChk
+                                                           ; frame size=12
+    00000284 4DF0                   MOVMU.L     R13,@-R15
+             tskint.c        329    {
+             tskint.c        330      UB sts;
+             tskint.c        331      ER result = E_CONTINUE;
+    00000286 6E43                   MOV         R4,R14
+    00000288 E1FF                   MOV         #-1,R1     ; H'FFFFFFFF
+             tskint.c        332    
+             tskint.c        333    
+             tskint.c        334      // 未接続
+             tskint.c        335      if( cntl->intinf.nn == DEFDAT )     return( result );
+    0000028A 34418004               MOVU.B      @(4,R4),R4 ; (cntl)->nn
+    0000028E 611C                   EXTU.B      R1,R1
+    00000290 EDF1                   MOV         #-15,R13   ; H'FFFFFFF1
+    00000292 3410                   CMP/EQ      R1,R4
+    00000294 8D4A                   BT/S        L89
+    00000296 6DDC                   EXTU.B      R13,R13
+             tskint.c        336    
+             tskint.c        337      // 状態取得
+             tskint.c        338      sts = pio_BIN( cntl->intinf.nn );
+    00000298 D20C                   MOV.L       L94+2,R2   ; _pio_BIN
+    0000029A 424B                   JSR/N       @R2
+             tskint.c        339    
+             tskint.c        340      // 最初の一発目
+             tskint.c        341      if( ChDataOld[cntl->intinf.nn] == DEFDAT )
+    0000029C 37E18004               MOVU.B      @(4,R14),R7; (cntl)->nn
+    000002A0 D50B                   MOV.L       L94+6,R5   ; __$ChDataOld
+    000002A2 375C                   ADD         R5,R7
+    000002A4 E1FF                   MOV         #-1,R1     ; H'FFFFFFFF
+    000002A6 34718000               MOVU.B      @(0,R7),R4 ; ChDataOld[]
+    000002AA 611C                   EXTU.B      R1,R1
+    000002AC 3410                   CMP/EQ      R1,R4
+    000002AE 8F02                   BF/S        L91
+    000002B0 660C                   EXTU.B      R0,R6
+             tskint.c        342      {
+             tskint.c        343          ChDataOld[cntl->intinf.nn] = sts;
+    000002B2 A03B                   BRA         L89
+    000002B4 2760                   MOV.B       R6,@R7     ; ChDataOld[]
+    000002B6              L91:
+             tskint.c        344          return( result );
+             tskint.c        345      }
+             tskint.c        346    
+             tskint.c        347      switch(cntl->intinf.trg)
+    000002B6 35E18005               MOVU.B      @(5,R14),R5; (cntl)->trg
+    000002BA E20F                   MOV         #15,R2     ; H'0000000F
+    000002BC 3526                   CMP/HI      R2,R5
+    000002BE 8934                   BT          L93
+    000002C0 4500                   SHLL        R5
+    000002C2 C704                   MOVA        L95,R0
+    000002C4 005D                   MOV.W       @(R0,R5),R0
+    000002C6 0023                   BRAF        R0
+    000002C8 0009                   NOP
+    000002CA              L94:
+    000002CA 00000002               .RES.W      1
+    000002CC <00000000>             .DATA.L     _pio_BIN
+    000002D0 <00000000>             .DATA.L     __$ChDataOld
+    000002D4              L95:
+    000002D4 0060                   .DATA.W     L86-L94
+    000002D6 002A                   .DATA.W     L71-L94
+    000002D8 002A                   .DATA.W     L72-L94
+    000002DA 002A                   .DATA.W     L73-L94
+    000002DC 0034                   .DATA.W     L74-L94
+    000002DE 0034                   .DATA.W     L75-L94
+    000002E0 0034                   .DATA.W     L76-L94
+    000002E2 003C                   .DATA.W     L77-L94
+    000002E4 003C                   .DATA.W     L78-L94
+    000002E6 003C                   .DATA.W     L79-L94
+    000002E8 004A                   .DATA.W     L80-L94
+    000002EA 004A                   .DATA.W     L81-L94
+    000002EC 004A                   .DATA.W     L82-L94
+    000002EE 0058                   .DATA.W     L83-L94
+    000002F0 0058                   .DATA.W     L84-L94
+    000002F2 0058                   .DATA.W     L85-L94
+    000002F4              L71:
+    000002F4              L72:
+    000002F4              L73:
+             tskint.c        348      {
+             tskint.c        349          case TRG_HD:                                                    // HD  ：High入力状態の間、CW/CCW両方向共に一時停止
+             tskint.c        350          case TRG_HP:                                                    // H+  ：High入力状態の間、CW方向のみ一時停止
+             tskint.c        351          case TRG_HM:                                                    // H-  ：High入力状態の間、CCW方向のみ一時停止
+             tskint.c        352              if(( ChDataOld[cntl->intinf.nn] == SET )&&( sts == SET ))
+    000002F4 6043                   MOV         R4,R0
+    000002F6 8801                   CMP/EQ      #1,R0
+    000002F8 8907                   BT          L97
+    000002FA A016                   BRA         L93
+    000002FC 0009                   NOP
+    000002FE              L74:
+    000002FE              L75:
+    000002FE              L76:
+             tskint.c        353              {
+             tskint.c        354                  result = E_SUCCESS;
+             tskint.c        355              }
+             tskint.c        356              break;
+             tskint.c        357          case TRG_LD:                                                    // LD  ：Low入力状態の間、CW/CCW両方向共に一時停止
+             tskint.c        358          case TRG_LP:                                                    // L+  ：Low入力状態の間、CW方向のみ一時停止
+             tskint.c        359          case TRG_LM:                                                    // L-  ：Low入力状態の間、CCW方向のみ一時停止
+             tskint.c        360              if(( ChDataOld[cntl->intinf.nn] == CLR )&&( sts == CLR ))
+    000002FE 2448                   TST         R4,R4
+    00000300 890B                   BT          L99
+    00000302 A012                   BRA         L93
+    00000304 0009                   NOP
+    00000306              L77:
+    00000306              L78:
+    00000306              L79:
+             tskint.c        361              {
+             tskint.c        362                  result = E_SUCCESS;
+             tskint.c        363              }
+             tskint.c        364              break;
+             tskint.c        365    
+             tskint.c        366          case TRG_UD:                                                    // UD  ：立ち上がりエッジ検出時、CW/CCW両方向共に一時停止
+             tskint.c        367          case TRG_UP:                                                    // U+  ：立ち上がりエッジ検出時、CW方向のみ一時停止
+             tskint.c        368          case TRG_UM:                                                    // U-  ：立ち上がりエッジ検出時、CCW方向のみ一時停止
+             tskint.c        369              if(( ChDataOld[cntl->intinf.nn] == CLR )&&( sts == SET ))
+    00000306 2448                   TST         R4,R4
+    00000308 8B0F                   BF          L93
+    0000030A              L97:
+    0000030A 6063                   MOV         R6,R0
+    0000030C 8801                   CMP/EQ      #1,R0
+    0000030E 890B                   BT          L101
+    00000310 A00B                   BRA         L93
+    00000312 0009                   NOP
+    00000314              L80:
+    00000314              L81:
+    00000314              L82:
+             tskint.c        370              {
+             tskint.c        371                  result = E_SUCCESS;
+             tskint.c        372              }
+             tskint.c        373              break;
+             tskint.c        374    
+             tskint.c        375          case TRG_DD:                                                    // DD  ：立ち下がりエッジ検出時、CW/CCW両方向共に一時停止
+             tskint.c        376          case TRG_DP:                                                    // D+  ：立ち下がりエッジ検出時、CW方向のみ一時停止
+             tskint.c        377          case TRG_DM:                                                    // D-  ：立ち下がりエッジ検出時、CCW方向のみ一時停止
+             tskint.c        378              if(( ChDataOld[cntl->intinf.nn] == SET )&&( sts == CLR ))
+    00000314 6043                   MOV         R4,R0
+    00000316 8801                   CMP/EQ      #1,R0
+    00000318 8B07                   BF          L93
+    0000031A              L99:
+    0000031A 2668                   TST         R6,R6
+    0000031C 8904                   BT          L101
+    0000031E A004                   BRA         L93
+    00000320 0009                   NOP
+    00000322              L83:
+    00000322              L84:
+    00000322              L85:
+             tskint.c        379              {
+             tskint.c        380                  result = E_SUCCESS;
+             tskint.c        381              }
+             tskint.c        382              break;
+             tskint.c        383    
+             tskint.c        384          case TRG_ED:                                                    // ED  ：立ち上がり／立ち下がりエッジ検出時、CW/CCW両方向共に一時停止
+             tskint.c        385          case TRG_EP:                                                    // E+  ：立ち上がり／立ち下がりエッジ検出時、CW方向のみ一時停止
+             tskint.c        386          case TRG_EM:                                                    // E-  ：立ち上がり／立ち下がりエッジ検出時、CCW方向のみ一時停止
+             tskint.c        387              if( (ChDataOld[cntl->intinf.nn]^sts) )
+    00000322 246A                   XOR         R6,R4
+    00000324 2448                   TST         R4,R4
+    00000326 8900                   BT          L93
+    00000328              L101:
+    00000328 ED00                   MOV         #0,R13     ; H'00000000
+    0000032A              L86:
+    0000032A              L93:
+             tskint.c        388              {
+             tskint.c        389                  result = E_SUCCESS;
+             tskint.c        390              }
+             tskint.c        391              break;
+             tskint.c        392          case TRG_NM:                                                    // N   ：通常入力設定(割込設定解除) 
+             tskint.c        393          default:
+             tskint.c        394              break;
+             tskint.c        395      }
+             tskint.c        396    
+             tskint.c        397      ChDataOld[cntl->intinf.nn] = sts;
+    0000032A 2760                   MOV.B       R6,@R7     ; ChDataOld[]
+    0000032C              L89:
+    0000032C 60D3                   MOV         R13,R0
+    0000032E 4DF4                   MOVMU.L     @R15+,R13
+             tskint.c        398    
+             tskint.c        399      return( result );
+             tskint.c        400    }
+    00000330 006B                   RTS/N
+             tskint.c        401    
+C   00000000              L106:
+    00000000 433A5C576F             .SDATA      "C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskint.c"
+             726B537061   
+             63655C5175   
+             69636B4765   
+             6E655C536F   
+             66745F4669   
+             726D5C5175   
+             69636B4765   
+             6E655F5072   
+             6F6A656374   
+             5C74736B69   
+             6E742E63     
+    0000003B 00                     .DATA.B     H'00
+B   00000000              __$ChDataOld:                    ; static: __$ChDataOld
+    00000000 00000001               .RES.B      64
+    00000040              __$stCntl:                       ; static: __$stCntl
+    00000040 00000004               .RES.L      576
+    00000940              __$rspdat:                       ; static: __$rspdat
+    00000940 00000004               .RES.L      71
+SH SERIES C/C++ Compiler (V.9.04.03.000)                                                         07-Sep-2023 20:41:35  PAGE    1
+
+
+******** STATISTICS INFORMATION ********
+
+
+********** ERROR INFORMATION ***********
+
+NUMBER OF ERRORS:           0
+NUMBER OF WARNINGS:         0
+
+
+
+
+******* SOURCE LINE INFORMATION ********
+
+COMPILED SOURCE LINE:      401
+
+
+
+******* SECTION SIZE INFORMATION *******
+
+PROGRAM  SECTION (P):                                 00000332 Byte(s)
+CONSTANT SECTION (C):                                 0000003C Byte(s)
+DATA     SECTION (D):                                 00000000 Byte(s)
+BSS      SECTION (B):                                 00000A5C Byte(s)
+
+TOTAL PROGRAM  SECTION: 00000332 Byte(s)
+TOTAL CONSTANT SECTION: 0000003C Byte(s)
+TOTAL DATA     SECTION: 00000000 Byte(s)
+TOTAL BSS      SECTION: 00000A5C Byte(s)
+
+    TOTAL PROGRAM SIZE: 00000DCA Byte(s)
+
+
+
+********** LABEL INFORMATION ***********
+
+NUMBER OF EXTERNAL REFERENCE SYMBOLS:           12
+NUMBER OF EXTERNAL DEFINITION SYMBOLS:           1
+NUMBER OF INTERNAL/EXTERNAL SYMBOLS:            72
+
+
+
+*** COMMAND PARAMETER ***
+
+-subcommand=C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene_Hew\ROM_Big\tskint.shc
+-cpu=sh2a
+-include="C:\NORTi\INC","C:\NORTi\INC\Dummy","C:\NORTi\INC","C:\NORTi\LIB"
+-object="C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene_Hew\ROM_Big\tskint.obj"
+-debug
+-listfile="C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene_Hew\ROM_Big\tskint.lst"
+-show=source,tab=4
+-gbr=auto
+-chgincpath
+-errorpath
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskint.c"
+-global_volatile=0
+-opt_range=all
+-infinite_loop=0
+-del_vacant_loop=0
+-struct_alloc=1
+-lang=c
+-nologo

@@ -1,0 +1,157 @@
+SH SERIES C/C++ Compiler (V.9.02.00.003)                                                         08-Sep-2023 13:46:33  PAGE    1
+
+************ OBJECT LISTING ************
+
+FILE NAME: C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\seg.c
+
+SCT OFFSET   CODE       C LABEL     INSTRUCTION OPERAND    COMMENT
+
+                seg.c          1    /******************************************************************************
+                seg.c          2    * ÇVÇrÇdÇfèàóù                                                                *
+                seg.c          3    *                                                                             *
+                seg.c          4    * File name : seg.c                                                           *
+                seg.c          5    *                                                                             *
+                seg.c          6    * Copyright (c) 2018 NICHIRYO Co., Ltd.                                       *
+                seg.c          7    *                                                                             *
+                seg.c          8    ******************************************************************************/
+                seg.c          9    #include <kernel.h>
+                seg.c         10    #include "define.h"
+                seg.c         11    #include "seg.h"
+                seg.c         12    #include "tblchr.h"
+                seg.c         13    
+                seg.c         14    
+                seg.c         15    //*************************************
+                seg.c         16    // ì‡ïîä÷êî
+                seg.c         17    //*************************************
+                seg.c         18    
+                seg.c         19    
+                seg.c         20    //*************************************
+                seg.c         21    // ÉeÅ[ÉuÉã
+                seg.c         22    //*************************************
+                seg.c         23    
+                seg.c         24    
+                seg.c         25    //*************************************
+                seg.c         26    // ÉfÅ[É^íËã`
+                seg.c         27    //*************************************
+                seg.c         28    
+                seg.c         29    
+                seg.c         30    /******************************************************************************
+                seg.c         31    * 7SEGèâä˙âª
+                seg.c         32    * 
+                seg.c         33    * [äTóv]
+                seg.c         34    * ÇVÇrÇdÇfèâä˙âªÅiëSè¡ìîÅj
+                seg.c         35    * 
+                seg.c         36    ******************************************************************************/
+                seg.c         37    void SegInit(void)
+P   00000000              _SegInit:                        ; function: SegInit
+                                                           ; frame size=0
+                seg.c         38    {
+                seg.c         39      // 7SEGï\é¶
+                seg.c         40      SegDisp(ALL_BLINK);
+    00000000 E4FF                   MOV         #-1,R4     ; H'FFFFFFFF
+                seg.c         41    }
+                seg.c         42    
+                seg.c         43    /******************************************************************************
+                seg.c         44    * 7SEGï\é¶èàóù
+                seg.c         45    * 
+                seg.c         46    * [äTóv]
+                seg.c         47    * 7SEGï\é¶ÇçsÇ§ÅB
+                seg.c         48    * 
+                seg.c         49    ******************************************************************************/
+                seg.c         50    void SegDisp( UB num)
+    00000002              _SegDisp:                        ; function: SegDisp
+                                                           ; frame size=0
+                seg.c         51    {
+                seg.c         52      /* 7SEGï\é¶è„å¿í¥Ç¶ÇƒÇ¢ÇÈÇ©ÅH*/
+                seg.c         53      if( num > 0x1f)
+    00000002 614C                   EXTU.B      R4,R1
+    00000004 E51F                   MOV         #31,R5     ; H'0000001F
+    00000006 3157                   CMP/GT      R5,R1
+    00000008 D603                   MOV.L       L14,R6     ; H'0C00F028
+    0000000A 8D03                   BT/S        L13
+    0000000C E200                   MOV         #0,R2      ; H'00000000
+                seg.c         54      {
+                seg.c         55          // 7SEGè¡ìî
+                seg.c         56          *( (UB *)SEG7_ADDR ) = SEG_CLR;
+                seg.c         57      }
+                seg.c         58      else
+                seg.c         59      {
+                seg.c         60          // 7SEGêîílï\é¶
+                seg.c         61          *( (UB *)SEG7_ADDR ) = num_seg[num];
+    0000000E D503                   MOV.L       L14+4,R5   ; _num_seg
+    00000010 604C                   EXTU.B      R4,R0
+    00000012 025C                   MOV.B       @(R0,R5),R2; num_seg[]
+    00000014              L13:
+                seg.c         62      }
+                seg.c         63    }
+    00000014 000B                   RTS
+    00000016 2620                   MOV.B       R2,@R6
+    00000018              L14:
+    00000018 0C00F028               .DATA.L     H'0C00F028
+    0000001C <00000000>             .DATA.L     _num_seg
+                seg.c         64    
+                seg.c         65    
+SH SERIES C/C++ Compiler (V.9.02.00.003)                                                         08-Sep-2023 13:46:33  PAGE    1
+
+
+******** STATISTICS INFORMATION ********
+
+
+********** ERROR INFORMATION ***********
+
+NUMBER OF ERRORS:           0
+NUMBER OF WARNINGS:         0
+
+
+
+
+******* SOURCE LINE INFORMATION ********
+
+COMPILED SOURCE LINE:       65
+
+
+
+******* SECTION SIZE INFORMATION *******
+
+PROGRAM  SECTION (P):                                 00000020 Byte(s)
+CONSTANT SECTION (C):                                 00000000 Byte(s)
+DATA     SECTION (D):                                 00000000 Byte(s)
+BSS      SECTION (B):                                 00000000 Byte(s)
+
+TOTAL PROGRAM  SECTION: 00000020 Byte(s)
+TOTAL CONSTANT SECTION: 00000000 Byte(s)
+TOTAL DATA     SECTION: 00000000 Byte(s)
+TOTAL BSS      SECTION: 00000000 Byte(s)
+
+    TOTAL PROGRAM SIZE: 00000020 Byte(s)
+
+
+
+********** LABEL INFORMATION ***********
+
+NUMBER OF EXTERNAL REFERENCE SYMBOLS:            1
+NUMBER OF EXTERNAL DEFINITION SYMBOLS:           2
+NUMBER OF INTERNAL/EXTERNAL SYMBOLS:             5
+
+
+
+*** COMMAND PARAMETER ***
+
+-subcommand=C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\Debug\seg.shc
+-cpu=sh2a
+-include="C:\NORTi\INC","C:\NORTi\INC\Dummy","C:\NORTi\INC","C:\NORTi\LIB"
+-object="C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\Debug\seg.obj"
+-debug
+-listfile="C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\Debug\seg.lst"
+-show=source,tab=4
+-gbr=auto
+-chgincpath
+-errorpath
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\seg.c"
+-global_volatile=0
+-opt_range=all
+-infinite_loop=0
+-del_vacant_loop=0
+-struct_alloc=1
+-lang=c
+-nologo

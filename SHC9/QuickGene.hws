@@ -1,0 +1,52 @@
+[HIMDBVersion]
+2.0
+[DATABASE_VERSION]
+"11.0" 
+[WORKSPACE_DETAILS]
+"QuickGene" "C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9" "C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene.hws" "SuperH RISC engine" "Renesas SuperH Standard" 
+[SHARED_WORKSPACE_CONTROL_STATUS]
+"" "" "" 
+"" "" "" 
+[PROJECTS]
+"QuickGene" "C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene_Hew" "C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene_Hew\QuickGene_Hew.hwp" 0 
+[INFORMATION]
+"ワークスペース情報がありません" 
+[SCRAP]
+[PROJECT_DEPENDENCY]
+[WORKSPACE_PROPERTIES]
+[HELP_FILES]
+"c:\hew3\tools\renesas\sh\9_0_0\hew\stdlib.hlp" "C/C++ Standard Library Help" 0 
+"c:\hew3\tools\renesas\sh\9_0_2\hew\stdlib.hlp" "C/C++ Standard Library Help" 0 
+"c:\hew3\tools\renesas\sh\9_1_1\hew\stdlib.hlp" "C/C++ Standard Library Help" 0 
+"c:\hew3\tools\renesas\sh\9_2_0\hew\stdlib.hlp" "C/C++ Standard Library Help" 0 
+"c:\hew3\tools\renesas\sh\9_3_0\hew\stdlib.chm" "C/C++ Standard Library Help" 0 
+"c:\hew3\tools\renesas\sh\9_3_2\hew\stdlib.chm" "C/C++ Standard Library Help" 0 
+"c:\hew3\tools\renesas\sh\9_4_0\hew\stdlib.chm" "C/C++ Standard Library Help" 0 
+"c:\hew\tools\renesas\sh\9_4_3\hew\stdlib.chm" "C/C++ Standard Library Help" 0 
+"c:\program files\renesas\hew\tools\renesas\sh\9_3_0\hew\stdlib.chm" "C/C++ Standard Library Help" 0 
+"c:\program files\renesas\hew\tools\renesas\sh\9_4_3\hew\stdlib.chm" "C/C++ Standard Library Help" 0 
+"c:\renesas\hew\tools\renesas\sh\9_4_3\hew\stdlib.chm" "C/C++ Standard Library Help" 1 
+[GENERAL_DATA_PROJECT]
+[USERMENUTOOLS]
+[CUSTOMPLACEHOLDERS]
+"NORTI" "NORTiインストールフォルダ" "C:\NORTi" 
+[MAKEFILE_BUILD_INFO]
+"$(WORKSPDIR)\make\$(PROJECTNAME).mak" "" "$(WORKSPDIR)\make" 0 0 0 
+[VD_CONFIGURATION_OPTIONS]
+"ACTIVE_DESKTOP" "0" 
+[VD_CONFIGURATIONS]
+"0" "Default1" "1" 
+"1" "Default2" "1" 
+"2" "Default3" "1" 
+"3" "Default4" "1" 
+[OPTIONS_DEBUG_TAB]
+0 0 0 0 0 
+[VCS]
+"" "" "" 0 
+[VCS_PROJECT]
+[MAKEFILE_ENV_STRINGS]
+[MAKEFILE_ENV_FLAGS]
+1 0 0 
+[MAKEFILE_CLEAN_INFO]
+"" 
+[END]

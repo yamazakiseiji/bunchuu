@@ -1,0 +1,171 @@
+SH SERIES C/C++ Compiler (V.9.04.03.000)                                                         07-Sep-2023 14:07:49  PAGE    1
+
+************ OBJECT LISTING ************
+
+FILE NAME: C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\initsh.c
+
+SCT OFFSET   CODE       C LABEL     INSTRUCTION OPERAND    COMMENT
+
+             initsh.c          1    /****************************************************************************
+             initsh.c          2    * ルネサスC初期設定ルーチンの例 (SH)                                        *
+             initsh.c          3    *                                                                           *
+             initsh.c          4    *  File name : initsh.c                                                     *
+             initsh.c          5    *                                                                           *
+             initsh.c          6    * 24/May/1997 作成                                                          *
+             initsh.c          7    * 06/Dec/1999 -fpu=doubleオプションに対応                             MiSPO *
+             initsh.c          8    * 24/Mar/2006 mainの型を関数定義に合わせてvoidからintに修正              EM *
+             initsh.c          9    * 25/Jul/2008 コメントを追記                                             KZ *
+             initsh.c         10    ****************************************************************************/
+             initsh.c         11    
+             initsh.c         12    #include "machine.h"
+             initsh.c         13    
+             initsh.c         14    extern int *_D_ROM, *_D_BGN, *_D_END, *_B_BGN, *_B_END;
+             initsh.c         15    extern void _INITSCT(void);
+             initsh.c         16    extern int main(void);
+             initsh.c         17    #pragma noregsave(_INIT)
+             initsh.c         18    
+             initsh.c         19    /*****************************************************************************
+             initsh.c         20    * 初期設定
+             initsh.c         21    *
+             initsh.c         22    ******************************************************************************/
+             initsh.c         23    
+             initsh.c         24    void _INIT(void)
+P   00000000              __INIT:                          ; function: _INIT
+                                                           ; frame size=0
+             initsh.c         25    {
+             initsh.c         26        _INITSCT();     /* セクションの初期化ルーチンの呼び出し */
+    00000000 B004                   BSR         __INITSCT
+    00000002 0009                   NOP
+             initsh.c         27    #ifdef _FPD
+             initsh.c         28        set_fpscr(((int)get_fpscr()&~0x00100000)|0x00080000);
+             initsh.c         29    #endif
+             initsh.c         30        main();         /* メインルーチンの呼び出し */
+    00000004 D20C                   MOV.L       L20,R2     ; _main
+    00000006 424B                   JSR/N       @R2
+    00000008              L11:
+    00000008 AFFE                   BRA         L11
+    0000000A 0009                   NOP
+             initsh.c         31        for (;;)        /* 万一、main 関数終了したら、無限ループ */
+             initsh.c         32            ;
+             initsh.c         33    }
+             initsh.c         34    
+             initsh.c         35    /*****************************************************************************
+             initsh.c         36    * セクションの初期化
+             initsh.c         37    *
+             initsh.c         38    ******************************************************************************/
+             initsh.c         39    
+             initsh.c         40    void _INITSCT(void)
+    0000000C              __INITSCT:                       ; function: _INITSCT
+                                                           ; frame size=0
+             initsh.c         41    {
+             initsh.c         42        int *p, *q;
+             initsh.c         43    
+             initsh.c         44        /* 未初期化データ領域をゼロで初期化 */
+             initsh.c         45    
+             initsh.c         46        for (p = _B_BGN; p < _B_END; p++)
+    0000000C D10B                   MOV.L       L20+4,R1   ; __B_BGN
+    0000000E 6212                   MOV.L       @R1,R2     ; _B_BGN
+    00000010 D40B                   MOV.L       L20+8,R4   ; __B_END
+    00000012 A002                   BRA         L14
+    00000014 E600                   MOV         #0,R6      ; H'00000000
+    00000016              L15:
+             initsh.c         47            *p = 0;
+    00000016 6063                   MOV         R6,R0
+    00000018 42AB                   MOV.L       R0,@R2+    ; *(p)
+    0000001A              L14:
+    0000001A 6542                   MOV.L       @R4,R5     ; _B_END
+    0000001C 3252                   CMP/HS      R5,R2
+    0000001E 8BFA                   BF          L15
+             initsh.c         48    
+             initsh.c         49        /* 初期化データを ROM 上から RAM 上へコピー */
+             initsh.c         50    
+             initsh.c         51        for (p = _D_BGN, q = _D_ROM; p < _D_END; p++, q++)
+    00000020 D408                   MOV.L       L20+12,R4  ; __D_BGN
+    00000022 6642                   MOV.L       @R4,R6     ; _D_BGN
+    00000024 D708                   MOV.L       L20+16,R7  ; __D_ROM
+    00000026 D409                   MOV.L       L20+20,R4  ; __D_END
+    00000028 A002                   BRA         L17
+    0000002A 6572                   MOV.L       @R7,R5     ; _D_ROM
+    0000002C              L18:
+             initsh.c         52            *p = *q;
+    0000002C 6056                   MOV.L       @R5+,R0    ; *(q)
+    0000002E 46AB                   MOV.L       R0,@R6+    ; *(p)
+    00000030              L17:
+    00000030 6242                   MOV.L       @R4,R2     ; _D_END
+    00000032 3622                   CMP/HS      R2,R6
+    00000034 8BFA                   BF          L18
+             initsh.c         53    }
+    00000036 006B                   RTS/N
+    00000038              L20:
+    00000038 <00000000>             .DATA.L     _main
+    0000003C <00000000>             .DATA.L     __B_BGN
+    00000040 <00000000>             .DATA.L     __B_END
+    00000044 <00000000>             .DATA.L     __D_BGN
+    00000048 <00000000>             .DATA.L     __D_ROM
+    0000004C <00000000>             .DATA.L     __D_END
+             initsh.c         54    
+             initsh.c         55    /* end */
+SH SERIES C/C++ Compiler (V.9.04.03.000)                                                         07-Sep-2023 14:07:49  PAGE    1
+
+
+******** STATISTICS INFORMATION ********
+
+
+********** ERROR INFORMATION ***********
+
+NUMBER OF ERRORS:           0
+NUMBER OF WARNINGS:         0
+
+
+
+
+******* SOURCE LINE INFORMATION ********
+
+COMPILED SOURCE LINE:       55
+
+
+
+******* SECTION SIZE INFORMATION *******
+
+PROGRAM  SECTION (P):                                 00000050 Byte(s)
+CONSTANT SECTION (C):                                 00000000 Byte(s)
+DATA     SECTION (D):                                 00000000 Byte(s)
+BSS      SECTION (B):                                 00000000 Byte(s)
+
+TOTAL PROGRAM  SECTION: 00000050 Byte(s)
+TOTAL CONSTANT SECTION: 00000000 Byte(s)
+TOTAL DATA     SECTION: 00000000 Byte(s)
+TOTAL BSS      SECTION: 00000000 Byte(s)
+
+    TOTAL PROGRAM SIZE: 00000050 Byte(s)
+
+
+
+********** LABEL INFORMATION ***********
+
+NUMBER OF EXTERNAL REFERENCE SYMBOLS:            6
+NUMBER OF EXTERNAL DEFINITION SYMBOLS:           2
+NUMBER OF INTERNAL/EXTERNAL SYMBOLS:            14
+
+
+
+*** COMMAND PARAMETER ***
+
+-subcommand=C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene_Hew\ROM_Big\initsh.shc
+-cpu=sh2a
+-include="C:\NORTi\INC","C:\NORTi\INC\Dummy","C:\NORTi\INC","C:\NORTi\LIB"
+-object="C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene_Hew\ROM_Big\initsh.obj"
+-debug
+-listfile="C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene_Hew\ROM_Big\initsh.lst"
+-show=source,tab=4
+-gbr=auto
+-chgincpath
+-errorpath
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\initsh.c"
+-global_volatile=0
+-opt_range=all
+-infinite_loop=0
+-del_vacant_loop=0
+-struct_alloc=1
+-lang=c
+-nologo

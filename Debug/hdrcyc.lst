@@ -1,0 +1,670 @@
+SH SERIES C/C++ Compiler (V.9.02.00.003)                                                         08-Sep-2023 13:46:32  PAGE    1
+
+************ OBJECT LISTING ************
+
+FILE NAME: C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\hdrcyc.c
+
+SCT OFFSET   CODE       C LABEL     INSTRUCTION OPERAND    COMMENT
+
+             hdrcyc.c          1    /******************************************************************************
+             hdrcyc.c          2    * 周期ハンドラ                                                                *
+             hdrcyc.c          3    *                                                                             *
+             hdrcyc.c          4    * File name : hdrcyc.c                                                        *
+             hdrcyc.c          5    *                                                                             *
+             hdrcyc.c          6    * Copyright (c) 2018 NICHIRYO Co., Ltd.                                       *
+             hdrcyc.c          7    *                                                                             *
+             hdrcyc.c          8    ******************************************************************************/
+             hdrcyc.c          9    #include <machine.h>
+             hdrcyc.c         10    #include "kernel.h"
+             hdrcyc.c         11    #include "sh7237.h"
+             hdrcyc.c         12    #include "define.h"
+             hdrcyc.c         13    #include "hdrcyc.h"
+             hdrcyc.c         14    #include "iodefine.h"
+             hdrcyc.c         15    #include "define.h"
+             hdrcyc.c         16    #include "seg.h"
+             hdrcyc.c         17    #include "datastruct.h" 
+             hdrcyc.c         18    #include "automachine.h"
+             hdrcyc.c         19    #include "mnet.h"
+             hdrcyc.c         20    #include "tskcmd.h"
+             hdrcyc.c         21    #include "sub.h"
+             hdrcyc.c         22    #include "macro.h"
+             hdrcyc.c         23    
+             hdrcyc.c         24    //*************************************
+             hdrcyc.c         25    // テーブル
+             hdrcyc.c         26    //*************************************
+             hdrcyc.c         27    #define DUTY_PTN  6
+             hdrcyc.c         28    
+             hdrcyc.c         29    
+             hdrcyc.c         30    //*************************************
+             hdrcyc.c         31    // 関数定義
+             hdrcyc.c         32    //*************************************
+             hdrcyc.c         33    static void CycSegCtrl( void );
+             hdrcyc.c         34    static void CycInputChRead( void );                                       // 入力チャネル読込処理
+             hdrcyc.c         35    static void InpRead( void );                                          // 入力情報読み込み処理
+             hdrcyc.c         36    static void DpumpControl();
+             hdrcyc.c         37    
+             hdrcyc.c         38    
+             hdrcyc.c         39    //*************************************
+             hdrcyc.c         40    // テーブル
+             hdrcyc.c         41    //*************************************
+             hdrcyc.c         42    
+             hdrcyc.c         43    static const UB DUTY_TBL[DUTY_PTN] = {
+             hdrcyc.c         44      OFF, // 停止
+             hdrcyc.c         45      20,  // ON DUTY  20%   OFF DUTY 80%
+             hdrcyc.c         46      40,  // ON DUTY  40%   OFF DUTY 60%
+             hdrcyc.c         47      60,  // ON DUTY  60%   OFF DUTY 40%
+             hdrcyc.c         48      80,  // ON DUTY  80%   OFF DUTY 20%
+             hdrcyc.c         49      100  // ON DUTY 100%   OFF DUTY  0%
+             hdrcyc.c         50    };
+             hdrcyc.c         51    
+             hdrcyc.c         52    //*************************************
+             hdrcyc.c         53    // データ定義
+             hdrcyc.c         54    //*************************************
+             hdrcyc.c         55    static    UH              uhIntervalTimer;
+             hdrcyc.c         56    static    ST_DPUMP_CNT    Dpump;
+             hdrcyc.c         57    
+             hdrcyc.c         58    
+             hdrcyc.c         59    /******************************************************************************
+             hdrcyc.c         60    * 周期起床タスク
+             hdrcyc.c         61    * 
+             hdrcyc.c         62    * [概要]
+             hdrcyc.c         63    * 
+             hdrcyc.c         64    * 7seg表示、LED点灯、DipSW監視を制御
+             hdrcyc.c         65    * 
+             hdrcyc.c         66    ******************************************************************************/
+             hdrcyc.c         67    void HdrCyc( VP_INT exinf )
+P   00000000              _HdrCyc:                         ; function: HdrCyc
+                                                           ; frame size=12
+    00000000 4F22                   STS.L       PR,@-R15
+    00000002 4F12                   STS.L       MACL,@-R15
+    00000004 4F02                   STS.L       MACH,@-R15
+             hdrcyc.c         68    {
+             hdrcyc.c         69    //    static BOOL initflg = FALSE;
+             hdrcyc.c         70    
+             hdrcyc.c         71      WdgStop();
+    00000006 D18A                   MOV.L       L37+2,R1   ; _WdgStop
+    00000008 414B                   JSR/N       @R1
+             hdrcyc.c         72    
+             hdrcyc.c         73      // "Unused variable" warning remove.
+             hdrcyc.c         74      exinf = E_SUCCESS;
+             hdrcyc.c         75    
+             hdrcyc.c         76      /* 1sec Interval */
+             hdrcyc.c         77      if( !(uhIntervalTimer % INTERVAL_1S) )
+    0000000A D18A                   MOV.L       L37+6,R1   ; __$uhIntervalTimer
+    0000000C 36119000               MOVU.W      @(0,R1),R6 ; uhIntervalTimer
+    00000010 D489                   MOV.L       L37+10,R4  ; H'10624DD3
+    00000012 E7FA                   MOV         #-6,R7     ; H'FFFFFFFA
+    00000014 346D                   DMULS.L     R6,R4
+    00000016 050A                   STS         MACH,R5
+    00000018 457C                   SHAD        R7,R5
+    0000001A 6053                   MOV         R5,R0
+    0000001C 4004                   ROTL        R0
+    0000001E C901                   AND         #1,R0
+    00000020 350C                   ADD         R0,R5
+    00000022 000003E8               MOVI20      #1000,R0   ; H'000003E8
+    00000026 4580                   MULR        R0,R5
+    00000028 3658                   SUB         R5,R6
+    0000002A 2668                   TST         R6,R6
+    0000002C 8B01                   BF          L12
+             hdrcyc.c         78      {
+             hdrcyc.c         79          // SEG表示処理
+             hdrcyc.c         80          CycSegCtrl();
+    0000002E B00B                   BSR         __$CycSegCtrl
+    00000030 0009                   NOP
+    00000032              L12:
+             hdrcyc.c         81      }
+             hdrcyc.c         82    
+             hdrcyc.c         83      /* 100msec Interval */
+             hdrcyc.c         84      if( !(uhIntervalTimer % INTERVAL_100M) )
+             hdrcyc.c         85      {
+             hdrcyc.c         86      }
+             hdrcyc.c         87    
+             hdrcyc.c         88      /* 10msec Interval */
+             hdrcyc.c         89      if( !(uhIntervalTimer % INTERVAL_10M) )
+             hdrcyc.c         90      {
+             hdrcyc.c         91      }
+             hdrcyc.c         92    
+             hdrcyc.c         93      DpumpControl();
+    00000032 B04D                   BSR         __$DpumpControl
+    00000034 0009                   NOP
+             hdrcyc.c         94      
+             hdrcyc.c         95      /* インターバルタイマカウント更新*/
+             hdrcyc.c         96      uhIntervalTimer++;
+    00000036 D17F                   MOV.L       L37+6,R1   ; __$uhIntervalTimer
+    00000038 6411                   MOV.W       @R1,R4     ; uhIntervalTimer
+    0000003A 7401                   ADD         #1,R4
+    0000003C 2141                   MOV.W       R4,@R1     ; uhIntervalTimer
+    0000003E D57F                   MOV.L       L37+14,R5  ; _WdgStart
+    00000040 4F06                   LDS.L       @R15+,MACH
+    00000042 4F16                   LDS.L       @R15+,MACL
+    00000044 452B                   JMP         @R5
+    00000046 4F26                   LDS.L       @R15+,PR
+             hdrcyc.c         97    
+             hdrcyc.c         98      WdgStart();
+             hdrcyc.c         99    }
+             hdrcyc.c        100    /******************************************************************************
+             hdrcyc.c        101    * 
+             hdrcyc.c        102    * [概要]  入力チャネル読込処理
+             hdrcyc.c        103    * [引数]  
+             hdrcyc.c        104    * [戻値]  
+             hdrcyc.c        105    * 
+             hdrcyc.c        106    ******************************************************************************/
+             hdrcyc.c        107    static void CycInputChRead(void)
+             hdrcyc.c        108    {
+             hdrcyc.c        109      InpRead();
+             hdrcyc.c        110    }
+             hdrcyc.c        111    
+             hdrcyc.c        112    /******************************************************************************
+             hdrcyc.c        113    * 
+             hdrcyc.c        114    * [概要]  7SEG表示を行う。
+             hdrcyc.c        115    * [引数]  
+             hdrcyc.c        116    * [戻値]  
+             hdrcyc.c        117    * 
+             hdrcyc.c        118    ******************************************************************************/
+             hdrcyc.c        119    static void CycSegCtrl(void)
+    00000048              __$CycSegCtrl:                   ; function: __$CycSegCtrl
+                                                           ; frame size=4
+    00000048 4F22                   STS.L       PR,@-R15
+             hdrcyc.c        120    {
+             hdrcyc.c        121      static  UH  uhBlink = 0;
+             hdrcyc.c        122    
+             hdrcyc.c        123      if( !uhBlink )
+    0000004A D67D                   MOV.L       L37+18,R6  ; __$uhBlink$7
+    0000004C 6161                   MOV.W       @R6,R1     ; uhBlink
+    0000004E D27D                   MOV.L       L37+22,R2  ; _SegDisp
+    00000050 2118                   TST         R1,R1
+    00000052 8F01                   BF/S        L15
+    00000054 E400                   MOV         #0,R4      ; H'00000000
+             hdrcyc.c        124      {
+             hdrcyc.c        125          SegDisp(ALL_BLINK);
+    00000056 E4FF                   MOV         #-1,R4     ; H'FFFFFFFF
+    00000058              L15:
+             hdrcyc.c        126      }
+             hdrcyc.c        127      else
+             hdrcyc.c        128      {
+             hdrcyc.c        129          // 7SEG表示
+             hdrcyc.c        130          SegDisp(0);
+             hdrcyc.c        131      }
+             hdrcyc.c        132    
+             hdrcyc.c        133      uhBlink ^= 1;
+    00000058 424B                   JSR/N       @R2
+    0000005A D679                   MOV.L       L37+18,R6  ; __$uhBlink$7
+    0000005C 6061                   MOV.W       @R6,R0     ; uhBlink
+    0000005E CA01                   XOR         #1,R0
+    00000060 4F26                   LDS.L       @R15+,PR
+             hdrcyc.c        134    }
+    00000062 000B                   RTS
+    00000064 2601                   MOV.W       R0,@R6     ; uhBlink
+             hdrcyc.c        135    
+             hdrcyc.c        136    /******************************************************************************
+             hdrcyc.c        137    * 
+             hdrcyc.c        138    * [概要]
+             hdrcyc.c        139    * 読み込み処理
+             hdrcyc.c        140    * 
+             hdrcyc.c        141    ******************************************************************************/
+             hdrcyc.c        142    static void InpRead()
+             hdrcyc.c        143    {
+             hdrcyc.c        144    }
+             hdrcyc.c        145    
+             hdrcyc.c        146    
+             hdrcyc.c        147    /******************************************************************************
+             hdrcyc.c        148    * 
+             hdrcyc.c        149    * [概要]
+             hdrcyc.c        150    * [引数]
+             hdrcyc.c        151    * [戻値]
+             hdrcyc.c        152    * 
+             hdrcyc.c        153    ******************************************************************************/
+             hdrcyc.c        154    void CycInit()
+    00000066              _CycInit:                        ; function: CycInit
+                                                           ; frame size=8
+    00000066 4F12                   STS.L       MACL,@-R15
+    00000068 4F02                   STS.L       MACH,@-R15
+             hdrcyc.c        155    {
+             hdrcyc.c        156      int save_i;
+             hdrcyc.c        157      
+             hdrcyc.c        158      save_i = get_imask();
+    0000006A 0002                   STC         SR,R0
+    0000006C 4009                   SHLR2       R0
+    0000006E 4009                   SHLR2       R0
+    00000070 C90F                   AND         #15,R0
+    00000072 6503                   MOV         R0,R5
+             hdrcyc.c        159      set_imask(0x0f);
+    00000074 0002                   STC         SR,R0
+    00000076 04F0FF0F               MOVI20      #-241,R4   ; H'FFFFFF0F
+    0000007A 2049                   AND         R4,R0
+    0000007C CBF0                   OR          #240,R0
+    0000007E 400E                   LDC         R0,SR
+             hdrcyc.c        160    
+             hdrcyc.c        161      PE.DR.BIT.B0 = OFF;
+    00000080 01E03A00               MOVI20      #-116224,R1; H'FFFE3A00
+             hdrcyc.c        162      PE.DR.BIT.B1 = OFF;
+             hdrcyc.c        163      
+             hdrcyc.c        164      Dpump.Req    = REQIDL;
+    00000084 E700                   MOV         #0,R7      ; H'00000000
+    00000086 31090003               BCLR.B      #0,@(3,R1)
+             hdrcyc.c        165      Dpump.OnPls  = ( DUTY_TBL[6] / INTERVAL_10M );
+    0000008A D26F                   MOV.L       L37+26,R2  ; H'00000006+__$DUTY_TBL
+    0000008C 31190003               BCLR.B      #1,@(3,R1)
+    00000090 D16E                   MOV.L       L37+30,R1  ; __$Dpump
+    00000092 2170                   MOV.B       R7,@R1     ; Dpump.Req
+    00000094 30218000               MOVU.B      @(0,R2),R0 ; DUTY_TBL[]
+    00000098 D76D                   MOV.L       L37+34,R7  ; H'66666667
+    0000009A 370D                   DMULS.L     R0,R7
+    0000009C 060A                   STS         MACH,R6
+    0000009E 4621                   SHAR        R6
+    000000A0 4621                   SHAR        R6
+    000000A2 6063                   MOV         R6,R0
+    000000A4 4004                   ROTL        R0
+    000000A6 C901                   AND         #1,R0
+    000000A8 360C                   ADD         R0,R6
+    000000AA 6063                   MOV         R6,R0
+    000000AC 8011                   MOV.B       R0,@(1,R1) ; Dpump.OnPls
+             hdrcyc.c        166      Dpump.OfPls  = ( INTERVAL_10M -  Dpump.OnPls);
+    000000AE E00A                   MOV         #10,R0     ; H'0000000A
+    000000B0 3068                   SUB         R6,R0
+    000000B2 8012                   MOV.B       R0,@(2,R1) ; Dpump.OfPls
+             hdrcyc.c        167      Dpump.OnCnt  = CLR;
+    000000B4 E000                   MOV         #0,R0      ; H'00000000
+    000000B6 8013                   MOV.B       R0,@(3,R1) ; Dpump.OnCnt
+             hdrcyc.c        168      Dpump.OfCnt  = CLR;
+    000000B8 8014                   MOV.B       R0,@(4,R1) ; Dpump.OfCnt
+             hdrcyc.c        169      Dpump.Sts    = CLR;
+    000000BA 8015                   MOV.B       R0,@(5,R1) ; Dpump.Sts
+             hdrcyc.c        170      Dpump.Duty   = OFF;
+    000000BC 8016                   MOV.B       R0,@(6,R1) ; Dpump.Duty
+             hdrcyc.c        171      
+             hdrcyc.c        172      set_imask(save_i);
+    000000BE 4508                   SHLL2       R5
+    000000C0 4508                   SHLL2       R5
+    000000C2 0202                   STC         SR,R2
+    000000C4 2249                   AND         R4,R2
+    000000C6 225B                   OR          R5,R2
+    000000C8 420E                   LDC         R2,SR
+    000000CA 4F06                   LDS.L       @R15+,MACH
+             hdrcyc.c        173    }
+    000000CC 000B                   RTS
+    000000CE 4F16                   LDS.L       @R15+,MACL
+             hdrcyc.c        174    
+             hdrcyc.c        175    /******************************************************************************
+             hdrcyc.c        176    * 
+             hdrcyc.c        177    * [概要]
+             hdrcyc.c        178    * [引数]
+             hdrcyc.c        179    * [戻値]
+             hdrcyc.c        180    * 
+             hdrcyc.c        181    ******************************************************************************/
+             hdrcyc.c        182    static void DpumpControl()
+    000000D0              __$DpumpControl:                 ; function: __$DpumpControl
+                                                           ; frame size=0
+             hdrcyc.c        183    {
+             hdrcyc.c        184      if( Dpump.Req == REQACT )
+    000000D0 D15E                   MOV.L       L37+30,R1  ; __$Dpump
+    000000D2 30118000               MOVU.B      @(0,R1),R0 ; Dpump.Req
+    000000D6 8802                   CMP/EQ      #2,R0
+    000000D8 8F33                   BF/S        L19
+    000000DA 6203                   MOV         R0,R2
+             hdrcyc.c        185      {
+             hdrcyc.c        186          if( Dpump.Sts == OFF )  // Off Pls
+    000000DC 8415                   MOV.B       @(5,R1),R0 ; Dpump.Sts
+    000000DE 2008                   TST         R0,R0
+    000000E0 8B18                   BF          L21
+             hdrcyc.c        187          {
+             hdrcyc.c        188              if( Dpump.OfCnt == CLR )
+    000000E2 8414                   MOV.B       @(4,R1),R0 ; Dpump.OfCnt
+    000000E4 2008                   TST         R0,R0
+    000000E6 8B07                   BF          L23
+             hdrcyc.c        189              {
+             hdrcyc.c        190                  PE.DR.BIT.B0 = ON;
+    000000E8 06E03A00               MOVI20      #-116224,R6; H'FFFE3A00
+    000000EC 36091003               BSET.B      #0,@(3,R6)
+             hdrcyc.c        191                  PE.DR.BIT.B1 = ON;
+    000000F0 36191003               BSET.B      #1,@(3,R6)
+    000000F4 32118000               MOVU.B      @(0,R1),R2 ; Dpump.Req
+    000000F8              L23:
+             hdrcyc.c        192              }
+             hdrcyc.c        193              
+             hdrcyc.c        194              Dpump.OfCnt++;
+    000000F8 8414                   MOV.B       @(4,R1),R0 ; Dpump.OfCnt
+    000000FA 7001                   ADD         #1,R0
+    000000FC 6403                   MOV         R0,R4
+    000000FE 8014                   MOV.B       R0,@(4,R1) ; Dpump.OfCnt
+             hdrcyc.c        195              if( Dpump.OfPls <= Dpump.OfCnt )
+    00000100 30118002               MOVU.B      @(2,R1),R0 ; Dpump.OfPls
+    00000104 664C                   EXTU.B      R4,R6
+    00000106 3067                   CMP/GT      R6,R0
+    00000108 891B                   BT          L19
+             hdrcyc.c        196              {
+             hdrcyc.c        197                  Dpump.OfCnt = CLR;
+    0000010A 0029                   MOVT        R0
+    0000010C 8014                   MOV.B       R0,@(4,R1) ; Dpump.OfCnt
+             hdrcyc.c        198                  Dpump.Sts   = ON;
+    0000010E E001                   MOV         #1,R0      ; H'00000001
+    00000110 A017                   BRA         L19
+    00000112 8015                   MOV.B       R0,@(5,R1) ; Dpump.Sts
+    00000114              L21:
+             hdrcyc.c        199              }
+             hdrcyc.c        200          }
+             hdrcyc.c        201          else                    // On Pls
+             hdrcyc.c        202          {
+             hdrcyc.c        203              if( Dpump.OnCnt == CLR )
+    00000114 8413                   MOV.B       @(3,R1),R0 ; Dpump.OnCnt
+    00000116 2008                   TST         R0,R0
+    00000118 8B07                   BF          L26
+             hdrcyc.c        204              {
+             hdrcyc.c        205                  PE.DR.BIT.B0 = ON;
+    0000011A 06E03A00               MOVI20      #-116224,R6; H'FFFE3A00
+    0000011E 36091003               BSET.B      #0,@(3,R6)
+             hdrcyc.c        206                  PE.DR.BIT.B1 = OFF;
+    00000122 36190003               BCLR.B      #1,@(3,R6)
+    00000126 32118000               MOVU.B      @(0,R1),R2 ; Dpump.Req
+    0000012A              L26:
+             hdrcyc.c        207              }
+             hdrcyc.c        208              Dpump.OnCnt++;
+    0000012A 8413                   MOV.B       @(3,R1),R0 ; Dpump.OnCnt
+    0000012C 7001                   ADD         #1,R0
+    0000012E 6403                   MOV         R0,R4
+    00000130 8013                   MOV.B       R0,@(3,R1) ; Dpump.OnCnt
+             hdrcyc.c        209              if( Dpump.OnPls <= Dpump.OnCnt )
+    00000132 30118001               MOVU.B      @(1,R1),R0 ; Dpump.OnPls
+    00000136 664C                   EXTU.B      R4,R6
+    00000138 3067                   CMP/GT      R6,R0
+    0000013A 8902                   BT          L19
+             hdrcyc.c        210              {
+             hdrcyc.c        211                  Dpump.OnCnt = CLR;
+    0000013C 0029                   MOVT        R0
+    0000013E 8013                   MOV.B       R0,@(3,R1) ; Dpump.OnCnt
+             hdrcyc.c        212                  Dpump.Sts   = OFF;
+    00000140 8015                   MOV.B       R0,@(5,R1) ; Dpump.Sts
+    00000142              L19:
+             hdrcyc.c        213              }
+             hdrcyc.c        214          }
+             hdrcyc.c        215      }
+             hdrcyc.c        216      if( Dpump.Req == REQEND )
+    00000142 E5EE                   MOV         #-18,R5    ; H'FFFFFFEE
+    00000144 655C                   EXTU.B      R5,R5
+    00000146 3250                   CMP/EQ      R5,R2
+    00000148 8B07                   BF          L29
+             hdrcyc.c        217      {
+             hdrcyc.c        218          PE.DR.BIT.B0 = ON;
+    0000014A 06E03A00               MOVI20      #-116224,R6; H'FFFE3A00
+             hdrcyc.c        219          PE.DR.BIT.B1 = ON;
+             hdrcyc.c        220          Dpump.Req = REQIDL;
+    0000014E E200                   MOV         #0,R2      ; H'00000000
+    00000150 36091003               BSET.B      #0,@(3,R6)
+    00000154 36191003               BSET.B      #1,@(3,R6)
+    00000158 2120                   MOV.B       R2,@R1     ; Dpump.Req
+    0000015A              L29:
+             hdrcyc.c        221      }
+             hdrcyc.c        222    }
+    0000015A 006B                   RTS/N
+             hdrcyc.c        223    
+             hdrcyc.c        224    /******************************************************************************
+             hdrcyc.c        225    * 
+             hdrcyc.c        226    * [概要]
+             hdrcyc.c        227    * [引数]
+             hdrcyc.c        228    * [戻値]
+             hdrcyc.c        229    * 
+             hdrcyc.c        230    ******************************************************************************/
+             hdrcyc.c        231    void SetDpumpDuty( UB dat )
+    0000015C              _SetDpumpDuty:                   ; function: SetDpumpDuty
+                                                           ; frame size=8
+    0000015C 4F12                   STS.L       MACL,@-R15
+    0000015E 4F02                   STS.L       MACH,@-R15
+             hdrcyc.c        232    {
+             hdrcyc.c        233      int save_i;
+             hdrcyc.c        234      
+             hdrcyc.c        235      save_i = get_imask();
+    00000160 0002                   STC         SR,R0
+    00000162 4009                   SHLR2       R0
+    00000164 4009                   SHLR2       R0
+    00000166 C90F                   AND         #15,R0
+    00000168 6603                   MOV         R0,R6
+             hdrcyc.c        236      set_imask(0x0f);
+    0000016A 0002                   STC         SR,R0
+    0000016C 01F0FF0F               MOVI20      #-241,R1   ; H'FFFFFF0F
+    00000170 2019                   AND         R1,R0
+    00000172 CBF0                   OR          #240,R0
+    00000174 400E                   LDC         R0,SR
+             hdrcyc.c        237    
+             hdrcyc.c        238      if( dat <=  DUTY_PTN )
+    00000176 624C                   EXTU.B      R4,R2
+    00000178 E506                   MOV         #6,R5      ; H'00000006
+    0000017A 3257                   CMP/GT      R5,R2
+    0000017C 891A                   BT          L32
+             hdrcyc.c        239      {
+             hdrcyc.c        240          Dpump.Duty = DUTY_TBL[dat];
+    0000017E D735                   MOV.L       L37+38,R7  ; __$DUTY_TBL
+    00000180 604C                   EXTU.B      R4,R0
+    00000182 027C                   MOV.B       @(R0,R7),R2; DUTY_TBL[]
+    00000184 D431                   MOV.L       L37+30,R4  ; __$Dpump
+    00000186 652C                   EXTU.B      R2,R5
+             hdrcyc.c        241          
+             hdrcyc.c        242          if( Dpump.Duty == OFF )
+    00000188 2558                   TST         R5,R5
+    0000018A 6053                   MOV         R5,R0
+    0000018C 8F04                   BF/S        L34
+    0000018E 8046                   MOV.B       R0,@(6,R4) ; Dpump.Duty
+             hdrcyc.c        243          {
+             hdrcyc.c        244              Dpump.OnPls = CLR;
+    00000190 E000                   MOV         #0,R0      ; H'00000000
+    00000192 8041                   MOV.B       R0,@(1,R4) ; Dpump.OnPls
+             hdrcyc.c        245              Dpump.OfPls = CLR;
+    00000194 A00E                   BRA         L32
+    00000196 8042                   MOV.B       R0,@(2,R4) ; Dpump.OfPls
+    00000198              L34:
+             hdrcyc.c        246          }
+             hdrcyc.c        247          else
+             hdrcyc.c        248          {
+             hdrcyc.c        249              Dpump.OnPls = ( DUTY_TBL[dat] / INTERVAL_10M );
+    00000198 D22D                   MOV.L       L37+34,R2  ; H'66666667
+    0000019A 325D                   DMULS.L     R5,R2
+    0000019C 050A                   STS         MACH,R5
+    0000019E 4521                   SHAR        R5
+    000001A0 4521                   SHAR        R5
+    000001A2 6053                   MOV         R5,R0
+    000001A4 4004                   ROTL        R0
+    000001A6 C901                   AND         #1,R0
+    000001A8 350C                   ADD         R0,R5
+    000001AA 6053                   MOV         R5,R0
+    000001AC 8041                   MOV.B       R0,@(1,R4) ; Dpump.OnPls
+             hdrcyc.c        250              Dpump.OfPls = ( INTERVAL_10M  - Dpump.OnPls  );
+    000001AE E00A                   MOV         #10,R0     ; H'0000000A
+    000001B0 3058                   SUB         R5,R0
+    000001B2 8042                   MOV.B       R0,@(2,R4) ; Dpump.OfPls
+    000001B4              L32:
+             hdrcyc.c        251          }
+             hdrcyc.c        252      }
+             hdrcyc.c        253      
+             hdrcyc.c        254      set_imask(save_i);
+    000001B4 6063                   MOV         R6,R0
+    000001B6 C90F                   AND         #15,R0
+    000001B8 4008                   SHLL2       R0
+    000001BA 4008                   SHLL2       R0
+    000001BC 0202                   STC         SR,R2
+    000001BE 2219                   AND         R1,R2
+    000001C0 220B                   OR          R0,R2
+    000001C2 420E                   LDC         R2,SR
+    000001C4 4F06                   LDS.L       @R15+,MACH
+             hdrcyc.c        255    }
+    000001C6 000B                   RTS
+    000001C8 4F16                   LDS.L       @R15+,MACL
+             hdrcyc.c        256    
+             hdrcyc.c        257    /******************************************************************************
+             hdrcyc.c        258    * 
+             hdrcyc.c        259    * [概要]
+             hdrcyc.c        260    * [引数]
+             hdrcyc.c        261    * [戻値]
+             hdrcyc.c        262    * 
+             hdrcyc.c        263    ******************************************************************************/
+             hdrcyc.c        264    void DpumpStart()
+    000001CA              _DpumpStart:                     ; function: DpumpStart
+                                                           ; frame size=0
+             hdrcyc.c        265    {
+             hdrcyc.c        266      int save_i;
+             hdrcyc.c        267      
+             hdrcyc.c        268      save_i = get_imask();
+    000001CA 0002                   STC         SR,R0
+    000001CC 4009                   SHLR2       R0
+    000001CE 4009                   SHLR2       R0
+    000001D0 C90F                   AND         #15,R0
+    000001D2 6603                   MOV         R0,R6
+             hdrcyc.c        269      set_imask(0x0f);
+    000001D4 0002                   STC         SR,R0
+    000001D6 05F0FF0F               MOVI20      #-241,R5   ; H'FFFFFF0F
+    000001DA 2059                   AND         R5,R0
+    000001DC CBF0                   OR          #240,R0
+    000001DE 400E                   LDC         R0,SR
+             hdrcyc.c        270      
+             hdrcyc.c        271      Dpump.Req   = REQACT;
+             hdrcyc.c        272      Dpump.OnCnt = CLR;
+    000001E0 E000                   MOV         #0,R0      ; H'00000000
+    000001E2 D41A                   MOV.L       L37+30,R4  ; __$Dpump
+    000001E4 8043                   MOV.B       R0,@(3,R4) ; Dpump.OnCnt
+    000001E6 E102                   MOV         #2,R1      ; H'00000002
+             hdrcyc.c        273      Dpump.OfCnt = CLR;
+    000001E8 8044                   MOV.B       R0,@(4,R4) ; Dpump.OfCnt
+             hdrcyc.c        274      Dpump.Sts   = OFF;
+    000001EA 8045                   MOV.B       R0,@(5,R4) ; Dpump.Sts
+             hdrcyc.c        275      
+             hdrcyc.c        276      set_imask(save_i);
+    000001EC 2410                   MOV.B       R1,@R4     ; Dpump.Req
+    000001EE 4608                   SHLL2       R6
+    000001F0 4608                   SHLL2       R6
+    000001F2 0702                   STC         SR,R7
+    000001F4 2759                   AND         R5,R7
+    000001F6 276B                   OR          R6,R7
+    000001F8 470E                   LDC         R7,SR
+             hdrcyc.c        277    }
+    000001FA 006B                   RTS/N
+             hdrcyc.c        278    
+             hdrcyc.c        279    /******************************************************************************
+             hdrcyc.c        280    * 
+             hdrcyc.c        281    * [概要]
+             hdrcyc.c        282    * [引数]
+             hdrcyc.c        283    * [戻値]
+             hdrcyc.c        284    * 
+             hdrcyc.c        285    ******************************************************************************/
+             hdrcyc.c        286    void DpumpStop()
+    000001FC              _DpumpStop:                      ; function: DpumpStop
+                                                           ; frame size=0
+             hdrcyc.c        287    {
+             hdrcyc.c        288      int save_i;
+             hdrcyc.c        289      
+             hdrcyc.c        290      save_i = get_imask();
+    000001FC 0002                   STC         SR,R0
+    000001FE 4009                   SHLR2       R0
+    00000200 4009                   SHLR2       R0
+    00000202 C90F                   AND         #15,R0
+    00000204 6603                   MOV         R0,R6
+             hdrcyc.c        291      set_imask(0x0f);
+    00000206 0002                   STC         SR,R0
+    00000208 05F0FF0F               MOVI20      #-241,R5   ; H'FFFFFF0F
+    0000020C 2059                   AND         R5,R0
+    0000020E CBF0                   OR          #240,R0
+    00000210 400E                   LDC         R0,SR
+             hdrcyc.c        292      
+             hdrcyc.c        293      Dpump.Req   = REQEND;
+             hdrcyc.c        294      Dpump.OnCnt = CLR;
+    00000212 E000                   MOV         #0,R0      ; H'00000000
+    00000214 D40D                   MOV.L       L37+30,R4  ; __$Dpump
+    00000216 8043                   MOV.B       R0,@(3,R4) ; Dpump.OnCnt
+    00000218 E1EE                   MOV         #-18,R1    ; H'FFFFFFEE
+             hdrcyc.c        295      Dpump.OfCnt = CLR;
+    0000021A 8044                   MOV.B       R0,@(4,R4) ; Dpump.OfCnt
+             hdrcyc.c        296      Dpump.Sts   = OFF;
+    0000021C 8045                   MOV.B       R0,@(5,R4) ; Dpump.Sts
+             hdrcyc.c        297      
+             hdrcyc.c        298      set_imask(save_i);
+    0000021E 2410                   MOV.B       R1,@R4     ; Dpump.Req
+    00000220 4608                   SHLL2       R6
+    00000222 4608                   SHLL2       R6
+    00000224 0702                   STC         SR,R7
+    00000226 2759                   AND         R5,R7
+    00000228 276B                   OR          R6,R7
+    0000022A 470E                   LDC         R7,SR
+             hdrcyc.c        299    }
+    0000022C 006B                   RTS/N
+    0000022E              L37:
+    0000022E 00000002               .RES.W      1
+    00000230 <00000000>             .DATA.L     _WdgStop
+    00000234 <00000000>             .DATA.L     __$uhIntervalTimer
+    00000238 10624DD3               .DATA.L     H'10624DD3
+    0000023C <00000000>             .DATA.L     _WdgStart
+    00000240 <00000000>             .DATA.L     __$uhBlink$7
+    00000244 <00000000>             .DATA.L     _SegDisp
+    00000248 <00000006>             .DATA.L     H'00000006+__$DUTY_TBL
+    0000024C <00000000>             .DATA.L     __$Dpump
+    00000250 66666667               .DATA.L     H'66666667
+    00000254 <00000000>             .DATA.L     __$DUTY_TBL
+C   00000000              __$DUTY_TBL:                     ; static: __$DUTY_TBL
+    00000000 0014283C50             .DATA.B     H'00,H'14,H'28,H'3C,H'50,H'64
+             64           
+D   00000000              __$uhBlink$7:                    ; static: __$uhBlink$7
+    00000000 0000                   .DATA.W     H'0000
+B   00000000              __$uhIntervalTimer:              ; static: __$uhIntervalTimer
+    00000000 00000002               .RES.W      1
+    00000002              __$Dpump:                        ; static: __$Dpump
+    00000002 00000001               .RES.B      8
+SH SERIES C/C++ Compiler (V.9.02.00.003)                                                         08-Sep-2023 13:46:32  PAGE    1
+
+
+******** STATISTICS INFORMATION ********
+
+
+********** ERROR INFORMATION ***********
+
+NUMBER OF ERRORS:           0
+NUMBER OF WARNINGS:         0
+
+
+
+
+******* SOURCE LINE INFORMATION ********
+
+COMPILED SOURCE LINE:      299
+
+
+
+******* SECTION SIZE INFORMATION *******
+
+PROGRAM  SECTION (P):                                 00000258 Byte(s)
+CONSTANT SECTION (C):                                 00000006 Byte(s)
+DATA     SECTION (D):                                 00000002 Byte(s)
+BSS      SECTION (B):                                 0000000A Byte(s)
+
+TOTAL PROGRAM  SECTION: 00000258 Byte(s)
+TOTAL CONSTANT SECTION: 00000006 Byte(s)
+TOTAL DATA     SECTION: 00000002 Byte(s)
+TOTAL BSS      SECTION: 0000000A Byte(s)
+
+    TOTAL PROGRAM SIZE: 0000026A Byte(s)
+
+
+
+********** LABEL INFORMATION ***********
+
+NUMBER OF EXTERNAL REFERENCE SYMBOLS:            3
+NUMBER OF EXTERNAL DEFINITION SYMBOLS:           5
+NUMBER OF INTERNAL/EXTERNAL SYMBOLS:            18
+
+
+
+*** COMMAND PARAMETER ***
+
+-subcommand=C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\Debug\hdrcyc.shc
+-cpu=sh2a
+-include="C:\NORTi\INC","C:\NORTi\INC\Dummy","C:\NORTi\INC","C:\NORTi\LIB"
+-object="C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\Debug\hdrcyc.obj"
+-debug
+-listfile="C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\Debug\hdrcyc.lst"
+-show=source,tab=4
+-gbr=auto
+-chgincpath
+-errorpath
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\hdrcyc.c"
+-global_volatile=0
+-opt_range=all
+-infinite_loop=0
+-del_vacant_loop=0
+-struct_alloc=1
+-lang=c
+-nologo

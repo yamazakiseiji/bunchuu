@@ -1,0 +1,3047 @@
+SH SERIES C/C++ Compiler (V.9.04.03.000)                                                         07-Sep-2023 20:41:33  PAGE    1
+
+************ OBJECT LISTING ************
+
+FILE NAME: C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\sub.c
+
+SCT OFFSET   CODE       C LABEL     INSTRUCTION OPERAND    COMMENT
+
+                sub.c          1    /******************************************************************************
+                sub.c          2    * サブ関数                                                                    *
+                sub.c          3    *                                                                             *
+                sub.c          4    * File name : sub.c                                                           *
+                sub.c          5    *                                                                             *
+                sub.c          6    * Copyright (c) 2018 NICHIRYO Co., Ltd.                                       *
+                sub.c          7    *                                                                             *
+                sub.c          8    ******************************************************************************/
+                sub.c          9    #include <machine.h>
+                sub.c         10    #include "kernel.h"
+                sub.c         11    #include "iodefine.h"
+                sub.c         12    #include "sh7237.h"
+                sub.c         13    #include "define.h"
+                sub.c         14    #include "datastruct.h"
+                sub.c         15    #include "sub.h"
+                sub.c         16    #include "tblchr.h"
+                sub.c         17    #include "mnet.h"
+                sub.c         18    #include "automachine.h"
+                sub.c         19    
+                sub.c         20    
+                sub.c         21    //*************************************
+                sub.c         22    // 関数定義
+                sub.c         23    //*************************************
+                sub.c         24    
+                sub.c         25    //*************************************
+                sub.c         26    // テーブル
+                sub.c         27    //*************************************
+                sub.c         28    
+                sub.c         29    
+                sub.c         30    //*************************************
+                sub.c         31    // データ定義
+                sub.c         32    //*************************************
+                sub.c         33    
+                sub.c         34    static    UB          InpChInf[INDAT_CNTRL_MAX];                          // 入力チャネル
+                sub.c         35    static volatile struct    StMotionnet *pMotionnet;
+                sub.c         36    //static  INT         ErrorInfo;
+                sub.c         37    static    ST_DEVICE_INFO  dev;
+                sub.c         38    
+                sub.c         39    /******************************************************************************
+                sub.c         40    * 
+                sub.c         41    * [概要]  データのコピーを行う
+                sub.c         42    * [引数]  dst     コピー先
+                sub.c         43    *             disz    コピー先のサイズ
+                sub.c         44    *             src     コピー元
+                sub.c         45    *             siz     コピー長
+                sub.c         46    * [戻値]  -
+                sub.c         47    * 
+                sub.c         48    ******************************************************************************/
+                sub.c         49    void MemCpy( B* dst, INT dsiz, B* src, INT siz )
+P   00000000              _MemCpy:                         ; function: MemCpy
+                                                           ; frame size=0
+    00000000 3573                   CMP/GE      R7,R5
+                sub.c         50    {
+                sub.c         51        INT     i;
+                sub.c         52    
+                sub.c         53        if( dsiz < siz )
+    00000002 8D01                   BT/S        L12
+    00000004 6163                   MOV         R6,R1
+                sub.c         54        {
+                sub.c         55            siz = dsiz;
+    00000006 6753                   MOV         R5,R7
+    00000008              L12:
+                sub.c         56        }
+                sub.c         57    
+                sub.c         58        for( i = 0; i < siz; i++ )
+    00000008 A003                   BRA         L13
+    0000000A E600                   MOV         #0,R6      ; H'00000000
+    0000000C              L14:
+                sub.c         59        {
+                sub.c         60            dst[i] = src[i];
+    0000000C 6014                   MOV.B       @R1+,R0    ; src[]
+    0000000E 7601                   ADD         #1,R6
+    00000010 448B                   MOV.B       R0,@R4+    ; dst[]
+    00000012              L13:
+    00000012 3673                   CMP/GE      R7,R6
+    00000014 8BFA                   BF          L14
+                sub.c         61        }
+                sub.c         62    }
+    00000016 006B                   RTS/N
+                sub.c         63    
+                sub.c         64    /******************************************************************************
+                sub.c         65    * 
+                sub.c         66    * [概要]  メモリプール取得
+                sub.c         67    * [引数]  ID      メモリープールID
+                sub.c         68    *         adr     メモリブロックへのポインタ
+                sub.c         69    * [戻値]  -
+                sub.c         70    * 
+                sub.c         71    ******************************************************************************/
+                sub.c         72    ER api_get_mpf( B* fname, INT line, ID id, VP* adr )
+    00000018              _api_get_mpf:                    ; function: api_get_mpf
+                                                           ; frame size=4
+    00000018 4F22                   STS.L       PR,@-R15
+                sub.c         73    {
+                sub.c         74        ER      err;
+                sub.c         75    
+                sub.c         76        err = tget_mpf( id, adr, 100/MSEC );
+    0000001A 6463                   MOV         R6,R4
+    0000001C E60A                   MOV         #10,R6     ; H'0000000A
+    0000001E D193                   MOV.L       L274+2,R1  ; _v4_tget_mpf
+    00000020 410B                   JSR         @R1
+    00000022 6573                   MOV         R7,R5
+                sub.c         77    
+                sub.c         78      if( E_OK != err )
+    00000024 2008                   TST         R0,R0
+    00000026 8901                   BT          L18
+                sub.c         79        {
+                sub.c         80            return E_SYS_POLGET;
+    00000028 0000F009               MOVI20      #61449,R0  ; H'0000F009
+    0000002C              L18:
+    0000002C 4F26                   LDS.L       @R15+,PR
+                sub.c         81        }
+                sub.c         82    
+                sub.c         83        return err;
+                sub.c         84    }
+    0000002E 006B                   RTS/N
+                sub.c         85    
+                sub.c         86    /******************************************************************************
+                sub.c         87    * 
+                sub.c         88    * [概要]  メモリプール解放
+                sub.c         89    * [引数]  ID      メモリープールID
+                sub.c         90    *         adr     メモリブロックへのポインタ
+                sub.c         91    * [戻値]  -
+                sub.c         92    * 
+                sub.c         93    ******************************************************************************/
+                sub.c         94    ER api_rel_mpf( B* fname, INT line, ID id, VP adr )
+    00000030              _api_rel_mpf:                    ; function: api_rel_mpf
+                                                           ; frame size=4
+    00000030 4F22                   STS.L       PR,@-R15
+                sub.c         95    {
+                sub.c         96        ER      err;
+                sub.c         97    
+                sub.c         98        err = rel_mpf( id, adr );
+    00000032 6463                   MOV         R6,R4
+    00000034 D28E                   MOV.L       L274+6,R2  ; _v4_rel_mpf
+    00000036 420B                   JSR         @R2
+    00000038 6573                   MOV         R7,R5
+                sub.c         99    
+                sub.c        100      if( E_OK != err )
+    0000003A 2008                   TST         R0,R0
+    0000003C 8901                   BT          L21
+                sub.c        101        {
+                sub.c        102            return E_SYS_POLREF;
+    0000003E 0000F00A               MOVI20      #61450,R0  ; H'0000F00A
+    00000042              L21:
+    00000042 4F26                   LDS.L       @R15+,PR
+                sub.c        103        }
+                sub.c        104    
+                sub.c        105        return err;
+                sub.c        106    }
+    00000044 006B                   RTS/N
+                sub.c        107    
+                sub.c        108    
+                sub.c        109    /******************************************************************************
+                sub.c        110    * 
+                sub.c        111    * [概要]
+                sub.c        112    * [引数]  ID      データキューID
+                sub.c        113    *             data    送信するデータ
+                sub.c        114    * [戻値]  エラーコード
+                sub.c        115    * 
+                sub.c        116    ******************************************************************************/
+                sub.c        117    ER api_snd_dtq( B* fname, INT line, ID id, VP_INT data )
+    00000046              _api_snd_dtq:                    ; function: api_snd_dtq
+                                                           ; frame size=12
+    00000046 4DF0                   MOVMU.L     R13,@-R15
+                sub.c        118    {
+                sub.c        119        ER  err;
+                sub.c        120    
+                sub.c        121        // データキュー送信
+                sub.c        122        if( sns_ctx( ) )
+    00000048 6E73                   MOV         R7,R14
+    0000004A D18A                   MOV.L       L274+10,R1 ; _v4_sns_ctx
+    0000004C 410B                   JSR         @R1
+    0000004E 6D63                   MOV         R6,R13
+    00000050 2008                   TST         R0,R0
+    00000052 D289                   MOV.L       L274+14,R2 ; _v4_tsnd_dtq
+    00000054 8D01                   BT/S        L24
+    00000056 E6FF                   MOV         #-1,R6     ; H'FFFFFFFF
+                sub.c        123        {   // 非コンテキスト
+                sub.c        124            err = ipsnd_dtq( id, data );
+    00000058 E600                   MOV         #0,R6      ; H'00000000
+    0000005A              L24:
+    0000005A 64D3                   MOV         R13,R4
+    0000005C 420B                   JSR         @R2
+    0000005E 65E3                   MOV         R14,R5
+    00000060 2008                   TST         R0,R0
+    00000062 8901                   BT          L26
+    00000064 0000F008               MOVI20      #61448,R0  ; H'0000F008
+    00000068              L26:
+    00000068 4DF4                   MOVMU.L     @R15+,R13
+                sub.c        125            if( E_OK != err )
+                sub.c        126            {
+                sub.c        127              return E_SYS_MSGCOM;
+                sub.c        128            }
+                sub.c        129        }
+                sub.c        130        else
+                sub.c        131        {   // コンテキスト
+                sub.c        132            err = snd_dtq( id, data );
+                sub.c        133            if( E_OK != err )
+                sub.c        134            {
+                sub.c        135              return E_SYS_MSGCOM;
+                sub.c        136            }
+                sub.c        137        }
+                sub.c        138        return err;
+                sub.c        139    }
+    0000006A 006B                   RTS/N
+                sub.c        140    
+                sub.c        141    static ID tskid_wk;
+                sub.c        142    static ID mpfid_wk;
+                sub.c        143    static ID mbxid_wk;
+                sub.c        144    static UB prid1_wk;
+                sub.c        145    static UB bcid_wk ;
+                sub.c        146    static UB msgid_wk;
+                sub.c        147    static UB sts_wk  ;
+                sub.c        148    static UB sts2_wk ;
+                sub.c        149    
+                sub.c        150    /******************************************************************************
+                sub.c        151    * Mailbox Send
+                sub.c        152    * 
+                sub.c        153    * [概要]
+                sub.c        154    *         書き方 pool_send(ﾀｽｸID,ﾒｯｾｰｼﾞBOXID,ﾒｯｾｰｼﾞID,状態,DATA);
+                sub.c        155    *         （※通信データサイズ付き）
+                sub.c        156    * [引数]  -
+                sub.c        157    * 
+                sub.c        158    * [戻値]  -
+                sub.c        159    * 
+                sub.c        160    ******************************************************************************/
+                sub.c        161    ER mbx_send( ID tskid, ID mpfid, ID mbxid, UB prid1, UB bcid, UB msgid, UB sts, UB sts2, UB* data, INT siz)
+    0000006C              _mbx_send:                       ; function: mbx_send
+                                                           ; frame size=60
+    0000006C 48F0                   MOVMU.L     R8,@-R15
+    0000006E 7FFC                   ADD         #-4,R15
+    00000070 6153                   MOV         R5,R1
+    00000072 2F52                   MOV.L       R5,@R15    ; mpfid
+    00000074 5CFA                   MOV.L       @(40,R15),R12
+                sub.c        162    {
+                sub.c        163      ER      err ;
+                sub.c        164      
+                sub.c        165      
+                sub.c        166      tskid_wk=tskid;
+    00000076 6863                   MOV         R6,R8
+    00000078 55FB                   MOV.L       @(44,R15),R5
+    0000007A 6943                   MOV         R4,R9
+    0000007C 52F9                   MOV.L       @(36,R15),R2
+    0000007E 54FC                   MOV.L       @(48,R15),R4
+    00000080 DD7E                   MOV.L       L274+18,R13; __$tskid_wk
+                sub.c        167      mpfid_wk=mpfid;
+    00000082 DB7F                   MOV.L       L274+22,R11; __$mpfid_wk
+                sub.c        168      mbxid_wk=mbxid;
+                sub.c        169      prid1_wk=prid1;
+                sub.c        170      bcid_wk =bcid;
+                sub.c        171      msgid_wk=msgid;
+    00000084 D67F                   MOV.L       L274+26,R6 ; __$msgid_wk
+    00000086 2D92                   MOV.L       R9,@R13    ; tskid_wk
+    00000088 6DCC                   EXTU.B      R12,R13
+    0000008A 2B12                   MOV.L       R1,@R11    ; mpfid_wk
+    0000008C D17E                   MOV.L       L274+30,R1 ; __$mbxid_wk
+    0000008E DE7F                   MOV.L       L274+34,R14; __$prid1_wk
+    00000090 26C0                   MOV.B       R12,@R6    ; msgid_wk
+    00000092 6C5C                   EXTU.B      R5,R12
+                sub.c        172      sts_wk  =sts;
+                sub.c        173      sts2_wk =sts2;
+    00000094 DA7E                   MOV.L       L274+38,R10; __$sts2_wk
+    00000096 2182                   MOV.L       R8,@R1     ; mbxid_wk
+    00000098 2E70                   MOV.B       R7,@R14    ; prid1_wk
+    0000009A 6E2C                   EXTU.B      R2,R14
+    0000009C D17D                   MOV.L       L274+42,R1 ; __$bcid_wk
+    0000009E DB7E                   MOV.L       L274+46,R11; __$sts_wk
+    000000A0 2A40                   MOV.B       R4,@R10    ; sts2_wk
+    000000A2 6A4C                   EXTU.B      R4,R10
+    000000A4 2120                   MOV.B       R2,@R1     ; bcid_wk
+    000000A6 2B50                   MOV.B       R5,@R11    ; sts_wk
+    000000A8 A003                   BRA         L28
+    000000AA 6B7C                   EXTU.B      R7,R11
+    000000AC              L29:
+                sub.c        174      
+                sub.c        175      
+                sub.c        176      
+                sub.c        177      for(;;)
+                sub.c        178      {
+                sub.c        179          err = sndproc(tskid, mpfid, mbxid, prid1, bcid, msgid, sts, sts2, data,siz);
+                sub.c        180    
+                sub.c        181          // タイムアウト以外のエラーの時は、無限ループとなる可能性があるので注意すること！！
+                sub.c        182          if(err == E_TMOUT)
+                sub.c        183          {
+                sub.c        184              dly_tsk(DLY_10M);           /* dly 10ms */
+    000000AC D27B                   MOV.L       L274+50,R2 ; _v4_dly_tsk
+    000000AE 420B                   JSR         @R2
+    000000B0 E40A                   MOV         #10,R4     ; H'0000000A
+    000000B2              L28:
+    000000B2 7FFC                   ADD         #-4,R15
+    000000B4 54FF                   MOV.L       @(60,R15),R4
+    000000B6 2F42                   MOV.L       R4,@R15
+    000000B8 7FFC                   ADD         #-4,R15
+    000000BA 51FF                   MOV.L       @(60,R15),R1
+    000000BC 2F12                   MOV.L       R1,@R15
+    000000BE 2FA6                   MOV.L       R10,@-R15
+    000000C0 2FC6                   MOV.L       R12,@-R15
+    000000C2 2FD6                   MOV.L       R13,@-R15
+    000000C4 2FE6                   MOV.L       R14,@-R15
+    000000C6 6493                   MOV         R9,R4
+    000000C8 6683                   MOV         R8,R6
+    000000CA 55F6                   MOV.L       @(24,R15),R5; mpfid
+    000000CC B006                   BSR         _sndproc
+    000000CE 67B3                   MOV         R11,R7
+    000000D0 88CE                   CMP/EQ      #-50,R0
+    000000D2 8DEB                   BT/S        L29
+    000000D4 7F18                   ADD         #24,R15
+    000000D6 7F04                   ADD         #4,R15
+    000000D8 48F4                   MOVMU.L     @R15+,R8
+                sub.c        185          }                               /* タイムアウト時は再トライ */
+                sub.c        186          else
+                sub.c        187          {
+                sub.c        188              break;
+                sub.c        189          }
+                sub.c        190      }
+                sub.c        191      return(err);
+                sub.c        192    }
+    000000DA 006B                   RTS/N
+                sub.c        193    /******************************************************************************
+                sub.c        194    * Mailbox Send
+                sub.c        195    * 
+                sub.c        196    * [概要]
+                sub.c        197    * 
+                sub.c        198    * [引数]  -
+                sub.c        199    * 
+                sub.c        200    * [戻値]  -
+                sub.c        201    * 
+                sub.c        202    ******************************************************************************/
+                sub.c        203    ER sndproc( ID tskid, ID mpfid, ID mbxid, UB prid1,UB bcid, UB msgid, UB sts, UB sts2, UB* data, INT siz )
+    000000DC              _sndproc:                        ; function: sndproc
+                                                           ; frame size=40
+    000000DC 48F0                   MOVMU.L     R8,@-R15
+    000000DE 7FF8                   ADD         #-8,R15
+    000000E0 4615                   CMP/PL      R6
+                sub.c        204    {
+                sub.c        205      T_CMD_MSG*    msg;
+                sub.c        206      ER      err ;
+                sub.c        207    
+                sub.c        208      if(mbxid <= 0)
+    000000E2 6C63                   MOV         R6,R12
+    000000E4 1F51                   MOV.L       R5,@(4,R15); mpfid
+    000000E6 6D43                   MOV         R4,R13
+    000000E8 6E73                   MOV         R7,R14
+    000000EA 5AFA                   MOV.L       @(40,R15),R10
+    000000EC 59FB                   MOV.L       @(44,R15),R9
+    000000EE 58FC                   MOV.L       @(48,R15),R8
+    000000F0 0000F007               MOVI20      #61447,R0  ; H'0000F007
+    000000F4 8F33                   BF/S        L33
+    000000F6 5BFD                   MOV.L       @(52,R15),R11
+    000000F8 56F1                   MOV.L       @(4,R15),R6; mpfid
+    000000FA E5D5                   MOV         #-43,R5    ; H'FFFFFFD5
+    000000FC 655C                   EXTU.B      R5,R5
+                sub.c        209      {
+                sub.c        210          return(E_SYS_DATERR);                           // データ整合性エラー
+                sub.c        211      }
+                sub.c        212    
+                sub.c        213      err = GetMpf( mpfid, (VP)&msg );                    // メモリプール取得
+    000000FE D468                   MOV.L       L274+54,R4 ; L286
+    00000100 BF8A                   BSR         _api_get_mpf
+    00000102 67F3                   MOV         R15,R7
+                sub.c        214      if(err == E_OK)
+    00000104 2008                   TST         R0,R0
+    00000106 8F29                   BF/S        L35
+    00000108 6203                   MOV         R0,R2
+                sub.c        215      {
+                sub.c        216          msg->msgdata.tskid  = tskid;                    // 送信元のタスクＩＤ
+    0000010A 61F2                   MOV.L       @R15,R1    ; msg
+    0000010C 11D5                   MOV.L       R13,@(20,R1); (msg)->tskid
+                sub.c        217          msg->msgdata.prid1  = prid1;                    // 
+                sub.c        218          msg->msgdata.bcid   = bcid;                     // ブロックコマンドＩＤ
+                sub.c        219          msg->msgdata.msgid  = msgid;                    // メッセージＩＤ
+                sub.c        220          msg->msgdata.inf    = sts;                      // 情報
+                sub.c        221          msg->msgdata.inf2   = sts2;                     // 情報
+                sub.c        222          msg->msgdata.siz    = siz;                      // サイズ
+    0000010E 5DFF                   MOV.L       @(60,R15),R13
+    00000110 64F2                   MOV.L       @R15,R4    ; msg
+    00000112 34E10018               MOV.B       R14,@(24:12,R4); (msg)->prid1
+    00000116 65F2                   MOV.L       @R15,R5    ; msg
+    00000118 35A1001A               MOV.B       R10,@(26:12,R5); (msg)->bcid
+    0000011C 66F2                   MOV.L       @R15,R6    ; msg
+    0000011E 55FE                   MOV.L       @(56,R15),R5
+    00000120 3691001B               MOV.B       R9,@(27:12,R6); (msg)->msgid
+    00000124 67F2                   MOV.L       @R15,R7    ; msg
+    00000126 E63C                   MOV         #60,R6     ; H'0000003C
+    00000128 3781001C               MOV.B       R8,@(28:12,R7); (msg)->inf
+    0000012C 68F2                   MOV.L       @R15,R8    ; msg
+    0000012E 38B1001D               MOV.B       R11,@(29:12,R8); (msg)->inf2
+    00000132 69F2                   MOV.L       @R15,R9    ; msg
+    00000134 19D8                   MOV.L       R13,@(32,R9); (msg)->siz
+                sub.c        223          memcpy( &msg->msgdata.data[0], data, CMD_BUFSIZ );
+    00000136 64F2                   MOV.L       @R15,R4    ; msg
+    00000138 DA5A                   MOV.L       L274+58,R10; _memcpy
+    0000013A 4A0B                   JSR         @R10
+    0000013C 7424                   ADD         #36,R4
+    0000013E 65F2                   MOV.L       @R15,R5    ; msg
+    00000140 DB59                   MOV.L       L274+62,R11; _v4_snd_mbx
+    00000142 4B0B                   JSR         @R11
+    00000144 64C3                   MOV         R12,R4
+    00000146 6203                   MOV         R0,R2
+                sub.c        224    
+                sub.c        225          err         = snd_mbx(mbxid, msg);              // メール送信
+                sub.c        226    
+                sub.c        227          if (err != E_OK)
+    00000148 2228                   TST         R2,R2
+    0000014A 8907                   BT          L35
+                sub.c        228          {
+                sub.c        229              RelMpf( mpfid, (VP)msg );                   // メモリ解放
+    0000014C 56F1                   MOV.L       @(4,R15),R6; mpfid
+    0000014E E5E5                   MOV         #-27,R5    ; H'FFFFFFE5
+    00000150 67F2                   MOV.L       @R15,R7    ; msg
+    00000152 D453                   MOV.L       L274+54,R4 ; L286
+    00000154 BF6C                   BSR         _api_rel_mpf
+    00000156 655C                   EXTU.B      R5,R5
+                sub.c        230              err = E_SYS_MSGCOM;
+    00000158 0200F008               MOVI20      #61448,R2  ; H'0000F008
+    0000015C              L35:
+    0000015C 6023                   MOV         R2,R0
+    0000015E              L33:
+    0000015E 7F08                   ADD         #8,R15
+    00000160 48F4                   MOVMU.L     @R15+,R8
+                sub.c        231          }
+                sub.c        232      }
+                sub.c        233      return(err);
+                sub.c        234    }
+    00000162 006B                   RTS/N
+                sub.c        235    /******************************************************************************
+                sub.c        236    * シリアルポートのエラーのチェック
+                sub.c        237    * 
+                sub.c        238    * [概要]
+                sub.c        239    * 
+                sub.c        240    * [引数]  sci:シリアルポートのレジスタへのポインタ
+                sub.c        241    * 
+                sub.c        242    * [戻値]  -
+                sub.c        243    * 
+                sub.c        244    ******************************************************************************/
+                sub.c        245    void sio_CheckError( volatile struct st_sci* sci )
+    00000164              _sio_CheckError:                 ; function: sio_CheckError
+                                                           ; frame size=0
+                sub.c        246    {
+                sub.c        247      if( sci->SCSSR.BIT.ORER )         // オーバーランエラー
+    00000164 34593008               BLD.B       #5,@(8,R4) ; (part of)(sci)->
+    00000168 8B01                   BF          L39
+                sub.c        248      {
+                sub.c        249          sci->SCSSR.BIT.ORER = 0;
+    0000016A 34590008               BCLR.B      #5,@(8,R4) ; (part of)(sci)->
+    0000016E              L39:
+                sub.c        250      }
+                sub.c        251      if( sci->SCSSR.BIT.FER )          // フレーミングエラー
+    0000016E 34493008               BLD.B       #4,@(8,R4) ; (part of)(sci)->
+    00000172 8B01                   BF          L41
+                sub.c        252      {
+                sub.c        253          sci->SCSSR.BIT.FER = 0;
+    00000174 34490008               BCLR.B      #4,@(8,R4) ; (part of)(sci)->
+    00000178              L41:
+                sub.c        254      }
+                sub.c        255      if( sci->SCSSR.BIT.PER )          // パリティーエラー
+    00000178 34393008               BLD.B       #3,@(8,R4) ; (part of)(sci)->
+    0000017C 8B01                   BF          L43
+                sub.c        256      {
+                sub.c        257          sci->SCSSR.BIT.PER = 0;
+    0000017E 34390008               BCLR.B      #3,@(8,R4) ; (part of)(sci)->
+    00000182              L43:
+                sub.c        258      }
+                sub.c        259    }
+    00000182 006B                   RTS/N
+                sub.c        260    /******************************************************************************
+                sub.c        261    * シリアルポートのエラーのチェック
+                sub.c        262    * 
+                sub.c        263    * [概要]
+                sub.c        264    * 
+                sub.c        265    * [引数]  -
+                sub.c        266    * 
+                sub.c        267    * [戻値]  -
+                sub.c        268    * 
+                sub.c        269    ******************************************************************************/
+                sub.c        270    void scif_CheckError()
+    00000184              _scif_CheckError:                ; function: scif_CheckError
+                                                           ; frame size=0
+                sub.c        271    {
+                sub.c        272      if( SCIF3.SCFSR.BIT.ER )            // エラー
+    00000184 06E09800               MOVI20      #-92160,R6 ; H'FFFE9800
+    00000188 8568                   MOV.W       @(16,R6),R0
+    0000018A C880                   TST         #128,R0
+    0000018C 8904                   BT          L46
+                sub.c        273      {
+                sub.c        274          SCIF3.SCFSR.BIT.ER = 0;
+    0000018E 8568                   MOV.W       @(16,R6),R0
+    00000190 0500FF7F               MOVI20      #65407,R5  ; H'0000FF7F
+    00000194 2059                   AND         R5,R0
+    00000196 8168                   MOV.W       R0,@(16,R6)
+    00000198              L46:
+                sub.c        275      }
+                sub.c        276      if( SCIF3.SCFSR.BIT.FER )          // フレーミングエラー
+    00000198 8568                   MOV.W       @(16,R6),R0
+    0000019A C808                   TST         #8,R0
+    0000019C 8903                   BT          L48
+                sub.c        277      {
+                sub.c        278          SCIF3.SCFSR.BIT.FER = 0;
+    0000019E 8568                   MOV.W       @(16,R6),R0
+    000001A0 E5F7                   MOV         #-9,R5     ; H'FFFFFFF7
+    000001A2 2059                   AND         R5,R0
+    000001A4 8168                   MOV.W       R0,@(16,R6)
+    000001A6              L48:
+                sub.c        279      }
+                sub.c        280      if( SCIF3.SCFSR.BIT.PER )          // パリティーエラー
+    000001A6 8568                   MOV.W       @(16,R6),R0
+    000001A8 C804                   TST         #4,R0
+    000001AA 8903                   BT          L50
+                sub.c        281      {
+                sub.c        282          SCIF3.SCFSR.BIT.PER = 0;
+    000001AC 8568                   MOV.W       @(16,R6),R0
+    000001AE E5FB                   MOV         #-5,R5     ; H'FFFFFFFB
+    000001B0 2059                   AND         R5,R0
+    000001B2 8168                   MOV.W       R0,@(16,R6)
+    000001B4              L50:
+                sub.c        283      }
+                sub.c        284    }
+    000001B4 006B                   RTS/N
+                sub.c        285    /******************************************************************************
+                sub.c        286    * 
+                sub.c        287    * [概要]  装置エラー状態設定
+                sub.c        288    * [引数]  
+                sub.c        289    * [戻値]  -
+                sub.c        290    * 
+                sub.c        291    ******************************************************************************/
+                sub.c        292    void SetError(ER err)
+    000001B6              _SetError:                       ; function: SetError
+                                                           ; frame size=0
+                sub.c        293    {
+                sub.c        294    }
+    000001B6 006B                   RTS/N
+                sub.c        295    /******************************************************************************
+                sub.c        296    * 
+                sub.c        297    * [概要]  装置エラー状態クリア
+                sub.c        298    * [引数]  
+                sub.c        299    * [戻値]  -
+                sub.c        300    * 
+                sub.c        301    ******************************************************************************/
+                sub.c        302    void ClrError(ER err)
+    000001B8              _ClrError:                       ; function: ClrError
+                                                           ; frame size=0
+                sub.c        303    {
+                sub.c        304    }
+    000001B8 006B                   RTS/N
+                sub.c        305    /******************************************************************************
+                sub.c        306    * 
+                sub.c        307    * [概要]  エラーを取得する
+                sub.c        308    * [引数]  
+                sub.c        309    * [戻値]  -
+                sub.c        310    * 
+                sub.c        311    ******************************************************************************/
+                sub.c        312    ER GetErrCode()
+    000001BA              _GetErrCode:                     ; function: GetErrCode
+                                                           ; frame size=0
+                sub.c        313    {
+                sub.c        314    }
+    000001BA 006B                   RTS/N
+                sub.c        315    
+                sub.c        316    /******************************************************************************
+                sub.c        317    * 
+                sub.c        318    * [概要]  エラーセット
+                sub.c        319    * [引数]  errcode: エラーコード
+                sub.c        320    * [戻値]  －
+                sub.c        321    * 
+                sub.c        322    ******************************************************************************/
+                sub.c        323    void ErrBitSet(INT errcode)
+    000001BC              _ErrBitSet:                      ; function: ErrBitSet
+                                                           ; frame size=0
+                sub.c        324    {
+                sub.c        325    }
+    000001BC 006B                   RTS/N
+                sub.c        326    /******************************************************************************
+                sub.c        327    * 
+                sub.c        328    * [概要]  エラークリア
+                sub.c        329    * [引数]  errcode: エラーコード
+                sub.c        330    * [戻値]  －
+                sub.c        331    * 
+                sub.c        332    ******************************************************************************/
+                sub.c        333    void ErrBitClr(INT errcode)
+    000001BE              _ErrBitClr:                      ; function: ErrBitClr
+                                                           ; frame size=0
+                sub.c        334    {
+                sub.c        335    }
+    000001BE 006B                   RTS/N
+                sub.c        336    /******************************************************************************
+                sub.c        337    * 
+                sub.c        338    * [概要]  
+                sub.c        339    * [引数]  
+                sub.c        340    * [戻値]  
+                sub.c        341    * 
+                sub.c        342    ******************************************************************************/
+                sub.c        343    BOOL ErrBitChk(INT errcode)
+    000001C0              _ErrBitChk:                      ; function: ErrBitChk
+                                                           ; frame size=0
+                sub.c        344    {
+                sub.c        345    }
+    000001C0 006B                   RTS/N
+                sub.c        346    
+                sub.c        347    /******************************************************************************
+                sub.c        348    * 
+                sub.c        349    * [概要]  入力チャネル情報を内部共有データに設定
+                sub.c        350    * [引数]  入力チャネルデータ
+                sub.c        351    * [戻値]  -
+                sub.c        352    * 
+                sub.c        353    ******************************************************************************/
+                sub.c        354    void SetInputDat(UB index, UB data)
+    000001C2              _SetInputDat:                    ; function: SetInputDat
+                                                           ; frame size=0
+                sub.c        355    {
+                sub.c        356       int save_i;
+                sub.c        357        // 割込み禁止処理
+                sub.c        358        save_i = get_imask();
+    000001C2 6143                   MOV         R4,R1
+    000001C4 0002                   STC         SR,R0
+    000001C6 4009                   SHLR2       R0
+    000001C8 4009                   SHLR2       R0
+    000001CA C90F                   AND         #15,R0
+    000001CC 6603                   MOV         R0,R6
+                sub.c        359      set_imask(0x0f);
+    000001CE 0002                   STC         SR,R0
+    000001D0 04F0FF0F               MOVI20      #-241,R4   ; H'FFFFFF0F
+    000001D4 2049                   AND         R4,R0
+    000001D6 CBF0                   OR          #240,R0
+    000001D8 400E                   LDC         R0,SR
+    000001DA 601C                   EXTU.B      R1,R0
+                sub.c        360    
+                sub.c        361    //5/24    InpChInfOld[index] = InpChInf[index] ;
+                sub.c        362      InpChInf[index] = data;
+    000001DC D733                   MOV.L       L274+66,R7 ; __$InpChInf
+    000001DE 0754                   MOV.B       R5,@(R0,R7); InpChInf[]
+                sub.c        363    
+                sub.c        364      set_imask(save_i);
+    000001E0 4608                   SHLL2       R6
+    000001E2 4608                   SHLL2       R6
+    000001E4 0202                   STC         SR,R2
+    000001E6 2249                   AND         R4,R2
+    000001E8 226B                   OR          R6,R2
+    000001EA 420E                   LDC         R2,SR
+                sub.c        365    }
+    000001EC 006B                   RTS/N
+                sub.c        366    /******************************************************************************
+                sub.c        367    * 
+                sub.c        368    * [概要]  入力チャネル情報を内部共有データに設定
+                sub.c        369    * [引数]  入力チャネルデータ
+                sub.c        370    * [戻値]  -
+                sub.c        371    * 
+                sub.c        372    ******************************************************************************/
+                sub.c        373    void SetInputBit(UB index, UB data)
+    000001EE              _SetInputBit:                    ; function: SetInputBit
+                                                           ; frame size=0
+                sub.c        374    {
+                sub.c        375      UB sftbit = 0x01;
+                sub.c        376      UB amari;
+                sub.c        377      UB syou;
+                sub.c        378      UB sftdat;
+                sub.c        379    
+                sub.c        380      syou    = ( index / 8 );            // 余り取得
+    000001EE 615C                   EXTU.B      R5,R1
+                sub.c        381      amari   = ( index % 8 );            // 余り取得
+                sub.c        382      sftdat  = ( sftbit << amari );      // 余りをシフト
+                sub.c        383    
+                sub.c        384    //
+                sub.c        385    //    タイマ割込みのみで呼ばれるため不要
+                sub.c        386    //
+                sub.c        387    //    // 割込み禁止処理
+                sub.c        388    //    save_i = get_imask();
+                sub.c        389     //   set_imask(0x0f);
+                sub.c        390      
+                sub.c        391    //5/24    InpChInfOld[syou] = InpChInf[syou] ;
+                sub.c        392      
+                sub.c        393      if( data )
+    000001F0 E5FD                   MOV         #-3,R5     ; H'FFFFFFFD
+    000001F2 674C                   EXTU.B      R4,R7
+    000001F4 E401                   MOV         #1,R4      ; H'00000001
+    000001F6 6073                   MOV         R7,R0
+    000001F8 C907                   AND         #7,R0
+    000001FA 475C                   SHAD        R5,R7
+    000001FC 2118                   TST         R1,R1
+    000001FE 657C                   EXTU.B      R7,R5
+    00000200 D62A                   MOV.L       L274+66,R6 ; __$InpChInf
+    00000202 356C                   ADD         R6,R5
+    00000204 440C                   SHAD        R0,R4
+    00000206 8F04                   BF/S        L59
+    00000208 6250                   MOV.B       @R5,R2     ; InpChInf[]
+                sub.c        394      {
+                sub.c        395          InpChInf[syou] |= sftdat;
+                sub.c        396      }
+                sub.c        397      else
+                sub.c        398      {
+                sub.c        399          InpChInf[syou] &= (~sftdat);
+    0000020A 6647                   NOT         R4,R6
+    0000020C 2269                   AND         R6,R2
+    0000020E 000B                   RTS
+    00000210 2520                   MOV.B       R2,@R5     ; InpChInf[]
+    00000212              L59:
+    00000212 224B                   OR          R4,R2
+    00000214 000B                   RTS
+    00000216 2520                   MOV.B       R2,@R5     ; InpChInf[]
+                sub.c        400      }
+                sub.c        401    //    set_imask(save_i);
+                sub.c        402    }
+                sub.c        403    /******************************************************************************
+                sub.c        404    * 
+                sub.c        405    * [概要]  入力チャネルを取得
+                sub.c        406    * [引数]  入力チャネル取得位置
+                sub.c        407    * [戻値]  入力チャネルデータ
+                sub.c        408    * 
+                sub.c        409    ******************************************************************************/
+                sub.c        410    UB GetInputDat(UB inputch)
+    00000218              _GetInputDat:                    ; function: GetInputDat
+                                                           ; frame size=0
+                sub.c        411    {
+                sub.c        412      UB sts = 0;
+                sub.c        413      UB  devno;
+                sub.c        414      UB  portno;
+                sub.c        415      UB  mskbit;
+                sub.c        416    
+                sub.c        417      pMotionnet = (struct StMotionnet *)MNET_BASE_ADDRESS;
+                sub.c        418    
+                sub.c        419      devno  = INPUTCH_INFTBL[inputch][0];
+    00000218 644C                   EXTU.B      R4,R4
+    0000021A E003                   MOV         #3,R0      ; H'00000003
+    0000021C 4480                   MULR        R0,R4
+    0000021E D524                   MOV.L       L274+70,R5 ; _INPUTCH_INFTBL
+                sub.c        420    
+                sub.c        421      if( devno != NONE )
+    00000220 E7FF                   MOV         #-1,R7     ; H'FFFFFFFF
+    00000222 D124                   MOV.L       L274+74,R1 ; H'0C008000
+    00000224 677C                   EXTU.B      R7,R7
+    00000226 345C                   ADD         R5,R4
+    00000228 32418000               MOVU.B      @(0,R4),R2 ; INPUTCH_INFTBL[]
+    0000022C D622                   MOV.L       L274+78,R6 ; __$pMotionnet
+    0000022E 3270                   CMP/EQ      R7,R2
+    00000230 8D0D                   BT/S        L64
+    00000232 2612                   MOV.L       R1,@R6     ; pMotionnet
+                sub.c        422      {
+                sub.c        423          portno = INPUTCH_INFTBL[inputch][1];
+    00000234 8441                   MOV.B       @(1,R4),R0 ; INPUTCH_INFTBL[]
+    00000236 E601                   MOV         #1,R6      ; H'00000001
+                sub.c        424          mskbit = INPUTCH_INFTBL[inputch][2];
+                sub.c        425          sts = (pMotionnet->portData[devno][portno] & mskbit) ;
+    00000238 4208                   SHLL2       R2
+    0000023A 650C                   EXTU.B      R0,R5
+    0000023C 4618                   SHLL8       R6
+    0000023E 325C                   ADD         R5,R2
+    00000240 316C                   ADD         R6,R1
+    00000242 6023                   MOV         R2,R0
+    00000244 34418002               MOVU.B      @(2,R4),R4 ; INPUTCH_INFTBL[]
+    00000248 071C                   MOV.B       @(R0,R1),R7; pMotionnet->portData[]
+                sub.c        426      }
+                sub.c        427    
+                sub.c        428      return(( sts > 0 ? SET : CLR ));
+    0000024A 2748                   TST         R4,R7
+    0000024C 8B01                   BF          L65
+    0000024E              L64:
+    0000024E E600                   MOV         #0,R6      ; H'00000000
+    00000250 067B                   RTV/N       R6
+    00000252              L65:
+    00000252 0639                   MOVRT       R6
+    00000254 067B                   RTV/N       R6
+                sub.c        429    }
+                sub.c        430    
+                sub.c        431    /******************************************************************************
+                sub.c        432    * 
+                sub.c        433    * [概要]  ＨＥＸ値(0～9,A～F)をＡＳＣⅡコードに変換
+                sub.c        434    * [引数]  dat:変換元
+                sub.c        435    * [戻値]  変換後
+                sub.c        436    * 
+                sub.c        437    ******************************************************************************/
+                sub.c        438    UB    HextoAsc( UB dat )
+    00000256              _HextoAsc:                       ; function: HextoAsc
+                                                           ; frame size=0
+                sub.c        439    {
+                sub.c        440      UB result;
+                sub.c        441    
+                sub.c        442      dat &= 0x0f;
+                sub.c        443      result = ASC_CHG[dat];
+    00000256 D519                   MOV.L       L274+82,R5 ; _ASC_CHG
+    00000258 6043                   MOV         R4,R0
+    0000025A C90F                   AND         #15,R0
+                sub.c        444    
+                sub.c        445      return(result);
+                sub.c        446    }
+    0000025C 000B                   RTS
+    0000025E 005C                   MOV.B       @(R0,R5),R0; ASC_CHG[]
+                sub.c        447    /******************************************************************************
+                sub.c        448    * 
+                sub.c        449    * [概要]  ＨＥＸ値(0～9,A～F)をＡＳＣⅡコードに変換（英字は小文字）
+                sub.c        450    * [引数]  dat:変換元
+                sub.c        451    * [戻値]  変換後
+                sub.c        452    * 
+                sub.c        453    ******************************************************************************/
+                sub.c        454    UB    HextoAscLower( UB dat )
+    00000260              _HextoAscLower:                  ; function: HextoAscLower
+                                                           ; frame size=0
+                sub.c        455    {
+                sub.c        456      UB result;
+                sub.c        457    
+                sub.c        458      dat &= 0x0f;
+                sub.c        459      result = ASC_CHG_LOWER[dat];
+    00000260 D517                   MOV.L       L274+86,R5 ; _ASC_CHG_LOWER
+    00000262 6043                   MOV         R4,R0
+    00000264 C90F                   AND         #15,R0
+                sub.c        460    
+                sub.c        461      return(result);
+                sub.c        462    }
+    00000266 000B                   RTS
+    00000268 005C                   MOV.B       @(R0,R5),R0; ASC_CHG_LOWER[]
+    0000026A              L274:
+    0000026A 00000002               .RES.W      1
+    0000026C <00000000>             .DATA.L     _v4_tget_mpf
+    00000270 <00000000>             .DATA.L     _v4_rel_mpf
+    00000274 <00000000>             .DATA.L     _v4_sns_ctx
+    00000278 <00000000>             .DATA.L     _v4_tsnd_dtq
+    0000027C <00000000>             .DATA.L     __$tskid_wk
+    00000280 <00000000>             .DATA.L     __$mpfid_wk
+    00000284 <00000000>             .DATA.L     __$msgid_wk
+    00000288 <00000000>             .DATA.L     __$mbxid_wk
+    0000028C <00000000>             .DATA.L     __$prid1_wk
+    00000290 <00000000>             .DATA.L     __$sts2_wk
+    00000294 <00000000>             .DATA.L     __$bcid_wk
+    00000298 <00000000>             .DATA.L     __$sts_wk
+    0000029C <00000000>             .DATA.L     _v4_dly_tsk
+    000002A0 <00000000>             .DATA.L     L286
+    000002A4 <00000000>             .DATA.L     _memcpy
+    000002A8 <00000000>             .DATA.L     _v4_snd_mbx
+    000002AC <00000000>             .DATA.L     __$InpChInf
+    000002B0 <00000000>             .DATA.L     _INPUTCH_INFTBL
+    000002B4 0C008000               .DATA.L     H'0C008000
+    000002B8 <00000000>             .DATA.L     __$pMotionnet
+    000002BC <00000000>             .DATA.L     _ASC_CHG
+    000002C0 <00000000>             .DATA.L     _ASC_CHG_LOWER
+                sub.c        463    /******************************************************************************
+                sub.c        464    * 
+                sub.c        465    * [概要]  ＡＳＣⅡコードをＨＥＸ値(0～9,A～F)に変換
+                sub.c        466    * [引数]  dat:変換元
+                sub.c        467    * [戻値]  変換後
+                sub.c        468    * 
+                sub.c        469    ******************************************************************************/
+                sub.c        470    UB    AsctoHex( UB dat )
+    000002C4              _AsctoHex:                       ; function: AsctoHex
+                                                           ; frame size=0
+                sub.c        471    {
+                sub.c        472      UB result = 0;
+                sub.c        473    
+                sub.c        474      if( ( dat >= '0') && ( dat <= '9'))
+    000002C4 664C                   EXTU.B      R4,R6
+    000002C6 E530                   MOV         #48,R5     ; H'00000030
+    000002C8 3653                   CMP/GE      R5,R6
+    000002CA 8F07                   BF/S        L71
+    000002CC E200                   MOV         #0,R2      ; H'00000000
+    000002CE E539                   MOV         #57,R5     ; H'00000039
+    000002D0 3657                   CMP/GT      R5,R6
+    000002D2 8903                   BT          L71
+                sub.c        475      {
+                sub.c        476          result = (dat - 0x30) & 0x0f;
+    000002D4 6043                   MOV         R4,R0
+    000002D6 70D0                   ADD         #-48,R0
+    000002D8 C90F                   AND         #15,R0
+    000002DA 6203                   MOV         R0,R2
+    000002DC              L71:
+                sub.c        477      }
+                sub.c        478      if( ( dat >= 'A') && ( dat <= 'F'))
+    000002DC E541                   MOV         #65,R5     ; H'00000041
+    000002DE 3653                   CMP/GE      R5,R6
+    000002E0 8B06                   BF          L74
+    000002E2 E546                   MOV         #70,R5     ; H'00000046
+    000002E4 3657                   CMP/GT      R5,R6
+    000002E6 8903                   BT          L74
+                sub.c        479      {
+                sub.c        480          result = (dat - 0x37) & 0x0f;
+    000002E8 6043                   MOV         R4,R0
+    000002EA 70C9                   ADD         #-55,R0
+    000002EC C90F                   AND         #15,R0
+    000002EE 6203                   MOV         R0,R2
+    000002F0              L74:
+                sub.c        481      }
+                sub.c        482      if( ( dat >= 'a') && ( dat <= 'f'))
+    000002F0 E561                   MOV         #97,R5     ; H'00000061
+    000002F2 3653                   CMP/GE      R5,R6
+    000002F4 8B06                   BF          L77
+    000002F6 E566                   MOV         #102,R5    ; H'00000066
+    000002F8 3657                   CMP/GT      R5,R6
+    000002FA 8903                   BT          L77
+                sub.c        483      {
+                sub.c        484          result = (dat - 0x57) & 0x0f;
+    000002FC 74A9                   ADD         #-87,R4
+    000002FE 6043                   MOV         R4,R0
+    00000300 C90F                   AND         #15,R0
+    00000302 6203                   MOV         R0,R2
+    00000304              L77:
+                sub.c        485      }
+                sub.c        486      
+                sub.c        487      return(result);
+                sub.c        488    }
+    00000304 027B                   RTV/N       R2
+                sub.c        489    /******************************************************************************
+                sub.c        490    * 
+                sub.c        491    * [概要]  ＡＳＣⅡコードをＤＥＣ値(0～9)に変換
+                sub.c        492    * [引数]  dat:変換元
+                sub.c        493    * [戻値]  変換後
+                sub.c        494    * 
+                sub.c        495    ******************************************************************************/
+                sub.c        496    UB    AsctoDec( UB dat )
+    00000306              _AsctoDec:                       ; function: AsctoDec
+                                                           ; frame size=0
+                sub.c        497    {
+                sub.c        498      UB result = 0;
+                sub.c        499    
+                sub.c        500      if( ( dat >= '0') && ( dat <= '9'))
+    00000306 664C                   EXTU.B      R4,R6
+    00000308 E530                   MOV         #48,R5     ; H'00000030
+    0000030A 3653                   CMP/GE      R5,R6
+    0000030C 8F05                   BF/S        L81
+    0000030E E200                   MOV         #0,R2      ; H'00000000
+    00000310 E539                   MOV         #57,R5     ; H'00000039
+    00000312 3657                   CMP/GT      R5,R6
+    00000314 8901                   BT          L81
+                sub.c        501      {
+                sub.c        502          result = (dat - 0x30) ;
+    00000316 74D0                   ADD         #-48,R4
+    00000318 6243                   MOV         R4,R2
+    0000031A              L81:
+                sub.c        503      }
+                sub.c        504      
+                sub.c        505      return(result);
+                sub.c        506    }
+    0000031A 027B                   RTV/N       R2
+                sub.c        507    
+                sub.c        508    /******************************************************************************
+                sub.c        509    * 
+                sub.c        510    * [概要]  ＤＥＣ値をＡＳＣⅡコードに変換
+                sub.c        511    * [引数]  dat:変換元
+                sub.c        512    * [戻値]  変換後
+                sub.c        513    * 
+                sub.c        514    ******************************************************************************/
+                sub.c        515    UB        DectoAscH( UB dat )
+    0000031C              _DectoAscH:                      ; function: DectoAscH
+                                                           ; frame size=8
+    0000031C 4F12                   STS.L       MACL,@-R15
+    0000031E 4F02                   STS.L       MACH,@-R15
+    00000320 D281                   MOV.L       L275,R2    ; H'66666667
+    00000322 654C                   EXTU.B      R4,R5
+                sub.c        516    {
+                sub.c        517      UB hdat = 0x00;
+                sub.c        518    
+                sub.c        519      hdat = ( dat / 10 );
+                sub.c        520      hdat = (UB)ASC_CHG[hdat];
+    00000324 D181                   MOV.L       L275+4,R1  ; _ASC_CHG
+    00000326 325D                   DMULS.L     R5,R2
+    00000328 060A                   STS         MACH,R6
+    0000032A 4621                   SHAR        R6
+    0000032C 4621                   SHAR        R6
+    0000032E 6063                   MOV         R6,R0
+    00000330 4004                   ROTL        R0
+    00000332 C901                   AND         #1,R0
+    00000334 360C                   ADD         R0,R6
+    00000336 606C                   EXTU.B      R6,R0
+    00000338 001C                   MOV.B       @(R0,R1),R0; ASC_CHG[]
+    0000033A 4F06                   LDS.L       @R15+,MACH
+                sub.c        521    
+                sub.c        522      return( hdat );
+                sub.c        523    }
+    0000033C 000B                   RTS
+    0000033E 4F16                   LDS.L       @R15+,MACL
+                sub.c        524    /******************************************************************************
+                sub.c        525    * 
+                sub.c        526    * [概要]  ＤＥＣ値をＡＳＣⅡコードに変換
+                sub.c        527    * [引数]  dat:変換元
+                sub.c        528    * [戻値]  変換後
+                sub.c        529    * 
+                sub.c        530    ******************************************************************************/
+                sub.c        531    UB        DectoAscL( UB dat )
+    00000340              _DectoAscL:                      ; function: DectoAscL
+                                                           ; frame size=8
+    00000340 4F12                   STS.L       MACL,@-R15
+    00000342 4F02                   STS.L       MACH,@-R15
+    00000344 D278                   MOV.L       L275,R2    ; H'66666667
+    00000346 664C                   EXTU.B      R4,R6
+                sub.c        532    {
+                sub.c        533      UB ldat = 0x00;
+                sub.c        534    
+                sub.c        535      ldat = ( dat % 10 );
+                sub.c        536      ldat = (UB)ASC_CHG[ldat];
+    00000348 D178                   MOV.L       L275+4,R1  ; _ASC_CHG
+    0000034A 326D                   DMULS.L     R6,R2
+    0000034C 050A                   STS         MACH,R5
+    0000034E 4521                   SHAR        R5
+    00000350 4521                   SHAR        R5
+    00000352 6053                   MOV         R5,R0
+    00000354 4004                   ROTL        R0
+    00000356 C901                   AND         #1,R0
+    00000358 350C                   ADD         R0,R5
+    0000035A E00A                   MOV         #10,R0     ; H'0000000A
+    0000035C 4580                   MULR        R0,R5
+    0000035E 3658                   SUB         R5,R6
+    00000360 606C                   EXTU.B      R6,R0
+    00000362 001C                   MOV.B       @(R0,R1),R0; ASC_CHG[]
+    00000364 4F06                   LDS.L       @R15+,MACH
+                sub.c        537    
+                sub.c        538      return( ldat );
+                sub.c        539    }
+    00000366 000B                   RTS
+    00000368 4F16                   LDS.L       @R15+,MACL
+                sub.c        540    
+                sub.c        541    /******************************************************************************
+                sub.c        542    * 
+                sub.c        543    * [概要]  ＤＥＣ値を１６進文字列に変換
+                sub.c        544    * [引数]  dat:変換元
+                sub.c        545    * [戻値]  変換後
+                sub.c        546    * 
+                sub.c        547    * 
+                sub.c        548    * 
+                sub.c        549    ******************************************************************************/
+                sub.c        550    void  DectoHexASC( UB mot, UB *hdat, UB *ldat )
+    0000036A              _DectoHexASC:                    ; function: DectoHexASC
+                                                           ; frame size=16
+    0000036A 4CF0                   MOVMU.L     R12,@-R15
+    0000036C 6E4C                   EXTU.B      R4,R14
+    0000036E E2FC                   MOV         #-4,R2     ; H'FFFFFFFC
+    00000370 64E3                   MOV         R14,R4
+    00000372 442C                   SHAD        R2,R4
+                sub.c        551    {
+                sub.c        552      UB dat = 0;
+                sub.c        553    
+                sub.c        554      dat = ( mot / 16 );
+                sub.c        555      *hdat = HextoAsc( dat );
+    00000374 6C63                   MOV         R6,R12
+    00000376 BF6E                   BSR         _HextoAsc
+    00000378 6D53                   MOV         R5,R13
+    0000037A 2D00                   MOV.B       R0,@R13    ; *(hdat)
+                sub.c        556      
+                sub.c        557      dat = ( mot % 16 );
+                sub.c        558      *ldat = HextoAsc( dat );
+    0000037C 60E3                   MOV         R14,R0
+    0000037E C90F                   AND         #15,R0
+    00000380 BF69                   BSR         _HextoAsc
+    00000382 6403                   MOV         R0,R4
+    00000384 2C00                   MOV.B       R0,@R12    ; *(ldat)
+    00000386 4CF4                   MOVMU.L     @R15+,R12
+                sub.c        559    }
+    00000388 006B                   RTS/N
+                sub.c        560    /******************************************************************************
+                sub.c        561    * 
+                sub.c        562    * [概要]  BYTEデータをINTデータに変換
+                sub.c        563    * [引数]  mot:変換元データ先頭ポインタ ※変換元データは必ず4byte構成であること。
+                sub.c        564    * [戻値]  －
+                sub.c        565    * 
+                sub.c        566    ******************************************************************************/
+                sub.c        567    INT BtoINT( UB *mot )
+    0000038A              _BtoINT:                         ; function: BtoINT
+                                                           ; frame size=0
+                sub.c        568    {
+                sub.c        569      INT int_wk    = 0;
+                sub.c        570      INT int_calwk = 0;
+                sub.c        571    
+                sub.c        572      int_wk = ( mot[0] & 0xff );
+                sub.c        573      int_calwk  = (int_wk << 24);
+                sub.c        574    
+                sub.c        575      int_wk = ( mot[1] & 0xff );
+                sub.c        576      int_calwk |= (int_wk << 16);
+                sub.c        577    
+                sub.c        578      int_wk = ( mot[2] & 0xff );
+                sub.c        579      int_calwk |= (int_wk <<  8);
+                sub.c        580    
+                sub.c        581      int_wk = ( mot[3] & 0xff );
+                sub.c        582      int_calwk |= int_wk;
+                sub.c        583      
+                sub.c        584      return(int_calwk);
+    0000038A 6540                   MOV.B       @R4,R5     ; mot[]
+    0000038C 30418001               MOVU.B      @(1,R4),R0 ; mot[]
+    00000390 4528                   SHLL16      R5
+    00000392 4518                   SHLL8       R5
+    00000394 4028                   SHLL16      R0
+    00000396 250B                   OR          R0,R5
+    00000398 30418002               MOVU.B      @(2,R4),R0 ; mot[]
+    0000039C 4018                   SHLL8       R0
+    0000039E 250B                   OR          R0,R5
+    000003A0 30418003               MOVU.B      @(3,R4),R0 ; mot[]
+                sub.c        585    }
+    000003A4 000B                   RTS
+    000003A6 205B                   OR          R5,R0
+                sub.c        586    /******************************************************************************
+                sub.c        587    * 
+                sub.c        588    * [概要]  BYTEデータ(2BYTE)をINTデータに変換
+                sub.c        589    * [引数]  mot:変換元データ先頭ポインタ
+                sub.c        590    * [戻値]  －
+                sub.c        591    * 
+                sub.c        592    ******************************************************************************/
+                sub.c        593    INT B2toINT( UB *mot )
+    000003A8              _B2toINT:                        ; function: B2toINT
+                                                           ; frame size=0
+                sub.c        594    {
+                sub.c        595      INT int_wk    = 0;
+                sub.c        596      INT int_calwk = 0;
+                sub.c        597    
+                sub.c        598      int_wk = ( mot[0] & 0xff );
+                sub.c        599      int_calwk |= (int_wk <<  8);
+                sub.c        600    
+                sub.c        601      int_wk = ( mot[1] & 0xff );
+                sub.c        602      int_calwk |= int_wk;
+                sub.c        603      
+                sub.c        604      return(int_calwk);
+    000003A8 32418000               MOVU.B      @(0,R4),R2 ; mot[]
+    000003AC 30418001               MOVU.B      @(1,R4),R0 ; mot[]
+    000003B0 4218                   SHLL8       R2
+                sub.c        605    }
+    000003B2 000B                   RTS
+    000003B4 202B                   OR          R2,R0
+                sub.c        606    /******************************************************************************
+                sub.c        607    * 
+                sub.c        608    * [概要]  INTデータを2BYTEデータに変換
+                sub.c        609    * [引数]  mot:変換元データ ※変換元データは必ず2byte構成であること。
+                sub.c        610    * [戻値]  －
+                sub.c        611    * 
+                sub.c        612    ******************************************************************************/
+                sub.c        613    void INTtoB2( INT mot, UB *sak )
+    000003B6              _INTtoB2:                        ; function: INTtoB2
+                                                           ; frame size=0
+    000003B6 4411                   CMP/PZ      R4
+                sub.c        614    {
+                sub.c        615      B calwk;
+                sub.c        616      
+                sub.c        617      calwk = (mot / 0x100);
+                sub.c        618      *sak  = calwk;
+    000003B8 8D03                   BT/S        L90
+    000003BA 6243                   MOV         R4,R2
+    000003BC E6FF                   MOV         #-1,R6     ; H'FFFFFFFF
+    000003BE 666C                   EXTU.B      R6,R6
+    000003C0 326C                   ADD         R6,R2
+    000003C2              L90:
+    000003C2 E1F8                   MOV         #-8,R1     ; H'FFFFFFF8
+                sub.c        619      sak++;
+                sub.c        620      calwk = (mot % 0x100);
+                sub.c        621      *sak  = calwk;
+    000003C4 E6FF                   MOV         #-1,R6     ; H'FFFFFFFF
+    000003C6 421C                   SHAD        R1,R2
+    000003C8 4411                   CMP/PZ      R4
+    000003CA 2520                   MOV.B       R2,@R5     ; *(sak)
+    000003CC 8D06                   BT/S        L92
+    000003CE 666C                   EXTU.B      R6,R6
+    000003D0 6447                   NOT         R4,R4
+    000003D2 7401                   ADD         #1,R4
+    000003D4 2469                   AND         R6,R4
+    000003D6 6447                   NOT         R4,R4
+    000003D8 A001                   BRA         L93
+    000003DA 7401                   ADD         #1,R4
+    000003DC              L92:
+    000003DC 2469                   AND         R6,R4
+    000003DE              L93:
+    000003DE 6043                   MOV         R4,R0
+                sub.c        622    }
+    000003E0 000B                   RTS
+    000003E2 8051                   MOV.B       R0,@(1,R5) ; *(sak)
+                sub.c        623    /******************************************************************************
+                sub.c        624    * 
+                sub.c        625    * [概要]  16進数文字列をBYTE配列にする
+                sub.c        626    * [引数]  str:16進数文字列, ary:格納先BYTE配列
+                sub.c        627    * [戻値]  －
+                sub.c        628    * 
+                sub.c        629    ******************************************************************************/
+                sub.c        630    void SetByteArray( const char* str, UB* ary )
+    000003E4              _SetByteArray:                   ; function: SetByteArray
+                                                           ; frame size=20
+    000003E4 4BF0                   MOVMU.L     R11,@-R15
+                sub.c        631    {
+                sub.c        632        INT i;
+                sub.c        633        UB  val;
+                sub.c        634        INT idx;
+                sub.c        635    
+                sub.c        636        for( i = Strlen( str ) - 1,idx = 0 ; i>=0; i-=2,idx++ )
+    000003E6 6B53                   MOV         R5,R11
+    000003E8 B133                   BSR         _Strlen
+    000003EA 6C43                   MOV         R4,R12
+    000003EC 70FF                   ADD         #-1,R0
+    000003EE 3C0C                   ADD         R0,R12
+    000003F0 6D03                   MOV         R0,R13
+    000003F2 A016                   BRA         L95
+    000003F4 7CFF                   ADD         #-1,R12
+    000003F6              L96:
+                sub.c        637        {
+                sub.c        638            if( ( i - 1 ) < 0 )
+    000003F6 62D3                   MOV         R13,R2
+    000003F8 72FF                   ADD         #-1,R2
+    000003FA 4211                   CMP/PZ      R2
+    000003FC 8904                   BT          L98
+                sub.c        639            {
+                sub.c        640                val = AsctoHex( str[i] );
+    000003FE 84C1                   MOV.B       @(1,R12),R0; str[]
+    00000400 BF60                   BSR         _AsctoHex
+    00000402 6403                   MOV         R0,R4
+    00000404 A009                   BRA         L99
+    00000406 6E03                   MOV         R0,R14
+    00000408              L98:
+                sub.c        641            }
+                sub.c        642            else
+                sub.c        643            {
+                sub.c        644                val = AsctoHex( str[i - 1] );
+    00000408 BF5C                   BSR         _AsctoHex
+    0000040A 64C0                   MOV.B       @R12,R4    ; str[]
+    0000040C 6E03                   MOV         R0,R14
+                sub.c        645                val <<= 4;
+                sub.c        646                val |= AsctoHex( str[i] );
+    0000040E 84C1                   MOV.B       @(1,R12),R0; str[]
+    00000410 4E08                   SHLL2       R14
+    00000412 BF57                   BSR         _AsctoHex
+    00000414 6403                   MOV         R0,R4
+    00000416 4E08                   SHLL2       R14
+    00000418 2E0B                   OR          R0,R14
+    0000041A              L99:
+                sub.c        647            }
+                sub.c        648            ary[idx] = val;
+    0000041A 60E3                   MOV         R14,R0
+    0000041C 4B8B                   MOV.B       R0,@R11+   ; ary[]
+    0000041E 7DFE                   ADD         #-2,R13
+    00000420 7CFE                   ADD         #-2,R12
+    00000422              L95:
+    00000422 4D11                   CMP/PZ      R13
+    00000424 89E7                   BT          L96
+    00000426 4BF4                   MOVMU.L     @R15+,R11
+                sub.c        649        }
+                sub.c        650    }
+    00000428 006B                   RTS/N
+                sub.c        651    
+                sub.c        652    /******************************************************************************
+                sub.c        653    * 
+                sub.c        654    * [概要]  16進数値を文字列配列にする
+                sub.c        655    * [引数]  binary:データ元(16進数値), strary:格納先文字列,siz:データ元サイズ
+                sub.c        656    * [戻値]  －
+                sub.c        657    * 
+                sub.c        658    ******************************************************************************/
+                sub.c        659    void SetStrArray( UB* binary, UB* strary, INT siz)
+    0000042A              _SetStrArray:                    ; function: SetStrArray
+                                                           ; frame size=28
+    0000042A 49F0                   MOVMU.L     R9,@-R15
+                sub.c        660    {
+                sub.c        661        INT i;
+                sub.c        662      UB  ldat;
+                sub.c        663      UB  hdat;
+                sub.c        664      
+                sub.c        665      
+                sub.c        666      for( i = 0; i < siz; i=i+2 )
+    0000042C 6A63                   MOV         R6,R10
+    0000042E ED00                   MOV         #0,R13     ; H'00000000
+    00000430 6C53                   MOV         R5,R12
+    00000432 E9FC                   MOV         #-4,R9     ; H'FFFFFFFC
+    00000434 A00F                   BRA         L102
+    00000436 6B43                   MOV         R4,R11
+    00000438              L103:
+                sub.c        667      {
+                sub.c        668          ldat = ( *binary )      & 0x0f;
+                sub.c        669          hdat = ( *binary >> 4 ) & 0x0f;
+    00000438 3EB18000               MOVU.B      @(0,R11),R14; *(binary)
+    0000043C 7D02                   ADD         #2,R13
+                sub.c        670          strary[(i+0)] = HextoAsc( ldat );
+    0000043E 60E3                   MOV         R14,R0
+    00000440 C90F                   AND         #15,R0
+    00000442 BF08                   BSR         _HextoAsc
+    00000444 6403                   MOV         R0,R4
+                sub.c        671          strary[(i+1)] = HextoAsc( hdat );
+    00000446 4E9C                   SHAD        R9,R14
+    00000448 2C00                   MOV.B       R0,@R12    ; strary[]
+    0000044A 60E3                   MOV         R14,R0
+    0000044C C90F                   AND         #15,R0
+    0000044E BF02                   BSR         _HextoAsc
+    00000450 6403                   MOV         R0,R4
+    00000452 80C1                   MOV.B       R0,@(1,R12); strary[]
+    00000454 7C02                   ADD         #2,R12
+    00000456              L102:
+    00000456 3DA3                   CMP/GE      R10,R13
+    00000458 8BEE                   BF          L103
+    0000045A 49F4                   MOVMU.L     @R15+,R9
+                sub.c        672      }
+                sub.c        673    }
+    0000045C 006B                   RTS/N
+                sub.c        674    
+                sub.c        675    /******************************************************************************
+                sub.c        676    * 
+                sub.c        677    * [概要]  ：文字列の比較
+                sub.c        678    * [引数]  ：cmpcmd:比較ターゲット、cmpchr:比較文字列
+                sub.c        679    * [戻値]  ：0:s1==s2、1:s1>s2, -1:s1<s2
+                sub.c        680    * 
+                sub.c        681    *******************************************************************************/
+                sub.c        682    INT Strncmp( const char* cmpcmd, const char* cmpchr, INT len )
+    0000045E              _Strncmp:                        ; function: Strncmp
+                                                           ; frame size=0
+    0000045E 6153                   MOV         R5,R1
+    00000460 E500                   MOV         #0,R5      ; H'00000000
+                sub.c        683    {
+                sub.c        684      INT Loop;
+                sub.c        685      INT Result = -1;
+                sub.c        686    
+                sub.c        687      for( Loop = 0; Loop < len; Loop++,cmpcmd++,cmpchr++ )
+    00000462 A007                   BRA         L106
+    00000464 6763                   MOV         R6,R7
+    00000466              L107:
+                sub.c        688      {
+                sub.c        689          if( *cmpcmd != *cmpchr )    return( Result );
+    00000466 6640                   MOV.B       @R4,R6     ; *(cmpcmd)
+    00000468 6210                   MOV.B       @R1,R2     ; *(cmpchr)
+    0000046A 3620                   CMP/EQ      R2,R6
+    0000046C 8B06                   BF          L109
+    0000046E 7501                   ADD         #1,R5
+    00000470 7401                   ADD         #1,R4
+    00000472 7101                   ADD         #1,R1
+    00000474              L106:
+    00000474 3573                   CMP/GE      R7,R5
+    00000476 8BF6                   BF          L107
+                sub.c        690      }
+                sub.c        691    
+                sub.c        692      
+                sub.c        693      return( 0 );
+    00000478 000B                   RTS
+    0000047A E000                   MOV         #0,R0      ; H'00000000
+    0000047C              L109:
+    0000047C 000B                   RTS
+    0000047E E0FF                   MOV         #-1,R0     ; H'FFFFFFFF
+                sub.c        694    }
+                sub.c        695    /******************************************************************************
+                sub.c        696    * 
+                sub.c        697    * [概要]  ：英字を大文字にする
+                sub.c        698    * [引数]  ：str:文字列
+                sub.c        699    * [戻値]  ：
+                sub.c        700    * 
+                sub.c        701    *******************************************************************************/
+                sub.c        702    void ToUpper( char* str )
+    00000480              _ToUpper:                        ; function: ToUpper
+                                                           ; frame size=0
+    00000480 E661                   MOV         #97,R6     ; H'00000061
+    00000482 A007                   BRA         L113
+    00000484 E57A                   MOV         #122,R5    ; H'0000007A
+    00000486              L114:
+                sub.c        703    {
+                sub.c        704        for( ; *str; str++ )
+                sub.c        705        {
+                sub.c        706            if( 'a' <= *str && *str <= 'z' )
+    00000486 3263                   CMP/GE      R6,R2
+    00000488 8B03                   BF          L116
+    0000048A 3257                   CMP/GT      R5,R2
+    0000048C 8901                   BT          L116
+                sub.c        707            {
+                sub.c        708                *str = *str - 'a' + 'A';
+    0000048E 72E0                   ADD         #-32,R2
+    00000490 2420                   MOV.B       R2,@R4     ; *(str)
+    00000492              L116:
+    00000492 7401                   ADD         #1,R4
+    00000494              L113:
+    00000494 6240                   MOV.B       @R4,R2     ; *(str)
+    00000496 2228                   TST         R2,R2
+    00000498 8BF5                   BF          L114
+                sub.c        709            }
+                sub.c        710        }
+                sub.c        711    }
+    0000049A 006B                   RTS/N
+                sub.c        712    /******************************************************************************
+                sub.c        713    * 
+                sub.c        714    * [概要]  ：英字を大文字にする
+                sub.c        715    * [引数]  ：str:文字列
+                sub.c        716    * [戻値]  ：
+                sub.c        717    * 
+                sub.c        718    *******************************************************************************/
+                sub.c        719    void ToUppern( char* str , INT len )
+    0000049C              _ToUppern:                       ; function: ToUppern
+                                                           ; frame size=0
+                sub.c        720    {
+                sub.c        721      INT Loop;
+                sub.c        722    
+                sub.c        723      for( Loop = 0; Loop < len; Loop++,str++ )
+    0000049C E600                   MOV         #0,R6      ; H'00000000
+    0000049E E161                   MOV         #97,R1     ; H'00000061
+    000004A0 A009                   BRA         L120
+    000004A2 E77A                   MOV         #122,R7    ; H'0000007A
+    000004A4              L121:
+                sub.c        724      {
+                sub.c        725            if( 'a' <= *str && *str <= 'z' )
+    000004A4 6240                   MOV.B       @R4,R2     ; *(str)
+    000004A6 3213                   CMP/GE      R1,R2
+    000004A8 8B03                   BF          L123
+    000004AA 3277                   CMP/GT      R7,R2
+    000004AC 8901                   BT          L123
+                sub.c        726            {
+                sub.c        727                *str = *str - 'a' + 'A';
+    000004AE 72E0                   ADD         #-32,R2
+    000004B0 2420                   MOV.B       R2,@R4     ; *(str)
+    000004B2              L123:
+    000004B2 7601                   ADD         #1,R6
+    000004B4 7401                   ADD         #1,R4
+    000004B6              L120:
+    000004B6 3653                   CMP/GE      R5,R6
+    000004B8 8BF4                   BF          L121
+                sub.c        728            }
+                sub.c        729      }
+                sub.c        730    }
+    000004BA 006B                   RTS/N
+                sub.c        731    /******************************************************************************
+                sub.c        732    * 
+                sub.c        733    * [概要]  ：コマンド引数を区切る
+                sub.c        734    * [引数]  ：str:文字列、arg:引数のポインタ
+                sub.c        735    * [戻値]  ：区切り数
+                sub.c        736    * 
+                sub.c        737    *******************************************************************************/
+                sub.c        738    UB Split( char* src, const char** arg )
+    000004BC              _Split:                          ; function: Split
+                                                           ; frame size=24
+    000004BC 4AF0                   MOVMU.L     R10,@-R15
+    000004BE EE00                   MOV         #0,R14     ; H'00000000
+                sub.c        739    {
+                sub.c        740        char*  p;
+                sub.c        741        char*  s;
+                sub.c        742        UB idx = 0;
+    000004C0 6C53                   MOV         R5,R12
+    000004C2 6AE3                   MOV         R14,R10
+                sub.c        743    
+                sub.c        744        p = src;
+    000004C4 EB2C                   MOV         #44,R11    ; H'0000002C
+    000004C6 A003                   BRA         L127
+    000004C8 6D43                   MOV         R4,R13
+    000004CA              L128:
+                sub.c        745        for( ; ; )
+                sub.c        746        {
+                sub.c        747            s = (char*)(Strchr( p, ',' ));
+                sub.c        748            if( NULL == s )
+                sub.c        749            {
+                sub.c        750                arg[idx] = p;
+                sub.c        751                idx++;
+                sub.c        752                break;
+                sub.c        753            }
+                sub.c        754            arg[idx] = p;
+                sub.c        755            idx++;
+                sub.c        756            *s = '\0';
+    000004CA 60A3                   MOV         R10,R0
+    000004CC 468B                   MOV.B       R0,@R6+    ; *(s)
+                sub.c        757            p = s + 1;
+    000004CE 6D63                   MOV         R6,R13
+    000004D0              L127:
+    000004D0 64D3                   MOV         R13,R4
+    000004D2 B054                   BSR         _Strchr
+    000004D4 65B3                   MOV         R11,R5
+    000004D6 6EEC                   EXTU.B      R14,R14
+    000004D8 6603                   MOV         R0,R6
+    000004DA 2008                   TST         R0,R0
+    000004DC 60E3                   MOV         R14,R0
+    000004DE 7E01                   ADD         #1,R14
+    000004E0 4008                   SHLL2       R0
+    000004E2 0CD6                   MOV.L       R13,@(R0,R12); arg[]
+    000004E4 8FF1                   BF/S        L128
+    000004E6 60E3                   MOV         R14,R0
+    000004E8 4AF4                   MOVMU.L     @R15+,R10
+                sub.c        758        }
+                sub.c        759        return idx;
+                sub.c        760    }
+    000004EA 006B                   RTS/N
+                sub.c        761    /******************************************************************************
+                sub.c        762    * 
+                sub.c        763    * [概要]  ：コマンド引数をＮＵＬＬで区切る
+                sub.c        764    * [引数]  ：str:文字列、arg:引数のポインタ
+                sub.c        765    * [戻値]  ：区切り数
+                sub.c        766    * 
+                sub.c        767    *******************************************************************************/
+                sub.c        768    UB SplitNull( char* src, const char** arg )
+    000004EC              _SplitNull:                      ; function: SplitNull
+                                                           ; frame size=20
+    000004EC 4BF0                   MOVMU.L     R11,@-R15
+    000004EE EE00                   MOV         #0,R14     ; H'00000000
+                sub.c        769    {
+                sub.c        770        char*  p;
+                sub.c        771        char*  s;
+                sub.c        772        UB idx = 0;
+    000004F0 6C53                   MOV         R5,R12
+                sub.c        773    
+                sub.c        774        p = src;
+    000004F2 6BE3                   MOV         R14,R11
+    000004F4 A003                   BRA         L131
+    000004F6 6D43                   MOV         R4,R13
+    000004F8              L132:
+                sub.c        775        for( ; ; )
+                sub.c        776        {
+                sub.c        777            s = (char*)(Strchr( p, 0x00 ));
+                sub.c        778            if( NULL == s )
+                sub.c        779            {
+                sub.c        780                arg[idx] = p;
+                sub.c        781                idx++;
+                sub.c        782                break;
+                sub.c        783            }
+                sub.c        784            arg[idx] = p;
+                sub.c        785            idx++;
+                sub.c        786            *s = '\0';
+    000004F8 60B3                   MOV         R11,R0
+    000004FA 468B                   MOV.B       R0,@R6+    ; *(s)
+                sub.c        787            p = s + 1;
+    000004FC 6D63                   MOV         R6,R13
+    000004FE              L131:
+    000004FE 64D3                   MOV         R13,R4
+    00000500 B03D                   BSR         _Strchr
+    00000502 65B3                   MOV         R11,R5
+    00000504 6EEC                   EXTU.B      R14,R14
+    00000506 6603                   MOV         R0,R6
+    00000508 2008                   TST         R0,R0
+    0000050A 60E3                   MOV         R14,R0
+    0000050C 7E01                   ADD         #1,R14
+    0000050E 4008                   SHLL2       R0
+    00000510 0CD6                   MOV.L       R13,@(R0,R12); arg[]
+    00000512 8FF1                   BF/S        L132
+    00000514 60E3                   MOV         R14,R0
+    00000516 4BF4                   MOVMU.L     @R15+,R11
+                sub.c        788        }
+                sub.c        789        return idx;
+                sub.c        790    }
+    00000518 006B                   RTS/N
+                sub.c        791    /******************************************************************************
+                sub.c        792    * 
+                sub.c        793    * [概要]  ：コマンド引数をＮＵＬＬで区切る
+                sub.c        794    * [引数]  ：str:文字列、arg:引数のポインタ
+                sub.c        795    * [戻値]  ：区切り数
+                sub.c        796    * 
+                sub.c        797    *******************************************************************************/
+                sub.c        798    UB SplitSpace( char* src, const char** arg )
+    0000051A              _SplitSpace:                     ; function: SplitSpace
+                                                           ; frame size=24
+    0000051A 4AF0                   MOVMU.L     R10,@-R15
+    0000051C EE00                   MOV         #0,R14     ; H'00000000
+                sub.c        799    {
+                sub.c        800        char*  p;
+                sub.c        801        char*  s;
+                sub.c        802        UB idx = 0;
+    0000051E 6C53                   MOV         R5,R12
+    00000520 6AE3                   MOV         R14,R10
+                sub.c        803    
+                sub.c        804        p = src;
+    00000522 EB20                   MOV         #32,R11    ; H'00000020
+    00000524 A007                   BRA         L135
+    00000526 6D43                   MOV         R4,R13
+    00000528              L275:
+    00000528 66666667               .DATA.L     H'66666667
+    0000052C <00000000>             .DATA.L     _ASC_CHG
+    00000530              L136:
+                sub.c        805        for( ; ; )
+                sub.c        806        {
+                sub.c        807            s = (char*)(Strchr( p, 0x20 ));
+                sub.c        808            if( NULL == s )
+                sub.c        809            {
+                sub.c        810                arg[idx] = p;
+                sub.c        811                idx++;
+                sub.c        812                break;
+                sub.c        813            }
+                sub.c        814            arg[idx] = p;
+                sub.c        815            idx++;
+                sub.c        816            *s = '\0';
+    00000530 60A3                   MOV         R10,R0
+    00000532 468B                   MOV.B       R0,@R6+    ; *(s)
+                sub.c        817            p = s + 1;
+    00000534 6D63                   MOV         R6,R13
+    00000536              L135:
+    00000536 64D3                   MOV         R13,R4
+    00000538 B021                   BSR         _Strchr
+    0000053A 65B3                   MOV         R11,R5
+    0000053C 6EEC                   EXTU.B      R14,R14
+    0000053E 6603                   MOV         R0,R6
+    00000540 2008                   TST         R0,R0
+    00000542 60E3                   MOV         R14,R0
+    00000544 7E01                   ADD         #1,R14
+    00000546 4008                   SHLL2       R0
+    00000548 0CD6                   MOV.L       R13,@(R0,R12); arg[]
+    0000054A 8FF1                   BF/S        L136
+    0000054C 60E3                   MOV         R14,R0
+    0000054E 4AF4                   MOVMU.L     @R15+,R10
+                sub.c        818        }
+                sub.c        819        return idx;
+                sub.c        820    }
+    00000550 006B                   RTS/N
+                sub.c        821    /******************************************************************************
+                sub.c        822    * 
+                sub.c        823    * [概要]  ：コマンド引数を区切る
+                sub.c        824    * [引数]  ：str:文字列、arg:引数のポインタ
+                sub.c        825    * [戻値]  ：区切り数
+                sub.c        826    * 
+                sub.c        827    *******************************************************************************/
+                sub.c        828    UB SplitOnly( char* src, const char** arg )
+    00000552              _SplitOnly:                      ; function: SplitOnly
+                                                           ; frame size=20
+    00000552 4BF0                   MOVMU.L     R11,@-R15
+                sub.c        829    {
+                sub.c        830        char*  p;
+                sub.c        831        char*  s;
+                sub.c        832        UB idx = 0;
+    00000554 6C53                   MOV         R5,R12
+    00000556 EE00                   MOV         #0,R14     ; H'00000000
+    00000558 6D43                   MOV         R4,R13
+                sub.c        833    
+                sub.c        834        p = src;
+    0000055A A002                   BRA         L139
+    0000055C EB2C                   MOV         #44,R11    ; H'0000002C
+    0000055E              L140:
+                sub.c        835        for( ; ; )
+                sub.c        836        {
+                sub.c        837            s = (char*)(Strchr( p, ',' ));
+                sub.c        838            if( NULL == s )
+                sub.c        839            {
+                sub.c        840                arg[idx] = p;
+                sub.c        841                idx++;
+                sub.c        842                break;
+                sub.c        843            }
+                sub.c        844            arg[idx] = p;
+                sub.c        845            idx++;
+                sub.c        846    //        *s = '\0';
+                sub.c        847            p = s + 1;
+    0000055E 7601                   ADD         #1,R6
+    00000560 6D63                   MOV         R6,R13
+    00000562              L139:
+    00000562 64D3                   MOV         R13,R4
+    00000564 B00B                   BSR         _Strchr
+    00000566 65B3                   MOV         R11,R5
+    00000568 6EEC                   EXTU.B      R14,R14
+    0000056A 6603                   MOV         R0,R6
+    0000056C 2008                   TST         R0,R0
+    0000056E 60E3                   MOV         R14,R0
+    00000570 7E01                   ADD         #1,R14
+    00000572 4008                   SHLL2       R0
+    00000574 8FF3                   BF/S        L140
+    00000576 0CD6                   MOV.L       R13,@(R0,R12); arg[]
+                sub.c        848        }
+                sub.c        849        return idx;
+    00000578 60E3                   MOV         R14,R0
+    0000057A 4BF4                   MOVMU.L     @R15+,R11
+                sub.c        850    }
+    0000057C 006B                   RTS/N
+                sub.c        851    /******************************************************************************
+                sub.c        852    * 
+                sub.c        853    * [概要]  ：指定した文字が最初に現れる位置を検索する
+                sub.c        854    * [引数]  ：str:文字列、arg:検索する文字
+                sub.c        855    * [戻値]  ：見つかった位置のポインタ、見つからなかった場合はNULL
+                sub.c        856    * 
+                sub.c        857    *******************************************************************************/
+                sub.c        858    char* Strchr(const char* s, char c )
+    0000057E              _Strchr:                         ; function: Strchr
+                                                           ; frame size=0
+    0000057E A003                   BRA         L143
+    00000580 655E                   EXTS.B      R5,R5
+    00000582              L144:
+                sub.c        859    {
+                sub.c        860        for( ; *s ; s++ )
+                sub.c        861        {
+                sub.c        862            if( *s == c )
+    00000582 3250                   CMP/EQ      R5,R2
+    00000584 8905                   BT          L146
+    00000586 7401                   ADD         #1,R4
+    00000588              L143:
+    00000588 6240                   MOV.B       @R4,R2     ; *(s)
+    0000058A 2228                   TST         R2,R2
+    0000058C 8BF9                   BF          L144
+                sub.c        863            {
+                sub.c        864                return (const char*)(s);
+                sub.c        865            }
+                sub.c        866        }
+                sub.c        867        return NULL;
+    0000058E 000B                   RTS
+    00000590 E000                   MOV         #0,R0      ; H'00000000
+    00000592              L146:
+    00000592 000B                   RTS
+    00000594 6043                   MOV         R4,R0
+                sub.c        868    }
+                sub.c        869    /*-----------------------------------------------------------------------------
+                sub.c        870      機能：文字列を数値にする
+                sub.c        871      引数：str     数字文字
+                sub.c        872            rad     進数( 10 or 16 )
+                sub.c        873            byte    バイト数(1/2/4)
+                sub.c        874            sig     符号(0:符号なし、1:符号あり)
+                sub.c        875      戻値：数値
+                sub.c        876     ----------------------------------------------------------------------------*/
+                sub.c        877    INT Atoi( const char* str, INT rad, INT byte, INT sig )
+    00000596              _Atoi:                           ; function: Atoi
+                                                           ; frame size=28
+    00000596 49F0                   MOVMU.L     R9,@-R15
+                sub.c        878    {
+                sub.c        879      INT     val = 0;
+                sub.c        880        INT     len;
+                sub.c        881        INT     i;
+                sub.c        882        INT     top;
+                sub.c        883    
+                sub.c        884      if( N_DEC == rad )
+    00000598 6053                   MOV         R5,R0
+    0000059A 880A                   CMP/EQ      #10,R0
+    0000059C 6A73                   MOV         R7,R10
+    0000059E EE00                   MOV         #0,R14     ; H'00000000
+    000005A0 6963                   MOV         R6,R9
+    000005A2 6C53                   MOV         R5,R12
+    000005A4 8F02                   BF/S        L151
+    000005A6 6D43                   MOV         R4,R13
+                sub.c        885        {
+                sub.c        886            if( '-' == str[0] ) top = 1;
+    000005A8 60D0                   MOV.B       @R13,R0    ; str[]
+    000005AA 882D                   CMP/EQ      #45,R0
+    000005AC              L151:
+    000005AC 0B29                   MOVT        R11
+                sub.c        887            else                top = 0;
+                sub.c        888        }
+                sub.c        889        else
+                sub.c        890        {
+                sub.c        891            top = 0;
+                sub.c        892        }
+                sub.c        893    
+                sub.c        894        len = Strlen( str );
+    000005AE B050                   BSR         _Strlen
+    000005B0 64D3                   MOV         R13,R4
+    000005B2 64B3                   MOV         R11,R4
+    000005B4 34DC                   ADD         R13,R4
+    000005B6 ED39                   MOV         #57,R13    ; H'00000039
+    000005B8 6103                   MOV         R0,R1
+                sub.c        895        for( i = top; i < len; i++ )
+    000005BA 65B3                   MOV         R11,R5
+    000005BC E730                   MOV         #48,R7     ; H'00000030
+    000005BE              L153:
+    000005BE 3513                   CMP/GE      R1,R5
+    000005C0 892B                   BT          L155
+                sub.c        896        {
+                sub.c        897            val *= rad;
+    000005C2 60C3                   MOV         R12,R0
+    000005C4 880A                   CMP/EQ      #10,R0
+    000005C6 4E80                   MULR        R0,R14
+                sub.c        898    
+                sub.c        899            if( N_DEC == rad )
+    000005C8 8F06                   BF/S        L157
+    000005CA 6640                   MOV.B       @R4,R6     ; str[]
+                sub.c        900            {
+                sub.c        901                if( '0' <= str[i] && str[i] <= '9' )
+    000005CC 3673                   CMP/GE      R7,R6
+    000005CE 8B22                   BF          L159
+    000005D0 36D7                   CMP/GT      R13,R6
+    000005D2 8B05                   BF          L160
+    000005D4 A01F                   BRA         L159
+    000005D6 0009                   NOP
+    000005D8              L157:
+                sub.c        902                    val += str[i] - '0';
+                sub.c        903                else
+                sub.c        904                    return -1;
+                sub.c        905            }
+                sub.c        906            else
+                sub.c        907            {
+                sub.c        908                if( '0' <= str[i] && str[i] <= '9' )
+    000005D8 3673                   CMP/GE      R7,R6
+    000005DA 8B04                   BF          L162
+    000005DC 36D7                   CMP/GT      R13,R6
+    000005DE 8902                   BT          L162
+    000005E0              L160:
+    000005E0 76D0                   ADD         #-48,R6
+    000005E2 A015                   BRA         L163
+    000005E4 3E6C                   ADD         R6,R14
+    000005E6              L162:
+                sub.c        909                    val += str[i] - '0';
+                sub.c        910                else if( 'A' <= str[i] && str[i] <= 'F' )
+    000005E6 E241                   MOV         #65,R2     ; H'00000041
+    000005E8 3623                   CMP/GE      R2,R6
+    000005EA 8B07                   BF          L165
+    000005EC E246                   MOV         #70,R2     ; H'00000046
+    000005EE 3627                   CMP/GT      R2,R6
+    000005F0 8904                   BT          L165
+                sub.c        911                    val += str[i] - 'A' + 10;
+    000005F2 76BF                   ADD         #-65,R6
+    000005F4 36EC                   ADD         R14,R6
+    000005F6 760A                   ADD         #10,R6
+    000005F8 A00A                   BRA         L163
+    000005FA 6E63                   MOV         R6,R14
+    000005FC              L165:
+                sub.c        912                else if( 'a' <= str[i] && str[i] <= 'f' )
+    000005FC E261                   MOV         #97,R2     ; H'00000061
+    000005FE 3623                   CMP/GE      R2,R6
+    00000600 8B09                   BF          L159
+    00000602 E266                   MOV         #102,R2    ; H'00000066
+    00000604 3627                   CMP/GT      R2,R6
+    00000606 8906                   BT          L159
+                sub.c        913                    val += str[i] - 'a' + 10;
+    00000608 769F                   ADD         #-97,R6
+    0000060A 36EC                   ADD         R14,R6
+    0000060C 760A                   ADD         #10,R6
+    0000060E 6E63                   MOV         R6,R14
+    00000610              L163:
+    00000610 7501                   ADD         #1,R5
+    00000612 AFD4                   BRA         L153
+    00000614 7401                   ADD         #1,R4
+    00000616              L159:
+    00000616 A01A                   BRA         L169
+    00000618 E0FF                   MOV         #-1,R0     ; H'FFFFFFFF
+    0000061A              L155:
+                sub.c        914                else
+                sub.c        915                    return -1;
+                sub.c        916            }
+                sub.c        917        }
+                sub.c        918        if( 1 == top )
+    0000061A 60B3                   MOV         R11,R0
+    0000061C 8801                   CMP/EQ      #1,R0
+    0000061E 8B00                   BF          L170
+                sub.c        919        {
+                sub.c        920            val *= -1;
+    00000620 6EEB                   NEG         R14,R14
+    00000622              L170:
+                sub.c        921        }
+                sub.c        922    
+                sub.c        923        if( N_SIG == sig )    // 符号あり
+    00000622 60A3                   MOV         R10,R0
+    00000624 8801                   CMP/EQ      #1,R0
+    00000626 8B11                   BF          L172
+                sub.c        924        {
+                sub.c        925            if     ( ( 1 == byte ) && ( val & 0x00000080 ) ) val |= 0xffffff00;
+    00000628 6093                   MOV         R9,R0
+    0000062A 8801                   CMP/EQ      #1,R0
+    0000062C 8909                   BT          L175
+    0000062E 8802                   CMP/EQ      #2,R0
+    00000630 8B0C                   BF          L172
+                sub.c        926            else if( ( 2 == byte ) && ( val & 0x00008000 ) ) val |= 0xffff0000;
+    00000632 02008000               MOVI20      #32768,R2  ; H'00008000
+    00000636 2E28                   TST         R2,R14
+    00000638 8908                   BT          L172
+    0000063A 06F00000               MOVI20      #-65536,R6 ; H'FFFF0000
+    0000063E A005                   BRA         L172
+    00000640 2E6B                   OR          R6,R14
+    00000642              L175:
+    00000642 87EF                   BLD         #7,R14
+    00000644 8B02                   BF          L172
+    00000646 E6FF                   MOV         #-1,R6     ; H'FFFFFFFF
+    00000648 4618                   SHLL8       R6
+    0000064A 2E6B                   OR          R6,R14
+    0000064C              L172:
+    0000064C 60E3                   MOV         R14,R0
+    0000064E              L169:
+    0000064E 49F4                   MOVMU.L     @R15+,R9
+                sub.c        927        }
+                sub.c        928    
+                sub.c        929        return val;
+                sub.c        930    }
+    00000650 006B                   RTS/N
+                sub.c        931    
+                sub.c        932    /*-----------------------------------------------------------------------------
+                sub.c        933      機能：文字列の長さを求める
+                sub.c        934      引数：str     文字列
+                sub.c        935      戻値：文字列長
+                sub.c        936     ----------------------------------------------------------------------------*/
+                sub.c        937    INT Strlen( const char* str )
+    00000652              _Strlen:                         ; function: Strlen
+                                                           ; frame size=0
+                sub.c        938    {
+                sub.c        939        INT     len;
+                sub.c        940    
+                sub.c        941        for( len = 0; *str; str++, len++ )
+    00000652 A002                   BRA         L180
+    00000654 E600                   MOV         #0,R6      ; H'00000000
+    00000656              L181:
+    00000656 7401                   ADD         #1,R4
+    00000658 7601                   ADD         #1,R6
+    0000065A              L180:
+    0000065A 6240                   MOV.B       @R4,R2     ; *(str)
+    0000065C 2228                   TST         R2,R2
+    0000065E 8BFA                   BF          L181
+                sub.c        942        {
+                sub.c        943            ;
+                sub.c        944        }
+                sub.c        945        return len;
+                sub.c        946    }
+    00000660 067B                   RTV/N       R6
+                sub.c        947    
+                sub.c        948    /*-----------------------------------------------------------------------------
+                sub.c        949      機能：文字列をコピー
+                sub.c        950      引数：s1:コピー先、s2:コピー先
+                sub.c        951      戻値：－
+                sub.c        952     ----------------------------------------------------------------------------*/
+                sub.c        953    void Strcpy( char *s1, char *s2 )
+    00000662              _Strcpy:                         ; function: Strcpy
+                                                           ; frame size=0
+    00000662 A002                   BRA         L183
+    00000664 0009                   NOP
+    00000666              L184:
+                sub.c        954    {
+                sub.c        955        for( ; *s2; s1++, s2++ )
+                sub.c        956        {
+                sub.c        957            *s1 = *s2;
+    00000666 448B                   MOV.B       R0,@R4+    ; *(s1)
+    00000668 7501                   ADD         #1,R5
+    0000066A              L183:
+    0000066A 6050                   MOV.B       @R5,R0     ; *(s2)
+    0000066C 2008                   TST         R0,R0
+    0000066E 8BFA                   BF          L184
+                sub.c        958        }
+                sub.c        959        *s1 = '\0';
+    00000670 E200                   MOV         #0,R2      ; H'00000000
+                sub.c        960    }
+    00000672 000B                   RTS
+    00000674 2420                   MOV.B       R2,@R4     ; *(s1)
+                sub.c        961    
+                sub.c        962    
+                sub.c        963    
+                sub.c        964    
+                sub.c        965    /*-----------------------------------------------------------------------------
+                sub.c        966      機能：文字列をコピー
+                sub.c        967      引数：s1:コピー先、s2:コピー元
+                sub.c        968      戻値：－
+                sub.c        969     ----------------------------------------------------------------------------*/
+                sub.c        970    void StrHexcpy( char *s1, char *s2 )
+    00000676              _StrHexcpy:                      ; function: StrHexcpy
+                                                           ; frame size=20
+    00000676 4BF0                   MOVMU.L     R11,@-R15
+    00000678 6C53                   MOV         R5,R12
+    0000067A A00C                   BRA         L187
+    0000067C 6B43                   MOV         R4,R11
+    0000067E              L188:
+                sub.c        971    {
+                sub.c        972      UB h_dat;
+                sub.c        973      UB l_dat;
+                sub.c        974      UB hl_dat;
+                sub.c        975      
+                sub.c        976        for( ; *s2; s1++ )
+                sub.c        977        {
+                sub.c        978          h_dat = *s2;
+                sub.c        979          s2++;
+    0000067E 7C01                   ADD         #1,R12
+                sub.c        980          l_dat = *s2;
+    00000680 62C4                   MOV.B       @R12+,R2   ; *(s2)
+                sub.c        981          s2++;
+                sub.c        982          *s1 = AsctoHex(h_dat) * 0x10 + AsctoHex(l_dat);
+    00000682 BE1F                   BSR         _AsctoHex
+    00000684 6D2C                   EXTU.B      R2,R13
+    00000686 6E0E                   EXTS.B      R0,R14
+    00000688 4E08                   SHLL2       R14
+    0000068A BE1B                   BSR         _AsctoHex
+    0000068C 64D3                   MOV         R13,R4
+    0000068E 4E08                   SHLL2       R14
+    00000690 3E0C                   ADD         R0,R14
+    00000692 60E3                   MOV         R14,R0
+    00000694 4B8B                   MOV.B       R0,@R11+   ; *(s1)
+    00000696              L187:
+    00000696 64C0                   MOV.B       @R12,R4    ; *(s2)
+    00000698 2448                   TST         R4,R4
+    0000069A 8BF0                   BF          L188
+                sub.c        983        }
+                sub.c        984        *s1 = '\0';
+    0000069C E200                   MOV         #0,R2      ; H'00000000
+    0000069E 2B20                   MOV.B       R2,@R11    ; *(s1)
+    000006A0 4BF4                   MOVMU.L     @R15+,R11
+                sub.c        985    }
+    000006A2 006B                   RTS/N
+                sub.c        986    /*-----------------------------------------------------------------------------
+                sub.c        987      機能：文字列をコピー
+                sub.c        988      引数：s1:コピー先、s2:コピー元
+                sub.c        989      戻値：－
+                sub.c        990     ----------------------------------------------------------------------------*/
+                sub.c        991    void StrHexcpyn( char *s1, char *s2,  int siz)
+    000006A4              _StrHexcpyn:                     ; function: StrHexcpyn
+                                                           ; frame size=24
+    000006A4 4AF0                   MOVMU.L     R10,@-R15
+    000006A6 6A63                   MOV         R6,R10
+    000006A8 6C53                   MOV         R5,R12
+    000006AA A00C                   BRA         L191
+    000006AC 6B43                   MOV         R4,R11
+    000006AE              L192:
+                sub.c        992    {
+                sub.c        993      UB h_dat;
+                sub.c        994      UB l_dat;
+                sub.c        995      UB hl_dat;
+                sub.c        996      int i;
+                sub.c        997      
+                sub.c        998        for( i = 0; i < siz; s1++ )
+                sub.c        999        {
+                sub.c       1000          h_dat = *s2;
+    000006AE 64C4                   MOV.B       @R12+,R4   ; *(s2)
+                sub.c       1001          s2++;
+                sub.c       1002          l_dat = *s2;
+    000006B0 62C4                   MOV.B       @R12+,R2   ; *(s2)
+                sub.c       1003          s2++;
+                sub.c       1004          *s1 = AsctoHex(h_dat) * 0x10 + AsctoHex(l_dat);
+    000006B2 BE07                   BSR         _AsctoHex
+    000006B4 6D2C                   EXTU.B      R2,R13
+    000006B6 6E0E                   EXTS.B      R0,R14
+    000006B8 4E08                   SHLL2       R14
+    000006BA BE03                   BSR         _AsctoHex
+    000006BC 64D3                   MOV         R13,R4
+    000006BE 4E08                   SHLL2       R14
+    000006C0 3E0C                   ADD         R0,R14
+    000006C2 60E3                   MOV         R14,R0
+    000006C4 4B8B                   MOV.B       R0,@R11+   ; *(s1)
+    000006C6              L191:
+    000006C6 4A15                   CMP/PL      R10
+    000006C8 89F1                   BT          L192
+                sub.c       1005        }
+                sub.c       1006        *s1 = '\0';
+    000006CA E200                   MOV         #0,R2      ; H'00000000
+    000006CC 2B20                   MOV.B       R2,@R11    ; *(s1)
+    000006CE 4AF4                   MOVMU.L     @R15+,R10
+                sub.c       1007    }
+    000006D0 006B                   RTS/N
+                sub.c       1008    
+                sub.c       1009    /***********************************************************************
+                sub.c       1010    * 
+                sub.c       1011    * [概要]  BCCの計算
+                sub.c       1012    * [引数]  buff:計算元データ,size:計算元データ長
+                sub.c       1013    * [戻値]  BCC
+                sub.c       1014    * 
+                sub.c       1015    ***********************************************************************/
+                sub.c       1016    UB CalcBCC( UB* buff, INT size )
+    000006D2              _CalcBCC:                        ; function: CalcBCC
+                                                           ; frame size=0
+                sub.c       1017    {
+                sub.c       1018        INT     i;
+                sub.c       1019        UB       bcc;
+                sub.c       1020        bcc = 0;
+    000006D2 6153                   MOV         R5,R1
+    000006D4 E500                   MOV         #0,R5      ; H'00000000
+                sub.c       1021    
+                sub.c       1022        for( i = 0; i < size; i++ )
+    000006D6 A004                   BRA         L195
+    000006D8 6653                   MOV         R5,R6
+    000006DA              L196:
+                sub.c       1023        {
+                sub.c       1024            bcc ^= buff[i];
+    000006DA 6244                   MOV.B       @R4+,R2    ; buff[]
+    000006DC 7601                   ADD         #1,R6
+    000006DE 622C                   EXTU.B      R2,R2
+    000006E0 252A                   XOR         R2,R5
+    000006E2              L195:
+    000006E2 3613                   CMP/GE      R1,R6
+    000006E4 8BF9                   BF          L196
+                sub.c       1025        }
+                sub.c       1026        return bcc;
+                sub.c       1027    }
+    000006E6 057B                   RTV/N       R5
+                sub.c       1028    
+                sub.c       1029    /***********************************************************************
+                sub.c       1030    * 
+                sub.c       1031    * [概要]  ウオッチドック設定
+                sub.c       1032    * [引数]  －
+                sub.c       1033    * [戻値]  －
+                sub.c       1034    * 
+                sub.c       1035    ***********************************************************************/
+                sub.c       1036    void WdgSet(void)
+    000006E8              _WdgSet:                         ; function: WdgSet
+                                                           ; frame size=0
+                sub.c       1037    {
+                sub.c       1038      sfr_outw(WDT_WTCSR,0xA548);
+    000006E8 06E00000               MOVI20      #-131072,R6; H'FFFE0000
+    000006EC 0200A548               MOVI20      #42312,R2  ; H'0000A548
+    000006F0 2621                   MOV.W       R2,@R6
+    000006F2 8562                   MOV.W       @(4,R6),R0
+                sub.c       1039      sfr_inw(WDT_WRCSR);
+                sub.c       1040      sfr_outw(WDT_WRCSR,0x5A5F);//b6:rste=1,b5:rsts=0
+    000006F4 00005A5F               MOVI20      #23135,R0  ; H'00005A5F
+    000006F8 8162                   MOV.W       R0,@(4,R6)
+    000006FA 70A1                   ADD         #-95,R0
+                sub.c       1041      sfr_outw(WDT_WTCNT,0x5A00);//
+                sub.c       1042    }
+    000006FC 000B                   RTS
+    000006FE 8161                   MOV.W       R0,@(2,R6)
+                sub.c       1043    /***********************************************************************
+                sub.c       1044    * 
+                sub.c       1045    * [概要]  ウオッチドック停止
+                sub.c       1046    * [引数]  －
+                sub.c       1047    * [戻値]  －
+                sub.c       1048    * 
+                sub.c       1049    ***********************************************************************/
+                sub.c       1050    void WdgStop(void)
+    00000700              _WdgStop:                        ; function: WdgStop
+                                                           ; frame size=0
+                sub.c       1051    {
+                sub.c       1052      // [WTCSR]
+                sub.c       1053      // b7    b6     b5    b4   b3   b2   b1   b0
+                sub.c       1054      // IOVF  WT/IT  TME   -    -    CKS  CKS  CKS
+                sub.c       1055      // 0     1      0     1    1    1    1    1
+                sub.c       1056      sfr_outw(WDT_WTCSR,0xA55F);
+    00000700 02E00000               MOVI20      #-131072,R2; H'FFFE0000
+    00000704 0600A55F               MOVI20      #42335,R6  ; H'0000A55F
+    00000708 00005A5F               MOVI20      #23135,R0  ; H'00005A5F
+    0000070C 2261                   MOV.W       R6,@R2
+    0000070E 8122                   MOV.W       R0,@(4,R2)
+                sub.c       1057    
+                sub.c       1058      // b7    b6     b5    b4   b3   b2   b1   b0
+                sub.c       1059      // WOVF  RSTE   RSTS  -    -    -    -    - 
+                sub.c       1060      // *     1      0     1    1    1    1    1
+                sub.c       1061      sfr_outw(WDT_WRCSR,0x5A5F);
+                sub.c       1062      
+                sub.c       1063      // b7:WOVF=0 Write
+                sub.c       1064      sfr_outw(WDT_WRCSR,0xA500);
+    00000710 0000A500               MOVI20      #42240,R0  ; H'0000A500
+    00000714 8122                   MOV.W       R0,@(4,R2)
+    00000716 E05A                   MOV         #90,R0     ; H'0000005A
+    00000718 4018                   SHLL8       R0
+                sub.c       1065      
+                sub.c       1066      // WTCNT CLEAR
+                sub.c       1067      sfr_outw(WDT_WTCNT,0x5A00);//
+                sub.c       1068    }
+    0000071A 000B                   RTS
+    0000071C 8121                   MOV.W       R0,@(2,R2)
+                sub.c       1069    /***********************************************************************
+                sub.c       1070    * 
+                sub.c       1071    * [概要]  ウオッチドック開始
+                sub.c       1072    * [引数]  －
+                sub.c       1073    * [戻値]  －
+                sub.c       1074    * 
+                sub.c       1075    ***********************************************************************/
+                sub.c       1076    void WdgStart(void)
+    0000071E              _WdgStart:                       ; function: WdgStart
+                                                           ; frame size=0
+                sub.c       1077    {
+                sub.c       1078      // WTCNT CLEAR
+                sub.c       1079      sfr_outw(WDT_WTCNT,0x5A00);//
+    0000071E 02E00000               MOVI20      #-131072,R2; H'FFFE0000
+    00000722 E05A                   MOV         #90,R0     ; H'0000005A
+    00000724 4018                   SHLL8       R0
+    00000726 0600A57F               MOVI20      #42367,R6  ; H'0000A57F
+    0000072A 8121                   MOV.W       R0,@(2,R2)
+                sub.c       1080    
+                sub.c       1081      // [WTCSR]
+                sub.c       1082      // b7    b6     b5    b4   b3   b2   b1   b0
+                sub.c       1083      // IOVF  WT/IT  TME   -    -    CKS  CKS  CKS
+                sub.c       1084      // 0     1      1     1    1    1    1    1
+                sub.c       1085      sfr_outw(WDT_WTCSR,0xA57F);
+                sub.c       1086    }
+    0000072C 000B                   RTS
+    0000072E 2261                   MOV.W       R6,@R2
+                sub.c       1087    
+                sub.c       1088    /***********************************************************************
+                sub.c       1089    * 
+                sub.c       1090    * [概要]CW/CCW情報取得
+                sub.c       1091    * 
+                sub.c       1092    * 
+                sub.c       1093    * 
+                sub.c       1094    ***********************************************************************/
+                sub.c       1095    UB GetCwInfo( char* arg )
+    00000730              _GetCwInfo:                      ; function: GetCwInfo
+                                                           ; frame size=8
+    00000730 4EF0                   MOVMU.L     R14,@-R15
+    00000732 E502                   MOV         #2,R5      ; H'00000002
+                sub.c       1096    {
+                sub.c       1097      UB result;
+                sub.c       1098    
+                sub.c       1099      ToUppern( arg, 2 );
+    00000734 BEB2                   BSR         _ToUppern
+    00000736 6E43                   MOV         R4,R14
+    00000738 E602                   MOV         #2,R6      ; H'00000002
+                sub.c       1100    
+                sub.c       1101      if( !Strncmp( arg, &STRTBL_CW[0],2 ) )
+    0000073A D50C                   MOV.L       L276,R5    ; _STRTBL_CW
+    0000073C BE8F                   BSR         _Strncmp
+    0000073E 64E3                   MOV         R14,R4
+    00000740 2008                   TST         R0,R0
+    00000742 8F01                   BF/S        L203
+    00000744 E002                   MOV         #2,R0      ; H'00000002
+                sub.c       1102      {
+                sub.c       1103          result = CW;
+    00000746 E001                   MOV         #1,R0      ; H'00000001
+    00000748              L203:
+    00000748 4EF4                   MOVMU.L     @R15+,R14
+                sub.c       1104      }
+                sub.c       1105      else
+                sub.c       1106      {
+                sub.c       1107          result = CCW;
+                sub.c       1108      }
+                sub.c       1109    
+                sub.c       1110      return( result );
+                sub.c       1111    }
+    0000074A 006B                   RTS/N
+                sub.c       1112    /******************************************************************************
+                sub.c       1113    * 
+                sub.c       1114    * [概要]  指定したindex値のビットをセット
+                sub.c       1115    * [引数]  index = 1～、data = 格納先データ
+                sub.c       1116    * [戻値]  ビットセット値
+                sub.c       1117    * 
+                sub.c       1118    ******************************************************************************/
+                sub.c       1119    void BitSet( UB index, UB *data )
+    0000074C              _BitSet:                         ; function: BitSet
+                                                           ; frame size=0
+                sub.c       1120    {
+                sub.c       1121      UB sftbit = 0x01;
+                sub.c       1122      UB amari;
+                sub.c       1123      UB syou;
+                sub.c       1124      UB sftdat;
+                sub.c       1125      UB indexwk;
+                sub.c       1126    
+                sub.c       1127      if(( index >= DVMIN )&&( index <= DVMAX ))
+    0000074C 624C                   EXTU.B      R4,R2
+    0000074E E601                   MOV         #1,R6      ; H'00000001
+    00000750 3263                   CMP/GE      R6,R2
+    00000752 8B0A                   BF          L206
+    00000754 E607                   MOV         #7,R6      ; H'00000007
+    00000756 3267                   CMP/GT      R6,R2
+    00000758 8907                   BT          L206
+    0000075A 74FF                   ADD         #-1,R4
+                sub.c       1128      {
+                sub.c       1129          indexwk = index - 1;
+                sub.c       1130          syou    = ( indexwk / 8 );          // 余り取得
+                sub.c       1131          amari   = ( indexwk % 8 );          // 余り取得
+                sub.c       1132          sftdat  = ( sftbit << amari );      // 余りをシフト
+                sub.c       1133          *data  |= sftdat;
+    0000075C 6650                   MOV.B       @R5,R6     ; *(data)
+    0000075E 6043                   MOV         R4,R0
+    00000760 C907                   AND         #7,R0
+    00000762 E101                   MOV         #1,R1      ; H'00000001
+    00000764 410C                   SHAD        R0,R1
+    00000766 261B                   OR          R1,R6
+    00000768 2560                   MOV.B       R6,@R5     ; *(data)
+    0000076A              L206:
+                sub.c       1134      }
+                sub.c       1135    }
+    0000076A 006B                   RTS/N
+    0000076C              L276:
+    0000076C <00000000>             .DATA.L     _STRTBL_CW
+                sub.c       1136    /******************************************************************************
+                sub.c       1137    * 
+                sub.c       1138    * [概要]  指定したindex値のビットをクリア
+                sub.c       1139    * [引数]  index = 1～、data = 格納先データ
+                sub.c       1140    * [戻値]  ビットクリア値
+                sub.c       1141    * 
+                sub.c       1142    ******************************************************************************/
+                sub.c       1143    void BitClr( UB index, UB *data )
+    00000770              _BitClr:                         ; function: BitClr
+                                                           ; frame size=0
+    00000770 6643                   MOV         R4,R6
+    00000772 624C                   EXTU.B      R4,R2
+    00000774 E401                   MOV         #1,R4      ; H'00000001
+    00000776 3243                   CMP/GE      R4,R2
+                sub.c       1144    {
+                sub.c       1145      UB sftbit = 0x01;
+                sub.c       1146      UB amari;
+                sub.c       1147      UB syou;
+                sub.c       1148      UB sftdat;
+                sub.c       1149      UB indexwk;
+                sub.c       1150    
+                sub.c       1151      if(( index >= MIN_CH )&&( index <= MAX_CH ))
+    00000778 8F0C                   BF/S        L210
+    0000077A 6153                   MOV         R5,R1
+    0000077C E53F                   MOV         #63,R5     ; H'0000003F
+    0000077E 3257                   CMP/GT      R5,R2
+    00000780 8908                   BT          L210
+    00000782 76FF                   ADD         #-1,R6
+    00000784 E701                   MOV         #1,R7      ; H'00000001
+    00000786 6063                   MOV         R6,R0
+    00000788 C907                   AND         #7,R0
+                sub.c       1152      {
+                sub.c       1153          indexwk = index - 1;
+                sub.c       1154          syou    = ( indexwk / 8 );          // 余り取得
+                sub.c       1155          amari   = ( indexwk % 8 );          // 余り取得
+                sub.c       1156          sftdat  = ( sftbit << amari ) ;     // 余りをシフト
+                sub.c       1157          *data  &= (~sftdat);
+    0000078A 6210                   MOV.B       @R1,R2     ; *(data)
+    0000078C 470C                   SHAD        R0,R7
+    0000078E 6577                   NOT         R7,R5
+    00000790 2259                   AND         R5,R2
+    00000792 2120                   MOV.B       R2,@R1     ; *(data)
+    00000794              L210:
+                sub.c       1158      }
+                sub.c       1159    }
+    00000794 006B                   RTS/N
+                sub.c       1160    
+                sub.c       1161    /******************************************************************************
+                sub.c       1162    * 
+                sub.c       1163    * [概要]  指定したindex値のビットをセット(INT型配列用)
+                sub.c       1164    *           例）data = 0x0000000, index = 31  →  戻り値 0x80000000
+                sub.c       1165    * [引数]  data = 指定データ、index = 0～31
+                sub.c       1166    * [戻値]  ビットセット値
+                sub.c       1167    * 
+                sub.c       1168    ******************************************************************************/
+                sub.c       1169    void BitSet_INT( UB index, INT *data )
+    00000796              _BitSet_INT:                     ; function: BitSet_INT
+                                                           ; frame size=0
+    00000796 6643                   MOV         R4,R6
+    00000798 624C                   EXTU.B      R4,R2
+    0000079A E401                   MOV         #1,R4      ; H'00000001
+    0000079C 3243                   CMP/GE      R4,R2
+                sub.c       1170    {
+                sub.c       1171      INT sftbit = 0x00000001;
+                sub.c       1172      INT amari;
+                sub.c       1173      INT syou;
+                sub.c       1174      INT sftdat;
+                sub.c       1175      UB indexwk;                                     // 2020/2/12 １はじまり対応
+                sub.c       1176    
+                sub.c       1177      if(( index >= MIN_CH )&&( index <= MAX_CH ))    // 2020/2/12 １はじまり対応
+    0000079E 8F10                   BF/S        L214
+    000007A0 6153                   MOV         R5,R1
+    000007A2 E53F                   MOV         #63,R5     ; H'0000003F
+    000007A4 3257                   CMP/GT      R5,R2
+    000007A6 890C                   BT          L214
+                sub.c       1178      {
+                sub.c       1179          indexwk = index - 1;                        // 2020/2/12 １はじまり対応
+                sub.c       1180          syou    = ( indexwk / 32 );         // 余り取得
+    000007A8 76FF                   ADD         #-1,R6
+    000007AA E5FB                   MOV         #-5,R5     ; H'FFFFFFFB
+    000007AC 606C                   EXTU.B      R6,R0
+    000007AE E201                   MOV         #1,R2      ; H'00000001
+                sub.c       1181          amari   = ( indexwk % 32 );         // 余り取得
+                sub.c       1182          sftdat  = ( sftbit << amari );      // 余りをシフト
+                sub.c       1183          data[syou] |= sftdat;
+    000007B0 6403                   MOV         R0,R4
+    000007B2 C91F                   AND         #31,R0
+    000007B4 445C                   SHAD        R5,R4
+    000007B6 4408                   SHLL2       R4
+    000007B8 341C                   ADD         R1,R4
+    000007BA 420C                   SHAD        R0,R2
+    000007BC 6742                   MOV.L       @R4,R7     ; data[]
+    000007BE 272B                   OR          R2,R7
+    000007C0 2472                   MOV.L       R7,@R4     ; data[]
+    000007C2              L214:
+                sub.c       1184      }
+                sub.c       1185    }
+    000007C2 006B                   RTS/N
+                sub.c       1186    
+                sub.c       1187    /******************************************************************************
+                sub.c       1188    * 
+                sub.c       1189    * [概要]  指定したindex値のビットをクリア(INT型配列用)
+                sub.c       1190    *           例）data = 0x8000000, index = 31  →  戻り値 0x00000000
+                sub.c       1191    * [引数]  data = 指定データ、index = 0～31
+                sub.c       1192    * [戻値]  ビットクリア値
+                sub.c       1193    * 
+                sub.c       1194    ******************************************************************************/
+                sub.c       1195    void BitClr_INT( UB index, INT *data )
+    000007C4              _BitClr_INT:                     ; function: BitClr_INT
+                                                           ; frame size=0
+    000007C4 6643                   MOV         R4,R6
+    000007C6 624C                   EXTU.B      R4,R2
+    000007C8 E401                   MOV         #1,R4      ; H'00000001
+    000007CA 3243                   CMP/GE      R4,R2
+                sub.c       1196    {
+                sub.c       1197      INT sftbit = 0x00000001;
+                sub.c       1198      INT amari;
+                sub.c       1199      INT syou;
+                sub.c       1200      INT sftdat;
+                sub.c       1201      UB indexwk;                                     // 2020/2/12 １はじまり対応
+                sub.c       1202    
+                sub.c       1203      if(( index >= MIN_CH )&&( index <= MAX_CH ))    // 2020/2/12 １はじまり対応
+    000007CC 8F11                   BF/S        L218
+    000007CE 6153                   MOV         R5,R1
+    000007D0 E53F                   MOV         #63,R5     ; H'0000003F
+    000007D2 3257                   CMP/GT      R5,R2
+    000007D4 890D                   BT          L218
+                sub.c       1204      {
+                sub.c       1205          indexwk = index - 1;                        // 2020/2/12 １はじまり対応
+                sub.c       1206          syou    = ( indexwk / 32 );         // 余り取得
+    000007D6 76FF                   ADD         #-1,R6
+    000007D8 E7FB                   MOV         #-5,R7     ; H'FFFFFFFB
+    000007DA 606C                   EXTU.B      R6,R0
+    000007DC E501                   MOV         #1,R5      ; H'00000001
+                sub.c       1207          amari   = ( indexwk % 32 );         // 余り取得
+                sub.c       1208          sftdat  = ( sftbit << amari ) ;     // 余りをシフト
+                sub.c       1209          data[syou] &= (~sftdat);
+    000007DE 6403                   MOV         R0,R4
+    000007E0 C91F                   AND         #31,R0
+    000007E2 447C                   SHAD        R7,R4
+    000007E4 4408                   SHLL2       R4
+    000007E6 341C                   ADD         R1,R4
+    000007E8 450C                   SHAD        R0,R5
+    000007EA 6142                   MOV.L       @R4,R1     ; data[]
+    000007EC 6257                   NOT         R5,R2
+    000007EE 2129                   AND         R2,R1
+    000007F0 2412                   MOV.L       R1,@R4     ; data[]
+    000007F2              L218:
+                sub.c       1210      }
+                sub.c       1211    }
+    000007F2 006B                   RTS/N
+                sub.c       1212    
+                sub.c       1213    /******************************************************************************
+                sub.c       1214    * 
+                sub.c       1215    * [概要]  指定したindex値のビット状態を取得(INT型配列用)
+                sub.c       1216    * [引数]  index = 0～31
+                sub.c       1217    * [戻値]  ≠０ ( indexで指定した位置のビットが１ )
+                sub.c       1218    * 
+                sub.c       1219    ******************************************************************************/
+                sub.c       1220    INT BitGet_INT( UB index, INT *data )
+    000007F4              _BitGet_INT:                     ; function: BitGet_INT
+                                                           ; frame size=0
+                sub.c       1221    {
+                sub.c       1222      INT sftbit = 0x00000001;
+                sub.c       1223      INT amari;
+                sub.c       1224      INT syou;
+                sub.c       1225      INT sftdat;
+                sub.c       1226      INT rltdat;
+                sub.c       1227      UB indexwk;                                     // 2020/2/12 １はじまり対応
+                sub.c       1228    
+                sub.c       1229      rltdat = *data;
+                sub.c       1230    
+                sub.c       1231      if(( index >= MIN_CH )&&( index <= MAX_CH ))    // 2020/2/12 １はじまり対応
+    000007F4 664C                   EXTU.B      R4,R6
+    000007F6 E701                   MOV         #1,R7      ; H'00000001
+    000007F8 3673                   CMP/GE      R7,R6
+    000007FA 6153                   MOV         R5,R1
+    000007FC 6543                   MOV         R4,R5
+    000007FE 8F0F                   BF/S        L222
+    00000800 6212                   MOV.L       @R1,R2     ; *(data)
+    00000802 E43F                   MOV         #63,R4     ; H'0000003F
+    00000804 3647                   CMP/GT      R4,R6
+    00000806 890B                   BT          L222
+                sub.c       1232      {
+                sub.c       1233          indexwk = index - 1;                        // 2020/2/12 １はじまり対応
+                sub.c       1234          syou    = ( indexwk / 32 );         // 余り取得
+                sub.c       1235          amari   = ( indexwk % 32 );         // 余り取得
+                sub.c       1236          sftdat  = ( sftbit << amari ) ;     // 余りをシフト
+                sub.c       1237          rltdat  = ( data[syou] & sftdat );
+    00000808 75FF                   ADD         #-1,R5
+    0000080A E2FB                   MOV         #-5,R2     ; H'FFFFFFFB
+    0000080C 655C                   EXTU.B      R5,R5
+    0000080E 6053                   MOV         R5,R0
+    00000810 402C                   SHAD        R2,R0
+    00000812 4008                   SHLL2       R0
+    00000814 021E                   MOV.L       @(R0,R1),R2; data[]
+    00000816 6053                   MOV         R5,R0
+    00000818 C91F                   AND         #31,R0
+    0000081A E101                   MOV         #1,R1      ; H'00000001
+    0000081C 410C                   SHAD        R0,R1
+    0000081E 2219                   AND         R1,R2
+    00000820              L222:
+                sub.c       1238      }
+                sub.c       1239    
+                sub.c       1240      return( rltdat );
+                sub.c       1241    }
+    00000820 027B                   RTV/N       R2
+                sub.c       1242    
+                sub.c       1243    /******************************************************************************
+                sub.c       1244    * 
+                sub.c       1245    * [概要]  最初に見つけたbit(=1)のループ値を返す
+                sub.c       1246    *           ※前提として必ず、どこかのbitが立っている前提で本関数は呼ばれる
+                sub.c       1247    * [引数]  ＩＮＴデータアドレス
+                sub.c       1248    * [戻値]  ループ値
+                sub.c       1249    * 
+                sub.c       1250    ******************************************************************************/
+                sub.c       1251    UB GetFirstCh( INT *data )
+    00000822              _GetFirstCh:                     ; function: GetFirstCh
+                                                           ; frame size=0
+                sub.c       1252    {
+                sub.c       1253      INT sftbit = 0x00000001;
+                sub.c       1254      INT sftdat;
+                sub.c       1255      INT rltdat;
+                sub.c       1256      UB  loop;
+                sub.c       1257    
+                sub.c       1258    
+                sub.c       1259      // bit0～bit31
+                sub.c       1260      sftbit = 0x00000001;
+                sub.c       1261      for( loop = 0; loop < 32; loop++ )
+    00000822 E500                   MOV         #0,R5      ; H'00000000
+    00000824 6142                   MOV.L       @R4,R1     ; *(data)
+    00000826 6653                   MOV         R5,R6
+    00000828 E401                   MOV         #1,R4      ; H'00000001
+    0000082A E720                   MOV         #32,R7     ; H'00000020
+    0000082C              L225:
+                sub.c       1262      {
+                sub.c       1263          sftdat  = ( sftbit << loop ) ;
+                sub.c       1264          rltdat  = ( *data & sftdat );
+                sub.c       1265    
+                sub.c       1266          if( rltdat )    return( (loop+1) );
+    0000082C 6243                   MOV         R4,R2
+    0000082E 426C                   SHAD        R6,R2
+    00000830 2128                   TST         R2,R1
+    00000832 8B05                   BF          L227
+    00000834 7501                   ADD         #1,R5
+    00000836 665C                   EXTU.B      R5,R6
+    00000838 3673                   CMP/GE      R7,R6
+    0000083A 8BF7                   BF          L225
+                sub.c       1267      }
+                sub.c       1268    
+                sub.c       1269      return( NO_DATA );                      // なし
+    0000083C 000B                   RTS
+    0000083E E0FF                   MOV         #-1,R0     ; H'FFFFFFFF
+    00000840              L227:
+    00000840 7501                   ADD         #1,R5
+    00000842 000B                   RTS
+    00000844 6053                   MOV         R5,R0
+                sub.c       1270    }
+                sub.c       1271    /******************************************************************************
+                sub.c       1272    * 
+                sub.c       1273    * [概要]  指定したモータを停止
+                sub.c       1274    * [引数]  指定モータ（bit=1:停止モータ）
+                sub.c       1275    * [戻値]  －
+                sub.c       1276    * 
+                sub.c       1277    ******************************************************************************/
+                sub.c       1278    void TargetMotorStop( INT *motdata )
+    00000846              _TargetMotorStop:                ; function: TargetMotorStop
+                                                           ; frame size=16
+    00000846 4CF0                   MOVMU.L     R12,@-R15
+    00000848 ECFF                   MOV         #-1,R12    ; H'FFFFFFFF
+    0000084A 6D43                   MOV         R4,R13
+    0000084C A005                   BRA         L231
+    0000084E 6CCC                   EXTU.B      R12,R12
+    00000850              L232:
+                sub.c       1279    {
+                sub.c       1280      UB  stopmot;
+                sub.c       1281    
+                sub.c       1282      while(1)
+                sub.c       1283      {
+                sub.c       1284          stopmot = GetFirstCh( motdata );
+                sub.c       1285          if( stopmot == NO_DATA )    break;
+                sub.c       1286          motor_ABORT(stopmot);
+    00000850 D265                   MOV.L       L277,R2    ; _motor_ABORT
+    00000852 424B                   JSR/N       @R2
+                sub.c       1287          
+                sub.c       1288          BitClr_INT(stopmot, motdata );
+    00000854 65D3                   MOV         R13,R5
+    00000856 BFB5                   BSR         _BitClr_INT
+    00000858 64E3                   MOV         R14,R4
+    0000085A              L231:
+    0000085A BFE2                   BSR         _GetFirstCh
+    0000085C 64D3                   MOV         R13,R4
+    0000085E 6E0C                   EXTU.B      R0,R14
+    00000860 3EC0                   CMP/EQ      R12,R14
+    00000862 8FF5                   BF/S        L232
+    00000864 64E3                   MOV         R14,R4
+    00000866 4CF4                   MOVMU.L     @R15+,R12
+                sub.c       1289      }
+                sub.c       1290    }
+    00000868 006B                   RTS/N
+                sub.c       1291    
+                sub.c       1292    /******************************************************************************
+                sub.c       1293    * 
+                sub.c       1294    * [概要]    Ch番号をBIT化しUB配列のデータにセットする。
+                sub.c       1295    *           用途としてINTコマンド等に利用   ※配列[0]から小さいCh番号
+                sub.c       1296    * 
+                sub.c       1297    *           例）Ch.63の場合に配列dataには、以下のようにセット
+                sub.c       1298    * 
+                sub.c       1299    *           小さいCh    data[0] = 0x00
+                sub.c       1300    *             ↑        data[1] = 0x00
+                sub.c       1301    *             ｜        data[2] = 0x00
+                sub.c       1302    *             ｜        data[3] = 0x00
+                sub.c       1303    *             ｜        data[4] = 0x00
+                sub.c       1304    *             ｜        data[5] = 0x00
+                sub.c       1305    *             ↓        data[6] = 0x00
+                sub.c       1306    *           大きいCh    data[7] = 0x80   ← Ch.63
+                sub.c       1307    * 
+                sub.c       1308    * [引数]    Ch = CH番号、array = 配列データ先頭アドレス
+                sub.c       1309    * [戻値]    －
+                sub.c       1310    * 
+                sub.c       1311    ******************************************************************************/
+                sub.c       1312    void SetDatToArray( UB ch, UB *array )
+    0000086A              _SetDatToArray:                  ; function: SetDatToArray
+                                                           ; frame size=0
+    0000086A 6643                   MOV         R4,R6
+    0000086C 624C                   EXTU.B      R4,R2
+    0000086E E401                   MOV         #1,R4      ; H'00000001
+    00000870 3243                   CMP/GE      R4,R2
+                sub.c       1313    {
+                sub.c       1314      UB sftbit = 0x01;
+                sub.c       1315      UB amari;
+                sub.c       1316      UB syou;
+                sub.c       1317      UB sftdat;
+                sub.c       1318      UB chwk;                                // 2020/2/12 １はじまり対応
+                sub.c       1319    
+                sub.c       1320      if(( ch >= MIN_CH )&&( ch <= MAX_CH ))  // 2020/2/12 １はじまり対応
+    00000872 8F10                   BF/S        L236
+    00000874 6153                   MOV         R5,R1
+    00000876 E53F                   MOV         #63,R5     ; H'0000003F
+    00000878 3257                   CMP/GT      R5,R2
+    0000087A 890C                   BT          L236
+                sub.c       1321      {
+                sub.c       1322          chwk  = ch - 1;                     // 2020/2/12 １はじまり対応
+                sub.c       1323          syou  = ( chwk / 8 );
+    0000087C 76FF                   ADD         #-1,R6
+    0000087E E7FD                   MOV         #-3,R7     ; H'FFFFFFFD
+    00000880 606C                   EXTU.B      R6,R0
+    00000882 E401                   MOV         #1,R4      ; H'00000001
+                sub.c       1324          amari = ( chwk % 8 );
+                sub.c       1325          sftdat = ( sftbit << amari );
+                sub.c       1326          array[syou] |= sftdat;
+    00000884 6503                   MOV         R0,R5
+    00000886 C907                   AND         #7,R0
+    00000888 457C                   SHAD        R7,R5
+    0000088A 625C                   EXTU.B      R5,R2
+    0000088C 321C                   ADD         R1,R2
+    0000088E 440C                   SHAD        R0,R4
+    00000890 6120                   MOV.B       @R2,R1     ; array[]
+    00000892 214B                   OR          R4,R1
+    00000894 2210                   MOV.B       R1,@R2     ; array[]
+    00000896              L236:
+                sub.c       1327      }
+                sub.c       1328    }
+    00000896 006B                   RTS/N
+                sub.c       1329    
+                sub.c       1330    /******************************************************************************
+                sub.c       1331    * 
+                sub.c       1332    * [概要]  Ch番号をBIT化しUB配列のデータのクリア。
+                sub.c       1333    * [引数]  Ch = CH番号、array = 配列データ先頭アドレス
+                sub.c       1334    * [戻値]  －
+                sub.c       1335    * 
+                sub.c       1336    ******************************************************************************/
+                sub.c       1337    void ClrDatToArray( UB ch, UB *array )
+    00000898              _ClrDatToArray:                  ; function: ClrDatToArray
+                                                           ; frame size=0
+    00000898 6643                   MOV         R4,R6
+    0000089A 624C                   EXTU.B      R4,R2
+    0000089C E401                   MOV         #1,R4      ; H'00000001
+    0000089E 3243                   CMP/GE      R4,R2
+                sub.c       1338    {
+                sub.c       1339      UB sftbit = 0x01;
+                sub.c       1340      UB amari;
+                sub.c       1341      UB syou;
+                sub.c       1342      UB sftdat;
+                sub.c       1343      UB chwk;                                // 2020/2/12 １はじまり対応
+                sub.c       1344    
+                sub.c       1345      if(( ch >= MIN_CH )&&( ch <= MAX_CH ))  // 2020/2/12 １はじまり対応
+    000008A0 8F11                   BF/S        L240
+    000008A2 6153                   MOV         R5,R1
+    000008A4 E53F                   MOV         #63,R5     ; H'0000003F
+    000008A6 3257                   CMP/GT      R5,R2
+    000008A8 890D                   BT          L240
+                sub.c       1346      {
+                sub.c       1347          chwk  = ch - 1;                     // 2020/2/12 １はじまり対応
+                sub.c       1348          syou  = ( chwk / 8 );
+    000008AA 76FF                   ADD         #-1,R6
+    000008AC E2FD                   MOV         #-3,R2     ; H'FFFFFFFD
+    000008AE 606C                   EXTU.B      R6,R0
+                sub.c       1349          amari = ( chwk % 8 );
+                sub.c       1350          sftdat = ( sftbit << amari );
+                sub.c       1351          array[syou] &= (~sftdat);
+    000008B0 6503                   MOV         R0,R5
+    000008B2 C907                   AND         #7,R0
+    000008B4 452C                   SHAD        R2,R5
+    000008B6 645C                   EXTU.B      R5,R4
+    000008B8 341C                   ADD         R1,R4
+    000008BA E101                   MOV         #1,R1      ; H'00000001
+    000008BC 6740                   MOV.B       @R4,R7     ; array[]
+    000008BE 410C                   SHAD        R0,R1
+    000008C0 6517                   NOT         R1,R5
+    000008C2 2759                   AND         R5,R7
+    000008C4 2470                   MOV.B       R7,@R4     ; array[]
+    000008C6              L240:
+                sub.c       1352      }
+                sub.c       1353    }
+    000008C6 006B                   RTS/N
+                sub.c       1354    
+                sub.c       1355    /******************************************************************************
+                sub.c       1356    * 
+                sub.c       1357    * [概要]  
+                sub.c       1358    * [引数]  装置状態、プロトコル番号、ステップ、コマンド
+                sub.c       1359    * [戻値]  
+                sub.c       1360    * 
+                sub.c       1361    ******************************************************************************/
+                sub.c       1362    //void DeviceInfoSet( INT sts, UB pno, UB step, UB cmd )
+                sub.c       1363    void DeviceInfoSet( ER result, UB pno, UB step, UB sts )
+    000008C8              _DeviceInfoSet:                  ; function: DeviceInfoSet
+                                                           ; frame size=112
+    000008C8 49F0                   MOVMU.L     R9,@-R15
+    000008CA 7FC4                   ADD         #-60,R15
+                sub.c       1364    {
+                sub.c       1365      UB flg = CLR;
+                sub.c       1366      UB bufwk[CMD_BUFSIZ];
+                sub.c       1367      UB cmd = CLR;
+                sub.c       1368      UB status = CLR;
+                sub.c       1369      UB devsts = CLR;
+                sub.c       1370    
+                sub.c       1371      cmd    =  ( sts & P_MSK );
+    000008CC 6073                   MOV         R7,R0
+    000008CE C90F                   AND         #15,R0
+    000008D0 6B03                   MOV         R0,R11
+    000008D2 E1FB                   MOV         #-5,R1     ; H'FFFFFFFB
+                sub.c       1372      status = (( sts >> 5 ) & 0x07);
+                sub.c       1373      
+                sub.c       1374      // 装置状態作成
+                sub.c       1375      if( status == PROCESS_LYSI )    devsts |= BIT0;
+    000008D4 607C                   EXTU.B      R7,R0
+    000008D6 ED00                   MOV         #0,R13     ; H'00000000
+    000008D8 401C                   SHAD        R1,R0
+    000008DA C907                   AND         #7,R0
+    000008DC 6C43                   MOV         R4,R12
+    000008DE 8801                   CMP/EQ      #1,R0
+    000008E0 6953                   MOV         R5,R9
+    000008E2 6A63                   MOV         R6,R10
+    000008E4 0E29                   MOVT        R14
+                sub.c       1376      if( status == PROCESS_BILD )    devsts |= BIT1;
+    000008E6 8802                   CMP/EQ      #2,R0
+    000008E8 8F01                   BF/S        L244
+    000008EA 6603                   MOV         R0,R6
+    000008EC 86E9                   BSET        #1,R14
+    000008EE              L244:
+                sub.c       1377      if( status == PROCESS_WASH )    devsts |= BIT2;
+    000008EE 6063                   MOV         R6,R0
+    000008F0 8803                   CMP/EQ      #3,R0
+    000008F2 8B00                   BF          L246
+    000008F4 86EA                   BSET        #2,R14
+    000008F6              L246:
+                sub.c       1378      if( status == PROCESS_ELUT )    devsts |= BIT3;
+    000008F6 6063                   MOV         R6,R0
+    000008F8 8804                   CMP/EQ      #4,R0
+    000008FA 8B00                   BF          L248
+    000008FC 86EB                   BSET        #3,R14
+    000008FE              L248:
+                sub.c       1379      if( pio_BIN(I_DOORSW1) )        devsts |= BIT4;
+    000008FE D23B                   MOV.L       L277+4,R2  ; _pio_BIN
+    00000900 420B                   JSR         @R2
+    00000902 E401                   MOV         #1,R4      ; H'00000001
+    00000904 2008                   TST         R0,R0
+    00000906 8900                   BT          L250
+    00000908 86EC                   BSET        #4,R14
+    0000090A              L250:
+                sub.c       1380      if( result == ER_LIQERR )       devsts |= BIT5;
+    0000090A 60C3                   MOV         R12,R0
+    0000090C 8810                   CMP/EQ      #16,R0
+    0000090E 8B00                   BF          L252
+    00000910 86ED                   BSET        #5,R14
+    00000912              L252:
+                sub.c       1381      if( result == ER_LIQTUMARI )    devsts |= BIT6;
+    00000912 60C3                   MOV         R12,R0
+    00000914 8820                   CMP/EQ      #32,R0
+    00000916 8B00                   BF          L254
+    00000918 86EE                   BSET        #6,R14
+    0000091A              L254:
+                sub.c       1382      
+                sub.c       1383      
+                sub.c       1384      if( DeviceStatusGet() != devsts )   flg = SET;
+    0000091A B04B                   BSR         _DeviceStatusGet
+    0000091C 0009                   NOP
+    0000091E 62EC                   EXTU.B      R14,R2
+    00000920 3020                   CMP/EQ      R2,R0
+    00000922 8900                   BT          L256
+    00000924 ED01                   MOV         #1,R13     ; H'00000001
+    00000926              L256:
+                sub.c       1385      if( DeviceProtcolNoGet() != pno )   flg = SET;
+    00000926 B048                   BSR         _DeviceProtcolNoGet
+    00000928 0009                   NOP
+    0000092A 660C                   EXTU.B      R0,R6
+    0000092C 629C                   EXTU.B      R9,R2
+    0000092E 3620                   CMP/EQ      R2,R6
+    00000930 8900                   BT          L258
+    00000932 ED01                   MOV         #1,R13     ; H'00000001
+    00000934              L258:
+                sub.c       1386      if( DeviceStepGet() != step )       flg = SET;
+    00000934 B044                   BSR         _DeviceStepGet
+    00000936 0009                   NOP
+    00000938 660C                   EXTU.B      R0,R6
+    0000093A 62AC                   EXTU.B      R10,R2
+    0000093C 3620                   CMP/EQ      R2,R6
+    0000093E 8900                   BT          L260
+    00000940 ED01                   MOV         #1,R13     ; H'00000001
+    00000942              L260:
+                sub.c       1387      if( DeviceCmdGet() != cmd )         flg = SET;
+    00000942 B040                   BSR         _DeviceCmdGet
+    00000944 0009                   NOP
+    00000946 660C                   EXTU.B      R0,R6
+    00000948 36B0                   CMP/EQ      R11,R6
+    0000094A 8900                   BT          L262
+    0000094C ED01                   MOV         #1,R13     ; H'00000001
+    0000094E              L262:
+                sub.c       1388      
+                sub.c       1389      if( flg == SET )                // データに変化有り
+    0000094E 60D3                   MOV         R13,R0
+    00000950 8801                   CMP/EQ      #1,R0
+    00000952 8B27                   BF          L264
+                sub.c       1390      {
+                sub.c       1391          dev.sts  = devsts;
+    00000954 6EEC                   EXTU.B      R14,R14
+    00000956 E63C                   MOV         #60,R6     ; H'0000003C
+    00000958 DD25                   MOV.L       L277+8,R13 ; __$dev
+    0000095A 2DE2                   MOV.L       R14,@R13   ; dev.sts
+                sub.c       1392          dev.pno  = pno;
+    0000095C 6093                   MOV         R9,R0
+    0000095E 80D4                   MOV.B       R0,@(4,R13); dev.pno
+                sub.c       1393          dev.step = step;
+    00000960 60A3                   MOV         R10,R0
+    00000962 80D5                   MOV.B       R0,@(5,R13); dev.step
+                sub.c       1394          dev.cmd  = cmd;
+    00000964 60B3                   MOV         R11,R0
+    00000966 80D6                   MOV.B       R0,@(6,R13); dev.cmd
+    00000968 E500                   MOV         #0,R5      ; H'00000000
+                sub.c       1395    
+                sub.c       1396          memset( &bufwk[0], CLR,  CMD_BUFSIZ );
+    0000096A 64F3                   MOV         R15,R4
+                sub.c       1397          memcpy( &bufwk[0], &dev.sts, sizeof(ST_DEVICE_INFO) );
+                sub.c       1398    
+                sub.c       1399          mbx_send    (
+                sub.c       1400              ID_TSK_CMD,             // tskid    <---->   msg->msgdata.tskid
+                sub.c       1401              ID_MPF_EEP,             // memory   <---->   To EEPTSK
+                sub.c       1402              ID_MBX_EEP,             // mailbox  <---->   To EEPTSK
+                sub.c       1403              NO_DATA,                // procid   <---->   msg->msgdata.procid
+                sub.c       1404              NO_DATA,                // bcid     <---->   msg->msgdata.bcid
+                sub.c       1405              ID_MSG_EEPWRIT_STS,     // msg      <---->   msg->msgdata.msgid
+                sub.c       1406              DEFDAT,                 // sts      <---->   msg->msgdata.inf
+                sub.c       1407              DEFDAT,                 // sts2     <---->   msg->msgdata.inf2
+                sub.c       1408              &bufwk[0],              // data     <---->   msg->msgdata.data[]
+                sub.c       1409              CMD_BUFSIZ              // data siz <---->   msg->msgdata.siz
+                sub.c       1410          );
+    0000096C D721                   MOV.L       L277+12,R7 ; _memset
+    0000096E 470B                   JSR         @R7
+    00000970 EA3C                   MOV         #60,R10    ; H'0000003C
+    00000972 E608                   MOV         #8,R6      ; H'00000008
+    00000974 D51E                   MOV.L       L277+8,R5  ; __$dev
+    00000976 D920                   MOV.L       L277+16,R9 ; _memcpy
+    00000978 490B                   JSR         @R9
+    0000097A 64F3                   MOV         R15,R4
+    0000097C 2FA6                   MOV.L       R10,@-R15
+    0000097E 6BF3                   MOV         R15,R11
+    00000980 7B04                   ADD         #4,R11
+    00000982 2FB6                   MOV.L       R11,@-R15
+    00000984 EEFF                   MOV         #-1,R14    ; H'FFFFFFFF
+    00000986 6EEC                   EXTU.B      R14,R14
+    00000988 67E3                   MOV         R14,R7
+    0000098A 2FE6                   MOV.L       R14,@-R15
+    0000098C 2FE6                   MOV.L       R14,@-R15
+    0000098E 7ECA                   ADD         #-54,R14
+    00000990 6CEC                   EXTU.B      R14,R12
+    00000992 2FC6                   MOV.L       R12,@-R15
+    00000994 7C36                   ADD         #54,R12
+    00000996 6CCC                   EXTU.B      R12,R12
+    00000998 2FC6                   MOV.L       R12,@-R15
+    0000099A E606                   MOV         #6,R6      ; H'00000006
+    0000099C E505                   MOV         #5,R5      ; H'00000005
+    0000099E BB65                   BSR         _mbx_send
+    000009A0 6453                   MOV         R5,R4
+    000009A2 7F18                   ADD         #24,R15
+    000009A4              L264:
+    000009A4 7F3C                   ADD         #60,R15
+    000009A6 49F4                   MOVMU.L     @R15+,R9
+                sub.c       1411      }
+                sub.c       1412    }
+    000009A8 006B                   RTS/N
+                sub.c       1413    
+                sub.c       1414    /******************************************************************************
+                sub.c       1415    * 
+                sub.c       1416    * [概要]  
+                sub.c       1417    * [引数]  
+                sub.c       1418    * [戻値]  
+                sub.c       1419    * 
+                sub.c       1420    ******************************************************************************/
+                sub.c       1421    void DeviceInfoClr()
+    000009AA              _DeviceInfoClr:                  ; function: DeviceInfoClr
+                                                           ; frame size=0
+                sub.c       1422    {
+                sub.c       1423      DeviceInfoSet(CLR,CLR,CLR,CLR);
+    000009AA E400                   MOV         #0,R4      ; H'00000000
+    000009AC 6743                   MOV         R4,R7
+    000009AE 6643                   MOV         R4,R6
+    000009B0 AF8A                   BRA         _DeviceInfoSet
+    000009B2 6543                   MOV         R4,R5
+                sub.c       1424    }
+                sub.c       1425    /******************************************************************************
+                sub.c       1426    * 
+                sub.c       1427    * [概要]  
+                sub.c       1428    * [引数]  
+                sub.c       1429    * [戻値]  
+                sub.c       1430    * 
+                sub.c       1431    ******************************************************************************/
+                sub.c       1432    INT DeviceStatusGet()
+    000009B4              _DeviceStatusGet:                ; function: DeviceStatusGet
+                                                           ; frame size=0
+                sub.c       1433    {
+                sub.c       1434      return( dev.sts );
+    000009B4 D60E                   MOV.L       L277+8,R6  ; __$dev
+                sub.c       1435    }
+    000009B6 000B                   RTS
+    000009B8 6062                   MOV.L       @R6,R0     ; dev.sts
+                sub.c       1436    /******************************************************************************
+                sub.c       1437    * 
+                sub.c       1438    * [概要]  
+                sub.c       1439    * [引数]  
+                sub.c       1440    * [戻値]  
+                sub.c       1441    * 
+                sub.c       1442    ******************************************************************************/
+                sub.c       1443    UB DeviceProtcolNoGet()
+    000009BA              _DeviceProtcolNoGet:             ; function: DeviceProtcolNoGet
+                                                           ; frame size=0
+                sub.c       1444    {
+                sub.c       1445      return( dev.pno );
+    000009BA D610                   MOV.L       L277+20,R6 ; H'00000004+__$dev
+                sub.c       1446    }
+    000009BC 000B                   RTS
+    000009BE 6060                   MOV.B       @R6,R0     ; dev.pno
+                sub.c       1447    /******************************************************************************
+                sub.c       1448    * 
+                sub.c       1449    * [概要]  
+                sub.c       1450    * [引数]  
+                sub.c       1451    * [戻値]  
+                sub.c       1452    * 
+                sub.c       1453    ******************************************************************************/
+                sub.c       1454    UB DeviceStepGet()
+    000009C0              _DeviceStepGet:                  ; function: DeviceStepGet
+                                                           ; frame size=0
+                sub.c       1455    {
+                sub.c       1456      return( dev.step );
+    000009C0 D60F                   MOV.L       L277+24,R6 ; H'00000005+__$dev
+                sub.c       1457    }
+    000009C2 000B                   RTS
+    000009C4 6060                   MOV.B       @R6,R0     ; dev.step
+                sub.c       1458    /******************************************************************************
+                sub.c       1459    * 
+                sub.c       1460    * [概要]  
+                sub.c       1461    * [引数]  
+                sub.c       1462    * [戻値]  
+                sub.c       1463    * 
+                sub.c       1464    ******************************************************************************/
+                sub.c       1465    UB DeviceCmdGet()
+    000009C6              _DeviceCmdGet:                   ; function: DeviceCmdGet
+                                                           ; frame size=0
+                sub.c       1466    {
+                sub.c       1467      return( (dev.cmd & 0x0f) );
+    000009C6 D20F                   MOV.L       L277+28,R2 ; H'00000006+__$dev
+    000009C8 6020                   MOV.B       @R2,R0     ; dev.cmd
+                sub.c       1468    }
+    000009CA 000B                   RTS
+    000009CC C90F                   AND         #15,R0
+                sub.c       1469    
+                sub.c       1470    /******************************************************************************
+                sub.c       1471    * 
+                sub.c       1472    * [概要]  CNT数分、右からbitをセット
+                sub.c       1473    * [引数]  
+                sub.c       1474    * [戻値]  
+                sub.c       1475    * 
+                sub.c       1476    ******************************************************************************/
+                sub.c       1477    unsigned short IdleBitSet(unsigned char cnt)
+    000009CE              _IdleBitSet:                     ; function: IdleBitSet
+                                                           ; frame size=0
+                sub.c       1478    {
+                sub.c       1479      unsigned char  loop;
+                sub.c       1480      unsigned short data   = 0x0000;
+    000009CE 6243                   MOV         R4,R2
+    000009D0 E400                   MOV         #0,R4      ; H'00000000
+                sub.c       1481      unsigned short sftbit = 0x0001;
+                sub.c       1482      
+                sub.c       1483      for( loop = 0; loop < cnt; loop++ )
+    000009D2 6543                   MOV         R4,R5
+    000009D4 E601                   MOV         #1,R6      ; H'00000001
+    000009D6 A004                   BRA         L271
+    000009D8 612C                   EXTU.B      R2,R1
+    000009DA              L272:
+                sub.c       1484      {
+                sub.c       1485          data |= sftbit;
+    000009DA 246B                   OR          R6,R4
+                sub.c       1486          
+                sub.c       1487          sftbit = ( sftbit << 1 );
+    000009DC 666D                   EXTU.W      R6,R6
+    000009DE 4620                   SHAL        R6
+    000009E0 7501                   ADD         #1,R5
+    000009E2              L271:
+    000009E2 3513                   CMP/GE      R1,R5
+    000009E4 8BF9                   BF          L272
+                sub.c       1488      }
+                sub.c       1489      
+                sub.c       1490    //    data = ((data ^ 0x0fff) & 0x0fff);
+                sub.c       1491      
+                sub.c       1492      return( data );
+                sub.c       1493    }
+    000009E6 047B                   RTV/N       R4
+    000009E8              L277:
+    000009E8 <00000000>             .DATA.L     _motor_ABORT
+    000009EC <00000000>             .DATA.L     _pio_BIN
+    000009F0 <00000000>             .DATA.L     __$dev
+    000009F4 <00000000>             .DATA.L     _memset
+    000009F8 <00000000>             .DATA.L     _memcpy
+    000009FC <00000004>             .DATA.L     H'00000004+__$dev
+    00000A00 <00000005>             .DATA.L     H'00000005+__$dev
+    00000A04 <00000006>             .DATA.L     H'00000006+__$dev
+                sub.c       1494    
+                sub.c       1495    
+C   00000000              L286:
+    00000000 433A5C576F             .SDATA      "C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\sub.c"
+             726B537061   
+             63655C5175   
+             69636B4765   
+             6E655C536F   
+             66745F4669   
+             726D5C5175   
+             69636B4765   
+             6E655F5072   
+             6F6A656374   
+             5C7375622E   
+             63           
+    00000038 00                     .DATA.B     H'00
+B   00000000              __$InpChInf:                     ; static: __$InpChInf
+    00000000 00000001               .RES.B      8
+    00000008              __$pMotionnet:                   ; static: __$pMotionnet
+    00000008 00000004               .RES.L      1
+    0000000C              __$dev:                          ; static: __$dev
+    0000000C 00000004               .RES.L      2
+    00000014              __$tskid_wk:                     ; static: __$tskid_wk
+    00000014 00000004               .RES.L      1
+    00000018              __$mpfid_wk:                     ; static: __$mpfid_wk
+    00000018 00000004               .RES.L      1
+    0000001C              __$mbxid_wk:                     ; static: __$mbxid_wk
+    0000001C 00000004               .RES.L      1
+    00000020              __$prid1_wk:                     ; static: __$prid1_wk
+    00000020 00000001               .RES.B      1
+    00000021              __$bcid_wk:                      ; static: __$bcid_wk
+    00000021 00000001               .RES.B      1
+    00000022              __$msgid_wk:                     ; static: __$msgid_wk
+    00000022 00000001               .RES.B      1
+    00000023              __$sts_wk:                       ; static: __$sts_wk
+    00000023 00000001               .RES.B      1
+    00000024              __$sts2_wk:                      ; static: __$sts2_wk
+    00000024 00000001               .RES.B      1
+SH SERIES C/C++ Compiler (V.9.04.03.000)                                                         07-Sep-2023 20:41:33  PAGE    1
+
+
+******** STATISTICS INFORMATION ********
+
+
+********** ERROR INFORMATION ***********
+
+NUMBER OF ERRORS:           0
+NUMBER OF WARNINGS:         0
+
+
+
+
+******* SOURCE LINE INFORMATION ********
+
+COMPILED SOURCE LINE:     1495
+
+
+
+******* SECTION SIZE INFORMATION *******
+
+PROGRAM  SECTION (P):                                 00000A08 Byte(s)
+CONSTANT SECTION (C):                                 00000039 Byte(s)
+DATA     SECTION (D):                                 00000000 Byte(s)
+BSS      SECTION (B):                                 00000025 Byte(s)
+
+TOTAL PROGRAM  SECTION: 00000A08 Byte(s)
+TOTAL CONSTANT SECTION: 00000039 Byte(s)
+TOTAL DATA     SECTION: 00000000 Byte(s)
+TOTAL BSS      SECTION: 00000025 Byte(s)
+
+    TOTAL PROGRAM SIZE: 00000A66 Byte(s)
+
+
+
+********** LABEL INFORMATION ***********
+
+NUMBER OF EXTERNAL REFERENCE SYMBOLS:           14
+NUMBER OF EXTERNAL DEFINITION SYMBOLS:          63
+NUMBER OF INTERNAL/EXTERNAL SYMBOLS:           183
+
+
+
+*** COMMAND PARAMETER ***
+
+-subcommand=C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene_Hew\ROM_Big\sub.shc
+-cpu=sh2a
+-include="C:\NORTi\INC","C:\NORTi\INC\Dummy","C:\NORTi\INC","C:\NORTi\LIB"
+-object="C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene_Hew\ROM_Big\sub.obj"
+-debug
+-listfile="C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene_Hew\ROM_Big\sub.lst"
+-show=source,tab=4
+-gbr=auto
+-chgincpath
+-errorpath
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\sub.c"
+-global_volatile=0
+-opt_range=all
+-infinite_loop=0
+-del_vacant_loop=0
+-struct_alloc=1
+-lang=c
+-nologo

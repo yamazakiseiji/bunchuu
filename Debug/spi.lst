@@ -1,0 +1,850 @@
+SH SERIES C/C++ Compiler (V.9.02.00.003)                                                         08-Sep-2023 13:46:33  PAGE    1
+
+************ OBJECT LISTING ************
+
+FILE NAME: C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\spi.c
+
+SCT OFFSET   CODE       C LABEL     INSTRUCTION OPERAND    COMMENT
+
+                spi.c          1    /**************************************************************************************************
+                spi.c          2     SPI通信モジュール
+                spi.c          3    
+                spi.c          4     更新日     更新者      更新内容
+                spi.c          5     ---------- ----------- ---------------------------------------------------------------------------
+                spi.c          6     2014.06.23 K.Hidaka    ・新規作成
+                spi.c          7    
+                spi.c          8    
+                spi.c          9     ==================================================================================================
+                spi.c         10    
+                spi.c         11    
+                spi.c         12    **************************************************************************************************/
+                spi.c         13    #include <machine.h>
+                spi.c         14    #include <kernel.h>
+                spi.c         15    #include <stdio.h>
+                spi.c         16    #include <stdlib.h>
+                spi.c         17    #include "define.h"
+                spi.c         18    #include "iodefine.h"
+                spi.c         19    #include "spi.h"
+                spi.c         20    #include "tskeep.h"
+                spi.c         21    
+                spi.c         22    
+                spi.c         23    /*=================================================================================================
+                spi.c         24      マクロ定義
+                spi.c         25    =================================================================================================*/
+                spi.c         26    #define WAIT_TIMEOUT                    100
+                spi.c         27    
+                spi.c         28    #define SPI_SSL1      1
+                spi.c         29    #define SPI_SSL2      2
+                spi.c         30    
+                spi.c         31    /*=================================================================================================
+                spi.c         32      構造体定義
+                spi.c         33    =================================================================================================*/
+                spi.c         34    
+                spi.c         35    
+                spi.c         36    /*=================================================================================================
+                spi.c         37      ローカル変数定義
+                spi.c         38    =================================================================================================*/
+                spi.c         39    
+                spi.c         40    
+                spi.c         41    /*=================================================================================================
+                spi.c         42      ローカル関数プロトタイプ宣言
+                spi.c         43    =================================================================================================*/
+                spi.c         44    static ER  select_ch( INT ch );
+                spi.c         45    static ER  wait_send_busy(void);
+                spi.c         46    static ER  wait_recv_busy(void);
+                spi.c         47    static ER  send_bytes( const B* sbuff, INT slen );
+                spi.c         48    static ER send_bytes_old( const B* sbuff, INT slen );
+                spi.c         49    static ER  send_recv_bytes( const B* sbuff, INT slen, B* rbuff, INT rsize );
+                spi.c         50    static ER send_recv_bytes_old( const B* sbuff, INT slen, B* rbuff, INT rsize );
+                spi.c         51    
+                spi.c         52    /*=================================================================================================
+                spi.c         53      グローバル関数
+                spi.c         54    =================================================================================================*/
+                spi.c         55    /*-------------------------------------------------------------------------------------------------
+                spi.c         56      機能：SPI通信初期化
+                spi.c         57      引数：なし
+                spi.c         58      戻値：なし
+                spi.c         59    -------------------------------------------------------------------------------------------------*/
+                spi.c         60    void spi_init( void )
+P   00000000              _spi_init:                       ; function: spi_init
+                                                           ; frame size=0
+                spi.c         61    {
+                spi.c         62    #if 1
+                spi.c         63      // 低消費電力モードを解除する
+                spi.c         64      STB.CR5.BIT._RSPI = 0;                      // モジュールストップ50 : RSPIは動作
+    00000000 02E00014               MOVI20      #-131052,R2; H'FFFE0014
+                spi.c         65      
+                spi.c         66      // RSPIを初期化する
+                spi.c         67        RSPI.SPPCR.BYTE = 0x30;                     // MOSIアイドル固定値=1
+    00000004 E5B0                   MOV         #-80,R5    ; H'FFFFFFB0
+    00000006 4518                   SHLL8       R5
+    00000008 E030                   MOV         #48,R0     ; H'00000030
+    0000000A 32090404               BCLR.B      #0,@(1028,R2)
+                spi.c         68        RSPI.SPSR.BYTE  = 0x22;                     // 
+                spi.c         69      RSPI.SPBR.BYTE = 3;                         // ビットレート : 5Mbps
+                spi.c         70      RSPI.SPCMD0.WORD = 0xE7A3;                  // RSPI次アクセス遅延イネーブル : SPNDの設定値
+                spi.c         71      
+                spi.c         72      PFC.PACRL3.BIT.PA8MD = 5;                   // PA8モード : MISO入出力  (RSPI)
+                spi.c         73      PFC.PACRL2.BIT.PA7MD = 5;                   // PA7モード : MOSI入出力  (RSPI)
+    0000000E E110                   MOV         #16,R1     ; H'00000010
+    00000010 8052                   MOV.B       R0,@(2,R5)
+    00000012 E022                   MOV         #34,R0     ; H'00000022
+    00000014 8053                   MOV.B       R0,@(3,R5)
+    00000016 E003                   MOV         #3,R0      ; H'00000003
+    00000018 805A                   MOV.B       R0,@(10,R5)
+    0000001A 0000E7A3               MOVI20      #59299,R0  ; H'0000E7A3
+    0000001E 06E03804               MOVI20      #-116732,R6; H'FFFE3804
+    00000022 8158                   MOV.W       R0,@(16,R5)
+    00000024 846F                   MOV.B       @(15,R6),R0
+    00000026 316C                   ADD         R6,R1
+    00000028 C9F8                   AND         #248,R0
+    0000002A CB05                   OR          #5,R0
+    0000002C 806F                   MOV.B       R0,@(15,R6)
+    0000002E 6010                   MOV.B       @R1,R0
+    00000030 C98F                   AND         #143,R0
+    00000032 CB50                   OR          #80,R0
+    00000034 2100                   MOV.B       R0,@R1
+                spi.c         74      PFC.PACRL2.BIT.PA6MD = 5;                   // PA6モード : RSPCK入出力 (RSPI)
+    00000036 6010                   MOV.B       @R1,R0
+    00000038 C9F8                   AND         #248,R0
+    0000003A CB05                   OR          #5,R0
+    0000003C 2100                   MOV.B       R0,@R1
+                spi.c         75      PFC.PECRL3.BIT.PE8MD = 5;                   // PE8モード : SSL2出力 (RSPI)
+    0000003E 3061420F               MOV.B       @(527:12,R6),R0
+    00000042 C9F8                   AND         #248,R0
+    00000044 CB05                   OR          #5,R0
+    00000046 3601020F               MOV.B       R0,@(527:12,R6)
+                spi.c         76      
+                spi.c         77      RSPI.SPCR.BIT.MSTR = 1;                     // RSPIマスタ／スレーブモード選択 : マスタモード
+    0000004A 35391000               BSET.B      #3,@(0,R5)
+                spi.c         78      RSPI.SPCR.BIT.SPE = 1;                      // RSPI機能イネーブル : RSPI機能を有効化する
+    0000004E 35691000               BSET.B      #6,@(0,R5)
+                spi.c         79    
+                spi.c         80    #else
+                spi.c         81      // RSPI
+                spi.c         82        RSPI.SPCR.BIT.SPE                   = 0;                        // RSPI機能無効
+                spi.c         83        RSPI.SPCR.BIT.MSTR                  = 1;                        // マスターモード
+                spi.c         84        RSPI.SPPCR.BYTE                   = 0x30;                     // MOSIアイドル固定値=1
+                spi.c         85        RSPI.SPPCR.BYTE                    = 3;                        // ビットレート:5Mbpsに設定(PΦ=50MHz)
+                spi.c         86        RSPI.SPCMD0.WORD                    = 0xE783;                   // MSBファースト
+                spi.c         87                                                                        // データ長:8bit
+                spi.c         88                                                                        // 転送終了後もSSL信号レベルを保持する
+                spi.c         89                                                                        // ビットレート:分周なし
+                spi.c         90                                                                        // アイドル時のRSPCK:1
+                spi.c         91                                                                        // 奇数エッジでデータ変化、偶数エッジでデータサンプル
+                spi.c         92    #endif
+                spi.c         93    }
+    00000052 006B                   RTS/N
+                spi.c         94    
+                spi.c         95    /*-------------------------------------------------------------------------------------------------
+                spi.c         96      機能：データ送信
+                spi.c         97      引数：ch          SPIチャネル番号
+                spi.c         98            sbuff       送信データ
+                spi.c         99            slen        送信データサイズ
+                spi.c        100      戻値：エラーコード
+                spi.c        101    -------------------------------------------------------------------------------------------------*/
+                spi.c        102    ER spi_send( INT ch, B* sbuff, INT slen )
+    00000054              _spi_send:                       ; function: spi_send
+                                                           ; frame size=24
+    00000054 4BF0                   MOVMU.L     R11,@-R15
+    00000056 7FFC                   ADD         #-4,R15
+                spi.c        103    {
+                spi.c        104        ER     err;
+                spi.c        105        INT     imask;
+                spi.c        106    
+                spi.c        107        // 割り込み禁止
+                spi.c        108        etc_dis_int( CPU_INT_DISABLE, &imask );
+                spi.c        109    
+                spi.c        110        // SSLアサート
+                spi.c        111        RSPI.SPCR.BIT.SPE = 1;
+    00000058 EDB0                   MOV         #-80,R13   ; H'FFFFFFB0
+    0000005A 6B43                   MOV         R4,R11
+    0000005C E409                   MOV         #9,R4      ; H'00000009
+    0000005E 4D18                   SHLL8       R13
+    00000060 6C63                   MOV         R6,R12
+    00000062 6E53                   MOV         R5,R14
+    00000064 B0F4                   BSR         _etc_dis_int
+    00000066 65F3                   MOV         R15,R5
+    00000068 3D691000               BSET.B      #6,@(0,R13)
+    0000006C E1F3                   MOV         #-13,R1    ; H'FFFFFFF3
+                spi.c        112    
+                spi.c        113        RSPI.SPCMD0.BIT.BRDV    = 0;                // ビットレート：5Mbps
+    0000006E 85D8                   MOV.W       @(16,R13),R0
+    00000070 E707                   MOV         #7,R7      ; H'00000007
+    00000072 0200F0FF               MOVI20      #61695,R2  ; H'0000F0FF
+    00000076 4718                   SHLL8       R7
+    00000078 2019                   AND         R1,R0
+    0000007A E18F                   MOV         #-113,R1   ; H'FFFFFF8F
+    0000007C 81D8                   MOV.W       R0,@(16,R13)
+                spi.c        114        RSPI.SPCMD0.BIT.SPB     = 7;                // データ長：8bit
+                spi.c        115        RSPI.SPCMD0.BIT.SSLA    = 2;                // SSL2アサート
+                spi.c        116    
+                spi.c        117        // データ送信
+                spi.c        118        err = send_bytes( sbuff, slen );
+    0000007E 64E3                   MOV         R14,R4
+    00000080 65C3                   MOV         R12,R5
+    00000082 85D8                   MOV.W       @(16,R13),R0
+    00000084 2029                   AND         R2,R0
+    00000086 207B                   OR          R7,R0
+    00000088 81D8                   MOV.W       R0,@(16,R13)
+    0000008A 85D8                   MOV.W       @(16,R13),R0
+    0000008C 2019                   AND         R1,R0
+    0000008E 860D                   BSET        #5,R0
+    00000090 B076                   BSR         __$send_bytes
+    00000092 81D8                   MOV.W       R0,@(16,R13)
+                spi.c        119        if( err ) goto lbl_ret;
+    00000094 2008                   TST         R0,R0
+    00000096 8F0C                   BF/S        L15
+    00000098 6E03                   MOV         R0,R14
+                spi.c        120    
+                spi.c        121        // 送信バッファエンプティ待ち
+                spi.c        122        err = wait_send_busy();
+    0000009A B043                   BSR         __$wait_send_busy
+    0000009C 0009                   NOP
+                spi.c        123        if( err ) goto lbl_ret;
+                spi.c        124    
+                spi.c        125    lbl_ret:
+                spi.c        126        // SSLネゲート
+                spi.c        127        RSPI.SPCR.BIT.SPE = 0;
+    0000009E 3D690000               BCLR.B      #6,@(0,R13)
+    000000A2 6E03                   MOV         R0,R14
+                spi.c        128    
+                spi.c        129        // 割り込み許可
+                spi.c        130        etc_ena_int( imask );
+    000000A4 B0D5                   BSR         _etc_ena_int
+    000000A6 64F2                   MOV.L       @R15,R4    ; imask
+                spi.c        131    
+                spi.c        132        if( err )
+    000000A8 2EE8                   TST         R14,R14
+    000000AA 8F06                   BF/S        L16
+    000000AC E000                   MOV         #0,R0      ; H'00000000
+    000000AE A006                   BRA         L17
+    000000B0 0009                   NOP
+    000000B2              L15:
+    000000B2 3D690000               BCLR.B      #6,@(0,R13)
+    000000B6 B0CC                   BSR         _etc_ena_int
+    000000B8 64F2                   MOV.L       @R15,R4    ; imask
+    000000BA              L16:
+                spi.c        133        {
+                spi.c        134            return err + ch;
+    000000BA 3EBC                   ADD         R11,R14
+    000000BC 60E3                   MOV         R14,R0
+    000000BE              L17:
+    000000BE 7F04                   ADD         #4,R15
+    000000C0 4BF4                   MOVMU.L     @R15+,R11
+                spi.c        135        }
+                spi.c        136        return E_SUCCESS;
+                spi.c        137    }
+    000000C2 006B                   RTS/N
+                spi.c        138    
+                spi.c        139    /*-------------------------------------------------------------------------------------------------
+                spi.c        140      機能：データ送信と受信
+                spi.c        141      引数：ch          SPIチャネル番号
+                spi.c        142            sbuff       送信データ
+                spi.c        143            slen        送信データサイズ
+                spi.c        144            rbuff       受信データバッファ
+                spi.c        145            rsize       受信データバッファのサイズ
+                spi.c        146            rlen        [out]受信データ長
+                spi.c        147      戻値：エラーコード
+                spi.c        148    -------------------------------------------------------------------------------------------------*/
+                spi.c        149    ER spi_send_recv( const B* sbuff, INT slen, B* rbuff, INT rsize )
+    000000C4              _spi_send_recv:                  ; function: spi_send_recv
+                                                           ; frame size=28
+    000000C4 4AF0                   MOVMU.L     R10,@-R15
+    000000C6 7FFC                   ADD         #-4,R15
+                spi.c        150    {
+                spi.c        151        ER     err;
+                spi.c        152        INT     imask;
+                spi.c        153    
+                spi.c        154        // 割り込み禁止
+                spi.c        155        etc_dis_int( CPU_INT_DISABLE, &imask );
+                spi.c        156    
+                spi.c        157        // SSLアサート
+                spi.c        158        RSPI.SPCR.BIT.SPE = 1;
+    000000C8 EDB0                   MOV         #-80,R13   ; H'FFFFFFB0
+    000000CA 6E43                   MOV         R4,R14
+    000000CC E409                   MOV         #9,R4      ; H'00000009
+    000000CE 4D18                   SHLL8       R13
+    000000D0 6B73                   MOV         R7,R11
+    000000D2 6A63                   MOV         R6,R10
+    000000D4 6C53                   MOV         R5,R12
+    000000D6 B0BB                   BSR         _etc_dis_int
+    000000D8 65F3                   MOV         R15,R5
+    000000DA 3D691000               BSET.B      #6,@(0,R13)
+    000000DE E1F3                   MOV         #-13,R1    ; H'FFFFFFF3
+                spi.c        159    
+                spi.c        160        RSPI.SPCMD0.BIT.BRDV    = 0;                // ビットレート：5Mbps
+    000000E0 85D8                   MOV.W       @(16,R13),R0
+    000000E2 E507                   MOV         #7,R5      ; H'00000007
+    000000E4 0200F0FF               MOVI20      #61695,R2  ; H'0000F0FF
+    000000E8 4518                   SHLL8       R5
+    000000EA 2019                   AND         R1,R0
+    000000EC E78F                   MOV         #-113,R7   ; H'FFFFFF8F
+    000000EE 81D8                   MOV.W       R0,@(16,R13)
+                spi.c        161        RSPI.SPCMD0.BIT.SPB     = 7;                // データ長：8bit
+                spi.c        162        RSPI.SPCMD0.BIT.SSLA    = 2;                // SSL2アサート
+                spi.c        163        err = send_recv_bytes( sbuff, slen, rbuff, rsize);
+    000000F0 64E3                   MOV         R14,R4
+    000000F2 66A3                   MOV         R10,R6
+    000000F4 85D8                   MOV.W       @(16,R13),R0
+    000000F6 2029                   AND         R2,R0
+    000000F8 205B                   OR          R5,R0
+    000000FA 65C3                   MOV         R12,R5
+    000000FC 81D8                   MOV.W       R0,@(16,R13)
+    000000FE 85D8                   MOV.W       @(16,R13),R0
+    00000100 2079                   AND         R7,R0
+    00000102 67B3                   MOV         R11,R7
+    00000104 860D                   BSET        #5,R0
+    00000106 B05D                   BSR         __$send_recv_bytes
+    00000108 81D8                   MOV.W       R0,@(16,R13)
+                spi.c        164        if( err ) goto lbl_ret;
+                spi.c        165    
+                spi.c        166    lbl_ret:
+                spi.c        167        // SSLネゲート
+                spi.c        168        RSPI.SPCR.BIT.SPE = 0;
+    0000010A 3D690000               BCLR.B      #6,@(0,R13)
+    0000010E 6E03                   MOV         R0,R14
+                spi.c        169    
+                spi.c        170        // 割り込み許可
+                spi.c        171        etc_ena_int( imask );
+    00000110 B09F                   BSR         _etc_ena_int
+    00000112 64F2                   MOV.L       @R15,R4    ; imask
+                spi.c        172    
+                spi.c        173        if( err )
+    00000114 2EE8                   TST         R14,R14
+    00000116 8D02                   BT/S        L22
+    00000118 E000                   MOV         #0,R0      ; H'00000000
+                spi.c        174        {
+                spi.c        175            return err + SPI_SSL2;
+    0000011A 7E02                   ADD         #2,R14
+    0000011C 60E3                   MOV         R14,R0
+    0000011E              L22:
+    0000011E 7F04                   ADD         #4,R15
+    00000120 4AF4                   MOVMU.L     @R15+,R10
+                spi.c        176        }
+                spi.c        177        return E_SUC;
+                spi.c        178    }
+    00000122 006B                   RTS/N
+                spi.c        179    
+                spi.c        180    
+                spi.c        181    /*=================================================================================================
+                spi.c        182      ローカル関数
+                spi.c        183    =================================================================================================*/
+                spi.c        184    /*-------------------------------------------------------------------------------------------------
+                spi.c        185      機能：SPIチャネルの選択を行う
+                spi.c        186      引数：ch          SPIチャネル番号
+                spi.c        187      戻値：エラーコード
+                spi.c        188    -------------------------------------------------------------------------------------------------*/
+                spi.c        189    static ER select_ch( INT ch )
+                spi.c        190    {
+                spi.c        191      switch( ch )
+                spi.c        192        {
+                spi.c        193          case SPI_SSL1:
+                spi.c        194            RSPI.SPCMD0.BIT.BRDV    = 0;                // ビットレート：4Mbps
+                spi.c        195            RSPI.SPCMD0.BIT.SPB     = 7;                // データ長：8bit
+                spi.c        196    #if(CPU==7237)
+                spi.c        197            RSPI.SPCMD0.BIT.SSLA    = 1;                // SSL1アサート
+                spi.c        198    #elif(CPU==7216)
+                spi.c        199            RSPI.SPCMD0.BIT.SSLA    = 0;                // SSL0アサート
+                spi.c        200    #endif
+                spi.c        201            break;
+                spi.c        202          case SPI_SSL2:
+                spi.c        203            RSPI.SPCMD0.BIT.BRDV    = 0;                // ビットレート：5Mbps
+                spi.c        204            RSPI.SPCMD0.BIT.SPB     = 7;                // データ長：8bit
+                spi.c        205            RSPI.SPCMD0.BIT.SSLA    = 2;                // SSL2アサート
+                spi.c        206            break;
+                spi.c        207          default:
+                spi.c        208            break;
+                spi.c        209        }
+                spi.c        210        return E_SUCCESS;
+                spi.c        211    }
+                spi.c        212    
+                spi.c        213    /*-------------------------------------------------------------------------------------------------
+                spi.c        214      機能：送信可能状態まで待つ
+                spi.c        215      引数：tmout   タイムアウト値
+                spi.c        216      戻値：エラーコード
+                spi.c        217    -------------------------------------------------------------------------------------------------*/
+                spi.c        218    static ER wait_send_busy()
+    00000124              __$wait_send_busy:               ; function: __$wait_send_busy
+                                                           ; frame size=16
+    00000124 4CF0                   MOVMU.L     R12,@-R15
+    00000126 EDB0                   MOV         #-80,R13   ; H'FFFFFFB0
+    00000128 EC7D                   MOV         #125,R12   ; H'0000007D
+    0000012A 4D18                   SHLL8       R13
+                spi.c        219    {
+                spi.c        220      INT rty = 0;
+    0000012C EE00                   MOV         #0,R14     ; H'00000000
+    0000012E A00A                   BRA         L24
+    00000130 4C08                   SHLL2       R12
+    00000132              L25:
+                spi.c        221    
+                spi.c        222      while( 0 == RSPI.SPSR.BIT.SPTEF )
+                spi.c        223      {
+                spi.c        224          rty++;
+    00000132 7E01                   ADD         #1,R14
+                spi.c        225          if( rty > SPI_TIMOUT)
+    00000134 3EC7                   CMP/GT      R12,R14
+    00000136 8B03                   BF          L27
+                spi.c        226          {
+                spi.c        227              return E_EEP_ERR;
+    00000138 00000B10               MOVI20      #2832,R0   ; H'00000B10
+    0000013C A007                   BRA         L28
+    0000013E 0009                   NOP
+    00000140              L27:
+                spi.c        228          }
+                spi.c        229          dly_tsk(DLY_10M);
+    00000140 D244                   MOV.L       L60,R2     ; _v4_dly_tsk
+    00000142 420B                   JSR         @R2
+    00000144 E40A                   MOV         #10,R4     ; H'0000000A
+    00000146              L24:
+    00000146 3D593003               BLD.B       #5,@(3,R13)
+    0000014A 8BF2                   BF          L25
+                spi.c        230      }
+                spi.c        231    
+                spi.c        232      return E_SUC;
+    0000014C E000                   MOV         #0,R0      ; H'00000000
+    0000014E              L28:
+    0000014E 4CF4                   MOVMU.L     @R15+,R12
+                spi.c        233    }
+    00000150 006B                   RTS/N
+                spi.c        234    
+                spi.c        235    /*-------------------------------------------------------------------------------------------------
+                spi.c        236      機能：受信可能状態まで待つ
+                spi.c        237      引数：tmout   タイムアウト値
+                spi.c        238      戻値：エラーコード
+                spi.c        239    -------------------------------------------------------------------------------------------------*/
+                spi.c        240    static ER wait_recv_busy()
+    00000152              __$wait_recv_busy:               ; function: __$wait_recv_busy
+                                                           ; frame size=16
+    00000152 4CF0                   MOVMU.L     R12,@-R15
+    00000154 EDB0                   MOV         #-80,R13   ; H'FFFFFFB0
+    00000156 EC7D                   MOV         #125,R12   ; H'0000007D
+    00000158 4D18                   SHLL8       R13
+                spi.c        241    {
+                spi.c        242      INT rty = 0;
+    0000015A EE00                   MOV         #0,R14     ; H'00000000
+    0000015C A00A                   BRA         L31
+    0000015E 4C08                   SHLL2       R12
+    00000160              L32:
+                spi.c        243    
+                spi.c        244      while( ( RSPI.SPSR.BYTE & 0x81 ) == 0x00 )
+                spi.c        245      {
+                spi.c        246          rty++;
+    00000160 7E01                   ADD         #1,R14
+                spi.c        247          if( rty > SPI_TIMOUT)
+    00000162 3EC7                   CMP/GT      R12,R14
+    00000164 8B03                   BF          L34
+                spi.c        248          {
+                spi.c        249              return E_EEP_ERR;
+    00000166 00000B10               MOVI20      #2832,R0   ; H'00000B10
+    0000016A A007                   BRA         L35
+    0000016C 0009                   NOP
+    0000016E              L34:
+                spi.c        250          }
+                spi.c        251          dly_tsk(DLY_10M);
+    0000016E D239                   MOV.L       L60,R2     ; _v4_dly_tsk
+    00000170 420B                   JSR         @R2
+    00000172 E40A                   MOV         #10,R4     ; H'0000000A
+    00000174              L31:
+    00000174 84D3                   MOV.B       @(3,R13),R0
+    00000176 C881                   TST         #129,R0
+    00000178 89F2                   BT          L32
+                spi.c        252      }
+                spi.c        253    
+                spi.c        254      return E_SUC;
+    0000017A E000                   MOV         #0,R0      ; H'00000000
+    0000017C              L35:
+    0000017C 4CF4                   MOVMU.L     @R15+,R12
+                spi.c        255    }
+    0000017E 006B                   RTS/N
+                spi.c        256    
+                spi.c        257    /*-------------------------------------------------------------------------------------------------
+                spi.c        258      機能：データ送信
+                spi.c        259      引数：sbuff       送信データ
+                spi.c        260            slen        送信データサイズ
+                spi.c        261      戻値：エラーコード
+                spi.c        262      注意：事前にSSLのアサートが完了出来ていること。
+                spi.c        263    -------------------------------------------------------------------------------------------------*/
+                spi.c        264    static ER send_bytes( const B* sbuff, INT slen )
+    00000180              __$send_bytes:                   ; function: __$send_bytes
+                                                           ; frame size=20
+    00000180 4BF0                   MOVMU.L     R11,@-R15
+    00000182 ECB0                   MOV         #-80,R12   ; H'FFFFFFB0
+                spi.c        265    {
+                spi.c        266        INT     i;
+                spi.c        267        ER     err;
+                spi.c        268        UH    work;
+                spi.c        269    
+                spi.c        270        for( i = 0; i < slen; i++ )
+    00000184 6B53                   MOV         R5,R11
+    00000186 4C18                   SHLL8       R12
+    00000188 EE00                   MOV         #0,R14     ; H'00000000
+    0000018A A014                   BRA         L38
+    0000018C 6D43                   MOV         R4,R13
+    0000018E              L39:
+                spi.c        271        {
+                spi.c        272            // 送信バッファエンプティ待ち
+                spi.c        273            err = wait_send_busy();
+    0000018E BFC9                   BSR         __$wait_send_busy
+    00000190 0009                   NOP
+                spi.c        274            if( err ) return err;
+    00000192 2008                   TST         R0,R0
+    00000194 8F14                   BF/S        L41
+    00000196 6203                   MOV         R0,R2
+                spi.c        275          
+                spi.c        276            // データ送信
+                spi.c        277            RSPI.SPDR.WORD = (UH)(0x00ff & sbuff[i]);
+    00000198 30D18000               MOVU.B      @(0,R13),R0; sbuff[]
+    0000019C 81C2                   MOV.W       R0,@(4,R12)
+                spi.c        278            RSPI.SPSR.BIT.SPTEF = 0;
+    0000019E 3C590003               BCLR.B      #5,@(3,R12)
+                spi.c        279    
+                spi.c        280            // 受信完了待ち
+                spi.c        281            err = wait_recv_busy( );
+    000001A2 BFD6                   BSR         __$wait_recv_busy
+    000001A4 0009                   NOP
+                spi.c        282            if( err ) return err;
+    000001A6 2008                   TST         R0,R0
+    000001A8 8F0A                   BF/S        L41
+    000001AA 6203                   MOV         R0,R2
+                spi.c        283    
+                spi.c        284            // データ受信(読み捨て)
+                spi.c        285            work = RSPI.SPDR.WORD;
+    000001AC 85C2                   MOV.W       @(4,R12),R0
+    000001AE 7E01                   ADD         #1,R14
+                spi.c        286            RSPI.SPSR.BIT.SPRF = 0; 
+    000001B0 3C790003               BCLR.B      #7,@(3,R12)
+    000001B4 7D01                   ADD         #1,R13
+    000001B6              L38:
+    000001B6 3EB3                   CMP/GE      R11,R14
+    000001B8 8BE9                   BF          L39
+                spi.c        287        }
+                spi.c        288        // 送信バッファエンプティ待ち
+                spi.c        289        err = wait_send_busy();
+    000001BA BFB3                   BSR         __$wait_send_busy
+    000001BC 0009                   NOP
+    000001BE 6203                   MOV         R0,R2
+    000001C0              L41:
+    000001C0 4BF4                   MOVMU.L     @R15+,R11
+                spi.c        290        return err;
+                spi.c        291    }
+    000001C2 027B                   RTV/N       R2
+                spi.c        292    static ER send_bytes_old( const B* sbuff, INT slen )
+                spi.c        293    {
+                spi.c        294        INT     i;
+                spi.c        295        ER     err;
+                spi.c        296        UH    work;
+                spi.c        297    
+                spi.c        298        for( i = 0; i < slen; i++ )
+                spi.c        299        {
+                spi.c        300            // 送信バッファエンプティ待ち
+                spi.c        301            err = wait_send_busy();
+                spi.c        302            if( err ) return err;
+                spi.c        303          
+                spi.c        304            // データ送信
+                spi.c        305            RSPI.SPDR.WORD = (UH)(0x00ff & sbuff[i]);
+                spi.c        306            RSPI.SPSR.BIT.SPTEF = 0;
+                spi.c        307    
+                spi.c        308            // 受信完了待ち
+                spi.c        309            err = wait_recv_busy( );
+                spi.c        310            if( err ) return err;
+                spi.c        311    
+                spi.c        312            // データ受信(読み捨て)
+                spi.c        313            work = RSPI.SPDR.WORD;
+                spi.c        314            RSPI.SPSR.BIT.SPRF = 0; 
+                spi.c        315        }
+                spi.c        316        // 送信バッファエンプティ待ち
+                spi.c        317        err = wait_send_busy();
+                spi.c        318        return err;
+                spi.c        319    }
+                spi.c        320    
+                spi.c        321    /*-------------------------------------------------------------------------------------------------
+                spi.c        322      機能：データ送信と受信
+                spi.c        323      引数：sbuff       送信データ
+                spi.c        324            slen        送信データサイズ
+                spi.c        325            rbuff       受信データバッファ
+                spi.c        326            rsize       受信データバッファのサイズ
+                spi.c        327            rlen        [out]受信データ長
+                spi.c        328      戻値：エラーコード
+                spi.c        329      注意：事前にSSLのアサートが完了出来ていること。
+                spi.c        330    -------------------------------------------------------------------------------------------------*/
+                spi.c        331    static ER send_recv_bytes( const B* sbuff, INT slen, B* rbuff, INT rsize )
+    000001C4              __$send_recv_bytes:              ; function: __$send_recv_bytes
+                                                           ; frame size=28
+    000001C4 49F0                   MOVMU.L     R9,@-R15
+    000001C6 ECB0                   MOV         #-80,R12   ; H'FFFFFFB0
+                spi.c        332    {
+                spi.c        333        ER     err;
+                spi.c        334        INT     i;
+                spi.c        335        UH    work;
+                spi.c        336    
+                spi.c        337        // データ送信
+                spi.c        338        for( i = 0; i < slen; i++ )
+    000001C8 6973                   MOV         R7,R9
+    000001CA 4C18                   SHLL8       R12
+    000001CC EE00                   MOV         #0,R14     ; H'00000000
+    000001CE 6A63                   MOV         R6,R10
+    000001D0 6B53                   MOV         R5,R11
+    000001D2 A014                   BRA         L45
+    000001D4 6D43                   MOV         R4,R13
+    000001D6              L46:
+                spi.c        339        {
+                spi.c        340            // 送信バッファエンプティ待ち
+                spi.c        341            err = wait_send_busy();
+    000001D6 BFA5                   BSR         __$wait_send_busy
+    000001D8 0009                   NOP
+                spi.c        342            if( err ) return err;
+    000001DA 2008                   TST         R0,R0
+    000001DC 8F35                   BF/S        L48
+    000001DE 6203                   MOV         R0,R2
+                spi.c        343    
+                spi.c        344            // データ送信
+                spi.c        345            RSPI.SPDR.WORD = (UH)(0x00ff & sbuff[i]);
+    000001E0 30D18000               MOVU.B      @(0,R13),R0; sbuff[]
+    000001E4 81C2                   MOV.W       R0,@(4,R12)
+                spi.c        346            RSPI.SPSR.BIT.SPTEF = 0;
+    000001E6 3C590003               BCLR.B      #5,@(3,R12)
+                spi.c        347    
+                spi.c        348            // 受信完了待ち
+                spi.c        349            err = wait_recv_busy( );
+    000001EA BFB2                   BSR         __$wait_recv_busy
+    000001EC 0009                   NOP
+                spi.c        350            if( err ) return err;
+    000001EE 2008                   TST         R0,R0
+    000001F0 8F2B                   BF/S        L48
+    000001F2 6203                   MOV         R0,R2
+                spi.c        351    
+                spi.c        352            // 受信データ読み捨て
+                spi.c        353            work = RSPI.SPDR.WORD;
+    000001F4 85C2                   MOV.W       @(4,R12),R0
+    000001F6 7E01                   ADD         #1,R14
+                spi.c        354            RSPI.SPSR.BIT.SPRF = 0; 
+    000001F8 3C790003               BCLR.B      #7,@(3,R12)
+    000001FC 7D01                   ADD         #1,R13
+    000001FE              L45:
+    000001FE 3EB3                   CMP/GE      R11,R14
+    00000200 8BE9                   BF          L46
+                spi.c        355        }
+                spi.c        356    
+                spi.c        357        // データ受信
+                spi.c        358        for( i = 0; i < rsize; i++ )
+    00000202 EE00                   MOV         #0,R14     ; H'00000000
+    00000204              L51:
+    00000204 3E93                   CMP/GE      R9,R14
+    00000206 8D21                   BT/S        L53
+    00000208 E000                   MOV         #0,R0      ; H'00000000
+                spi.c        359        {
+                spi.c        360            err = wait_send_busy();
+    0000020A BF8B                   BSR         __$wait_send_busy
+    0000020C 0009                   NOP
+                spi.c        361            if( err ) return err;
+    0000020E 2008                   TST         R0,R0
+    00000210 8F1B                   BF/S        L48
+    00000212 6203                   MOV         R0,R2
+                spi.c        362    
+                spi.c        363            // ダミーデータ送信
+                spi.c        364            RSPI.SPDR.WORD      = 0xff;
+    00000214 E0FF                   MOV         #-1,R0     ; H'FFFFFFFF
+    00000216 600C                   EXTU.B      R0,R0
+    00000218 81C2                   MOV.W       R0,@(4,R12)
+                spi.c        365            RSPI.SPSR.BIT.SPTEF = 0;
+    0000021A 3C590003               BCLR.B      #5,@(3,R12)
+                spi.c        366    
+                spi.c        367            // 受信完了待ち
+                spi.c        368            err = wait_recv_busy( );
+    0000021E BF98                   BSR         __$wait_recv_busy
+    00000220 0009                   NOP
+                spi.c        369            if( err ) return err;
+    00000222 2008                   TST         R0,R0
+    00000224 8F11                   BF/S        L48
+    00000226 6203                   MOV         R0,R2
+                spi.c        370    
+                spi.c        371            // オーバランエラー発生？
+                spi.c        372            if( 1 == RSPI.SPSR.BIT.OVRF )
+    00000228 3C093003               BLD.B       #0,@(3,R12)
+    0000022C 8B05                   BF          L57
+                spi.c        373            {
+                spi.c        374                RSPI.SPSR.BIT.OVRF = 0;
+    0000022E 3C090003               BCLR.B      #0,@(3,R12)
+                spi.c        375                return E_EEP_ERR;
+    00000232 00000B10               MOVI20      #2832,R0   ; H'00000B10
+    00000236 A009                   BRA         L53
+    00000238 0009                   NOP
+    0000023A              L57:
+                spi.c        376            }
+                spi.c        377            // 受信データリード
+                spi.c        378            rbuff[i] = (B)RSPI.SPDR.WORD;
+    0000023A 85C2                   MOV.W       @(4,R12),R0
+    0000023C 6203                   MOV         R0,R2
+    0000023E 60E3                   MOV         R14,R0
+    00000240 0A24                   MOV.B       R2,@(R0,R10); rbuff[]
+                spi.c        379            RSPI.SPSR.BIT.SPRF = 0; 
+    00000242 3C790003               BCLR.B      #7,@(3,R12)
+    00000246 AFDD                   BRA         L51
+    00000248 7E01                   ADD         #1,R14
+    0000024A              L48:
+    0000024A 6023                   MOV         R2,R0
+    0000024C              L53:
+    0000024C 49F4                   MOVMU.L     @R15+,R9
+                spi.c        380        }
+                spi.c        381    
+                spi.c        382        return E_SUC;
+                spi.c        383    }
+    0000024E 006B                   RTS/N
+                spi.c        384    /*-------------------------------------------------------------------------------------------------
+                spi.c        385      機能：データ送信と受信
+                spi.c        386      引数：sbuff       送信データ
+                spi.c        387            slen        送信データサイズ
+                spi.c        388            rbuff       受信データバッファ
+                spi.c        389            rsize       受信データバッファのサイズ
+                spi.c        390            rlen        [out]受信データ長
+                spi.c        391      戻値：エラーコード
+                spi.c        392      注意：事前にSSLのアサートが完了出来ていること。
+                spi.c        393    -------------------------------------------------------------------------------------------------*/
+                spi.c        394    static ER send_recv_bytes_old( const B* sbuff, INT slen, B* rbuff, INT rsize )
+                spi.c        395    {
+                spi.c        396        ER     err;
+                spi.c        397        INT     i;
+                spi.c        398        UH    work;
+                spi.c        399    
+                spi.c        400        // データ送信
+                spi.c        401        for( i = 0; i < slen; i++ )
+                spi.c        402        {
+                spi.c        403            // 送信バッファエンプティ待ち
+                spi.c        404            err = wait_send_busy();
+                spi.c        405            if( err ) return err;
+                spi.c        406    
+                spi.c        407            // データ送信
+                spi.c        408            RSPI.SPDR.WORD = (UH)(0x00ff & sbuff[i]);
+                spi.c        409            RSPI.SPSR.BIT.SPTEF = 0;
+                spi.c        410    
+                spi.c        411            // 受信完了待ち
+                spi.c        412            err = wait_recv_busy( );
+                spi.c        413            if( err ) return err;
+                spi.c        414    
+                spi.c        415            // 受信データ読み捨て
+                spi.c        416            work = RSPI.SPDR.WORD;
+                spi.c        417            RSPI.SPSR.BIT.SPRF = 0; 
+                spi.c        418        }
+                spi.c        419    
+                spi.c        420        // データ受信
+                spi.c        421        for( i = 0; i < rsize; i++ )
+                spi.c        422        {
+                spi.c        423            err = wait_send_busy();
+                spi.c        424            if( err ) return err;
+                spi.c        425    
+                spi.c        426            // ダミーデータ送信
+                spi.c        427            RSPI.SPDR.WORD      = 0xff;
+                spi.c        428            RSPI.SPSR.BIT.SPTEF = 0;
+                spi.c        429    
+                spi.c        430            // 受信完了待ち
+                spi.c        431            err = wait_recv_busy( );
+                spi.c        432            if( err ) return err;
+                spi.c        433    
+                spi.c        434            // オーバランエラー発生？
+                spi.c        435            if( 1 == RSPI.SPSR.BIT.OVRF )
+                spi.c        436            {
+                spi.c        437                RSPI.SPSR.BIT.OVRF = 0;
+                spi.c        438                return E_EEP_ERR;
+                spi.c        439            }
+                spi.c        440            // 受信データリード
+                spi.c        441            rbuff[i] = (B)RSPI.SPDR.WORD;
+                spi.c        442            RSPI.SPSR.BIT.SPRF = 0; 
+                spi.c        443        }
+                spi.c        444    
+                spi.c        445        return E_SUC;
+                spi.c        446    }
+                spi.c        447    
+                spi.c        448    /*-------------------------------------------------------------------------------------------------
+                spi.c        449      機能：割り込み禁止
+                spi.c        450      引数：mask        割り込み禁止マスク
+                spi.c        451            imask       [out]割り込み禁止前の割り込みマスク値
+                spi.c        452      戻値：なし
+                spi.c        453    -------------------------------------------------------------------------------------------------*/
+                spi.c        454    void etc_dis_int( INT mask, INT* imask )
+    00000250              _etc_dis_int:                    ; function: etc_dis_int
+                                                           ; frame size=0
+                spi.c        455    {
+                spi.c        456    //    *imask = get_imask( );
+                spi.c        457    //    set_imask( mask );
+                spi.c        458    }
+    00000250 006B                   RTS/N
+                spi.c        459    
+                spi.c        460    /*-------------------------------------------------------------------------------------------------
+                spi.c        461      機能：割り込み許可
+                spi.c        462      引数：imask   割り込みマスク値(０：割り込み許可)
+                spi.c        463      戻値：なし
+                spi.c        464    -------------------------------------------------------------------------------------------------*/
+                spi.c        465    void etc_ena_int( INT imask )
+    00000252              _etc_ena_int:                    ; function: etc_ena_int
+                                                           ; frame size=0
+                spi.c        466    {
+                spi.c        467    //    set_imask( imask );
+                spi.c        468    }
+    00000252 006B                   RTS/N
+    00000254              L60:
+    00000254 <00000000>             .DATA.L     _v4_dly_tsk
+SH SERIES C/C++ Compiler (V.9.02.00.003)                                                         08-Sep-2023 13:46:33  PAGE    1
+
+
+******** STATISTICS INFORMATION ********
+
+
+********** ERROR INFORMATION ***********
+
+NUMBER OF ERRORS:           0
+NUMBER OF WARNINGS:         0
+
+
+
+
+******* SOURCE LINE INFORMATION ********
+
+COMPILED SOURCE LINE:      468
+
+
+
+******* SECTION SIZE INFORMATION *******
+
+PROGRAM  SECTION (P):                                 00000258 Byte(s)
+CONSTANT SECTION (C):                                 00000000 Byte(s)
+DATA     SECTION (D):                                 00000000 Byte(s)
+BSS      SECTION (B):                                 00000000 Byte(s)
+
+TOTAL PROGRAM  SECTION: 00000258 Byte(s)
+TOTAL CONSTANT SECTION: 00000000 Byte(s)
+TOTAL DATA     SECTION: 00000000 Byte(s)
+TOTAL BSS      SECTION: 00000000 Byte(s)
+
+    TOTAL PROGRAM SIZE: 00000258 Byte(s)
+
+
+
+********** LABEL INFORMATION ***********
+
+NUMBER OF EXTERNAL REFERENCE SYMBOLS:            1
+NUMBER OF EXTERNAL DEFINITION SYMBOLS:           5
+NUMBER OF INTERNAL/EXTERNAL SYMBOLS:            28
+
+
+
+*** COMMAND PARAMETER ***
+
+-subcommand=C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\Debug\spi.shc
+-cpu=sh2a
+-include="C:\NORTi\INC","C:\NORTi\INC\Dummy","C:\NORTi\INC","C:\NORTi\LIB"
+-object="C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\Debug\spi.obj"
+-debug
+-listfile="C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\Debug\spi.lst"
+-show=source,tab=4
+-gbr=auto
+-chgincpath
+-errorpath
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\spi.c"
+-global_volatile=0
+-opt_range=all
+-infinite_loop=0
+-del_vacant_loop=0
+-struct_alloc=1
+-lang=c
+-nologo

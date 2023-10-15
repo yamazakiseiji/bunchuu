@@ -1,0 +1,12 @@
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\vec7237h.asm"
+-cpu=sh2a
+-endian=big
+-round=zero
+-denormalize=off
+-debug
+-object="C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\Debug\vec7237h.obj"
+-literal=pool,branch,jump,return
+-list="C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\Debug\vec7237h.lis"
+-nologo
+-chgincpath
+-errorpath

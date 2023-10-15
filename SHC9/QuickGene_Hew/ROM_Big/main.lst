@@ -1,0 +1,2168 @@
+SH SERIES C/C++ Compiler (V.9.04.03.000)                                                         07-Sep-2023 14:07:49  PAGE    1
+
+************ OBJECT LISTING ************
+
+FILE NAME: C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\main.c
+
+SCT OFFSET   CODE       C LABEL     INSTRUCTION OPERAND    COMMENT
+
+               main.c          1    /****************************************************************************
+               main.c          2    * メイン                                                                    *
+               main.c          3    *                                                                           *
+               main.c          4    * File name : main.c                                                        *
+               main.c          5    *                                                                           *
+               main.c          6    * Copyright (c) 2018 NICHIRYO Co., Ltd.                                     *
+               main.c          7    *                                                                           *
+               main.c          8    ****************************************************************************/
+               main.c          9    
+               main.c         10    #include "kernel.h"
+               main.c         11    #include "sh7237.h"
+               main.c         12    #include "define.h"
+               main.c         13    #include "datastruct.h"
+               main.c         14    #include "tskrx0.h"
+               main.c         15    #include "tsktx0.h"
+               main.c         16    #include "tskrxEx.h"
+               main.c         17    #include "tsktxEx.h"
+               main.c         18    #include "tskcmd.h"
+               main.c         19    #include "hdrcyc.h"
+               main.c         20    #include "spi.h"
+               main.c         21    #include "tskeep.h"
+               main.c         22    #include "seg.h"
+               main.c         23    #include "tskio.h"
+               main.c         24    #include "tskmotwait.h"
+               main.c         25    #include "tskmotact.h"
+               main.c         26    #include "tskmotend.h"
+               main.c         27    #include "tskint.h"
+               main.c         28    #include "tskled.h"
+               main.c         29    #include "tskpunit.h"
+               main.c         30    #include "tsktmpcnt.h"
+               main.c         31    
+               main.c         32    
+               main.c         33    //*************************************
+               main.c         34    // コンフィグレーション
+               main.c         35    //*************************************
+               main.c         36    #if 1
+               main.c         37    #define TSKID_MAX   TSK_NUM /* Maximum ID for task */
+               main.c         38    #define SEMID_MAX   SEM_NUM /* Maximum ID for semaphore */
+               main.c         39    #define FLGID_MAX   1       /* Maximum ID for event flag */
+               main.c         40    #define MBXID_MAX   MBX_NUM /* Maximum ID for mail box */
+               main.c         41    #define MBFID_MAX   1       /* Maximum ID for message buffer */
+               main.c         42    #define PORID_MAX   1       /* Maximum ID for rendevouz port */
+               main.c         43    #define MPLID_MAX   1       /* Maximum ID for valiable length memory pool */
+               main.c         44    #define MPFID_MAX   MPF_NUM /* Maximum ID for fixed length memory pool */
+               main.c         45    #define DTQID_MAX   DTQ_NUM /* Maximum ID for data queue */
+               main.c         46    #define MTXID_MAX   1       /* Maximum ID for mutex */
+               main.c         47    #define ISRID_MAX   1       /* Maximum ID for interrupt service routine */
+               main.c         48    #define SVCID_MAX   1       /* Maximum ID for superviser call */
+               main.c         49    #define CYCNO_MAX   HDR_NUM /* Maximum ID for cycric handler */
+               main.c         50    #define ALMNO_MAX   ALM_NUM /* Maximum ID for alarm handler */
+               main.c         51    //#define ISTKSZ      1024    /* Stack size for Interrupt Handlers */
+               main.c         52    #include "nocfg4.h"
+               main.c         53    #endif
+               main.c         54    
+               main.c         55    
+               main.c         56    //*************************************
+               main.c         57    // オブジェクト生成情報
+               main.c         58    //*************************************
+               main.c         59    
+               main.c         60    //const T_CTSK ctsk_rx0    = { TA_HLNG, NULL, (FP)TskRx0,     3, 1280, NULL, "TskRx0"     };
+               main.c         61    //const T_CTSK ctsk_tx0    = { TA_HLNG, NULL, (FP)TskTx0,     2, 1280, NULL, "TskTx0"     };
+               main.c         62    //const T_CTSK ctsk_rxEx   = { TA_HLNG, NULL, (FP)TskRxEx,    3, 1280, NULL, "TskRxEx"    };
+               main.c         63    //const T_CTSK ctsk_txEx   = { TA_HLNG, NULL, (FP)TskTxEx,    3, 1280, NULL, "TskTxEx"    };
+               main.c         64    const T_CTSK ctsk_rx0    = { TA_HLNG, NULL, (FP)TskRx0,     3, 1024, NULL, "TskRx0"     };
+               main.c         65    const T_CTSK ctsk_tx0    = { TA_HLNG, NULL, (FP)TskTx0,     2, 1024, NULL, "TskTx0"     };
+               main.c         66    const T_CTSK ctsk_rxEx   = { TA_HLNG, NULL, (FP)TskRxEx,    3, 1024, NULL, "TskRxEx"    };
+               main.c         67    const T_CTSK ctsk_txEx   = { TA_HLNG, NULL, (FP)TskTxEx,    3, 1024, NULL, "TskTxEx"    };
+               main.c         68    const T_CTSK ctsk_cmd    = { TA_HLNG, NULL, (FP)TskCmd,     3, 2048, NULL, "TskCmd"     };// ※768以上にしてください
+               main.c         69    const T_CTSK ctsk_io     = { TA_HLNG, NULL, (FP)TskIo,      3, 512,  NULL, "TskIo"      };
+               main.c         70    const T_CTSK ctsk_motwait= { TA_HLNG, NULL, (FP)TskMotWait, 3, 1280, NULL, "TskMotWait" };
+               main.c         71    const T_CTSK ctsk_motact = { TA_HLNG, NULL, (FP)TskMotAct,  3, 1280, NULL, "TskMotAct"  };
+               main.c         72    const T_CTSK ctsk_motend = { TA_HLNG, NULL, (FP)TskMotEnd,  3, 1280, NULL, "TskMotEnd"  };
+               main.c         73    const T_CTSK ctsk_int    = { TA_HLNG, NULL, (FP)TskInt,     3, 1280, NULL, "TskInt"     };
+               main.c         74    const T_CTSK ctsk_led    = { TA_HLNG, NULL, (FP)TskLed,     5, 512,  NULL, "TskLed"     };
+               main.c         75    const T_CTSK ctsk_eep    = { TA_HLNG, NULL, (FP)TskEep,     3, 1024, NULL, "TskEep"     };
+               main.c         76    const T_CTSK ctsk_punit  = { TA_HLNG, NULL, (FP)TskPunit,   3, 1024, NULL, "TskPunit"   };
+               main.c         77    const T_CTSK ctsk_tmpcnt = { TA_HLNG, NULL, (FP)TskTmpCnt,  3, 1024, NULL, "TskTmpCnt"   };
+               main.c         78    
+               main.c         79    //*************************************
+               main.c         80    // メモリプール
+               main.c         81    //*************************************
+               main.c         82    //const T_CMPF cmpf_tx0     = { TA_TFIFO, 12, sizeof(T_CMD_MSG), NULL, "mpf_tx0"     };
+               main.c         83    const T_CMPF cmpf_tx0     = { TA_TFIFO, 8 , sizeof(T_CMD_MSG), NULL, "mpf_tx0"     };
+               main.c         84    const T_CMPF cmpf_txex    = { TA_TFIFO, 4 , sizeof(T_CMD_MSG), NULL, "mpf_txex"    };
+               main.c         85    const T_CMPF cmpf_cmd     = { TA_TFIFO, 12, sizeof(T_CMD_MSG), NULL, "mpf_cmd"     };
+               main.c         86    const T_CMPF cmpf_io      = { TA_TFIFO, 4 , sizeof(T_CMD_MSG), NULL, "mpf_io"      };
+               main.c         87    const T_CMPF cmpf_motwait = { TA_TFIFO, 8 , sizeof(T_CMD_MSG), NULL, "mpf_motwait" };
+               main.c         88    const T_CMPF cmpf_motact  = { TA_TFIFO, 8 , sizeof(T_CMD_MSG), NULL, "mpf_motact"  };
+               main.c         89    const T_CMPF cmpf_motend  = { TA_TFIFO, 8 , sizeof(T_CMD_MSG), NULL, "mpf_motend"  };
+               main.c         90    const T_CMPF cmpf_int     = { TA_TFIFO, 8 , sizeof(T_CMD_MSG), NULL, "mpf_int"     };
+               main.c         91    const T_CMPF cmpf_led     = { TA_TFIFO, 4 , sizeof(T_CMD_MSG), NULL, "mpf_led"     };
+               main.c         92    const T_CMPF cmpf_eep     = { TA_TFIFO, 4 , sizeof(T_CMD_MSG), NULL, "mpf_eep"     };
+               main.c         93    const T_CMPF cmpf_punit   = { TA_TFIFO, 8 , sizeof(T_CMD_MSG), NULL, "mpf_punit"   };
+               main.c         94    const T_CMPF cmpf_tmpcnt  = { TA_TFIFO, 4 , sizeof(T_CMD_MSG), NULL, "mpf_tmpcnt"   };
+               main.c         95    
+               main.c         96    //*************************************
+               main.c         97    // メールボックス
+               main.c         98    //*************************************
+               main.c         99    const T_CMBX cmbx_rx0     = { TA_TFIFO | TA_MFIFO, 0, NULL, "mbx_rx0"  };
+               main.c        100    const T_CMBX cmbx_tx0     = { TA_TFIFO | TA_MFIFO, 0, NULL, "mbx_tx0"  };
+               main.c        101    const T_CMBX cmbx_txEx    = { TA_TFIFO | TA_MFIFO, 0, NULL, "mbx_txEx" };
+               main.c        102    const T_CMBX cmbx_rxEx    = { TA_TFIFO | TA_MFIFO, 0, NULL, "mbx_rxEx" };
+               main.c        103    const T_CMBX cmbx_cmd     = { TA_TFIFO | TA_MFIFO, 0, NULL, "mbx_cmd"  };
+               main.c        104    const T_CMBX cmbx_eep     = { TA_TFIFO | TA_MFIFO, 0, NULL, "mbx_eep"  };
+               main.c        105    const T_CMBX cmbx_io      = { TA_TFIFO | TA_MFIFO, 0, NULL, "mbx_io"   };
+               main.c        106    const T_CMBX cmbx_motwait = { TA_TFIFO | TA_MFIFO, 0, NULL, "mbx_motwait"  };
+               main.c        107    const T_CMBX cmbx_motact  = { TA_TFIFO | TA_MFIFO, 0, NULL, "mbx_motact"  };
+               main.c        108    const T_CMBX cmbx_motend  = { TA_TFIFO | TA_MFIFO, 0, NULL, "mbx_motend"  };
+               main.c        109    const T_CMBX cmbx_int     = { TA_TFIFO | TA_MFIFO, 0, NULL, "mbx_int"  };
+               main.c        110    const T_CMBX cmbx_led     = { TA_TFIFO | TA_MFIFO, 0, NULL, "mbx_led"  };
+               main.c        111    const T_CMBX cmbx_punit   = { TA_TFIFO | TA_MFIFO, 0, NULL, "mbx_punit"  };
+               main.c        112    const T_CMBX cmbx_tmpcnt  = { TA_TFIFO | TA_MFIFO, 0, NULL, "mbx_tmpcnt"  };
+               main.c        113    
+               main.c        114    //*************************************
+               main.c        115    // アラームハンドラ
+               main.c        116    //*************************************
+               main.c        117    const T_CALM calm_r0dat   = { TA_HLNG, NULL, (FP)AlmComR0Dat };
+               main.c        118    const T_CALM calm_r0ack   = { TA_HLNG, NULL, (FP)AlmComR0Ack };
+               main.c        119    const T_CALM calm_r2dat   = { TA_HLNG, NULL, (FP)AlmComR2Dat };
+               main.c        120    const T_CALM calm_r2rsp   = { TA_HLNG, NULL, (FP)AlmCom2RspTmo };
+               main.c        121    
+               main.c        122    
+               main.c        123    //*************************************
+               main.c        124    // 周期ハンドラ
+               main.c        125    //*************************************
+               main.c        126    const T_CCYC chdr_ccyc = { TA_HLNG | TA_STA, NULL, (FP)HdrCyc, 1, 100 };
+               main.c        127    
+               main.c        128    //*************************************
+               main.c        129    // データキュー生成情報
+               main.c        130    //*************************************
+               main.c        131    const T_CDTQ cdtq_rx0   = { TA_TFIFO, 1024, NULL, "dtq_rx0" };
+               main.c        132    const T_CDTQ cdtq_rxEx  = { TA_TFIFO, 768, NULL, "dtq_rxEx" };
+               main.c        133    
+               main.c        134    //*************************************
+               main.c        135    // セマフォ
+               main.c        136    // 装置データ
+               main.c        137    //*************************************
+               main.c        138    const T_CSEM csem_init0   = { TA_TFIFO, 1, 1, "sem_init0" };
+               main.c        139    const T_CSEM csem_pause   = { TA_TFIFO, 1, 1, "sem_pause" };
+               main.c        140    const T_CSEM csem_hdmov   = { TA_TFIFO, 1, 1, "sem_hdmov" };
+               main.c        141    const T_CSEM csem_tpget   = { TA_TFIFO, 1, 1, "sem_tpget" };
+               main.c        142    const T_CSEM csem_tprls   = { TA_TFIFO, 1, 1, "sem_tprls" };
+               main.c        143    const T_CSEM csem_dropn   = { TA_TFIFO, 1, 1, "sem_dropn" };
+               main.c        144    const T_CSEM csem_skset   = { TA_TFIFO, 1, 1, "sem_skset" };
+               main.c        145    const T_CSEM csem_suck0   = { TA_TFIFO, 1, 1, "sem_suck0" };
+               main.c        146    const T_CSEM csem_dtset   = { TA_TFIFO, 1, 1, "sem_dtset" };
+               main.c        147    const T_CSEM csem_dot00   = { TA_TFIFO, 1, 1, "sem_dot00" };
+               main.c        148    const T_CSEM csem_mxset   = { TA_TFIFO, 1, 1, "sem_mxset" };
+               main.c        149    const T_CSEM csem_mix00   = { TA_TFIFO, 1, 1, "sem_mix00" };
+               main.c        150    const T_CSEM csem_thmov   = { TA_TFIFO, 1, 1, "sem_thmov" };
+               main.c        151    const T_CSEM csem_cpopn   = { TA_TFIFO, 1, 1, "sem_cpopn" };
+               main.c        152    const T_CSEM csem_cpcls   = { TA_TFIFO, 1, 1, "sem_cpcls" };
+               main.c        153    const T_CSEM csem_bcdsp   = { TA_TFIFO, 1, 1, "sem_bcdsp" };
+               main.c        154    const T_CSEM csem_turn1   = { TA_TFIFO, 1, 1, "sem_turn1" };
+               main.c        155    const T_CSEM csem_bzcnt   = { TA_TFIFO, 1, 1, "sem_bzcnt" };
+               main.c        156    const T_CSEM csem_ledon   = { TA_TFIFO, 1, 1, "sem_ledon" };
+               main.c        157    const T_CSEM csem_memrw   = { TA_TFIFO, 1, 1, "sem_memrw" };
+               main.c        158    
+               main.c        159    
+               main.c        160    /******************************************************************************
+               main.c        161    * 
+               main.c        162    * [概要]  メイン
+               main.c        163    * 
+               main.c        164    * [引数]  －
+               main.c        165    * 
+               main.c        166    * [戻り値]    －
+               main.c        167    * 
+               main.c        168    ******************************************************************************/
+               main.c        169    int main(void)
+P   00000000              _main:                           ; function: main
+                                                           ; frame size=12
+    00000000 4DF0                   MOVMU.L     R13,@-R15
+               main.c        170    {
+               main.c        171      ER err;
+               main.c        172    
+               main.c        173      SegInit();
+    00000002 D17E                   MOV.L       L178,R1    ; _SegInit
+    00000004 414B                   JSR/N       @R1
+               main.c        174      
+               main.c        175      //*************************************
+               main.c        176        // システム初期化
+               main.c        177      //*************************************
+               main.c        178        err = sysini();                                   if( err != E_OK )   SetError( E_SYS_MLTACT );
+    00000006 D47E                   MOV.L       L178+4,R4  ; _sysini
+    00000008 444B                   JSR/N       @R4
+    0000000A 2008                   TST         R0,R0
+    0000000C 8903                   BT          L12
+    0000000E 0400F000               MOVI20      #61440,R4  ; H'0000F000
+    00000012 D27C                   MOV.L       L178+8,R2  ; _SetError
+    00000014 424B                   JSR/N       @R2
+    00000016              L12:
+               main.c        179    
+               main.c        180      //*************************************
+               main.c        181        //タスク生成
+               main.c        182      //*************************************
+               main.c        183        err = cre_tsk( ID_TSK_RX0,     &ctsk_rx0);        if( err != E_OK )   SetError( E_SYS_TSKHDL );
+    00000016 D57C                   MOV.L       L178+12,R5 ; _ctsk_rx0
+    00000018 DE7C                   MOV.L       L178+16,R14; _v4_cre_tsk
+    0000001A 4E0B                   JSR         @R14
+    0000001C E401                   MOV         #1,R4      ; H'00000001
+    0000001E 2008                   TST         R0,R0
+    00000020 8903                   BT          L14
+    00000022 0400F001               MOVI20      #61441,R4  ; H'0000F001
+    00000026 D277                   MOV.L       L178+8,R2  ; _SetError
+    00000028 424B                   JSR/N       @R2
+    0000002A              L14:
+               main.c        184        err = cre_tsk( ID_TSK_TX0,     &ctsk_tx0);        if( err != E_OK )   SetError( E_SYS_TSKHDL );
+    0000002A D579                   MOV.L       L178+20,R5 ; _ctsk_tx0
+    0000002C 4E0B                   JSR         @R14
+    0000002E E402                   MOV         #2,R4      ; H'00000002
+    00000030 2008                   TST         R0,R0
+    00000032 8903                   BT          L16
+    00000034 0400F001               MOVI20      #61441,R4  ; H'0000F001
+    00000038 D272                   MOV.L       L178+8,R2  ; _SetError
+    0000003A 424B                   JSR/N       @R2
+    0000003C              L16:
+               main.c        185        err = cre_tsk( ID_TSK_RXEX,    &ctsk_rxEx);       if( err != E_OK )   SetError( E_SYS_TSKHDL );
+    0000003C D575                   MOV.L       L178+24,R5 ; _ctsk_rxEx
+    0000003E 4E0B                   JSR         @R14
+    00000040 E403                   MOV         #3,R4      ; H'00000003
+    00000042 2008                   TST         R0,R0
+    00000044 8903                   BT          L18
+    00000046 0400F001               MOVI20      #61441,R4  ; H'0000F001
+    0000004A D26E                   MOV.L       L178+8,R2  ; _SetError
+    0000004C 424B                   JSR/N       @R2
+    0000004E              L18:
+               main.c        186        err = cre_tsk( ID_TSK_TXEX,    &ctsk_txEx);       if( err != E_OK )   SetError( E_SYS_TSKHDL );
+    0000004E D572                   MOV.L       L178+28,R5 ; _ctsk_txEx
+    00000050 4E0B                   JSR         @R14
+    00000052 E404                   MOV         #4,R4      ; H'00000004
+    00000054 2008                   TST         R0,R0
+    00000056 8903                   BT          L20
+    00000058 0400F001               MOVI20      #61441,R4  ; H'0000F001
+    0000005C D269                   MOV.L       L178+8,R2  ; _SetError
+    0000005E 424B                   JSR/N       @R2
+    00000060              L20:
+               main.c        187        err = cre_tsk( ID_TSK_CMD,     &ctsk_cmd);        if( err != E_OK )   SetError( E_SYS_TSKHDL );
+    00000060 D56E                   MOV.L       L178+32,R5 ; _ctsk_cmd
+    00000062 4E0B                   JSR         @R14
+    00000064 E405                   MOV         #5,R4      ; H'00000005
+    00000066 2008                   TST         R0,R0
+    00000068 8903                   BT          L22
+    0000006A 0400F001               MOVI20      #61441,R4  ; H'0000F001
+    0000006E D265                   MOV.L       L178+8,R2  ; _SetError
+    00000070 424B                   JSR/N       @R2
+    00000072              L22:
+               main.c        188        err = cre_tsk( ID_TSK_EEP,     &ctsk_eep);        if( err != E_OK )   SetError( E_SYS_TSKHDL );
+    00000072 D56B                   MOV.L       L178+36,R5 ; _ctsk_eep
+    00000074 4E0B                   JSR         @R14
+    00000076 E406                   MOV         #6,R4      ; H'00000006
+    00000078 2008                   TST         R0,R0
+    0000007A 8903                   BT          L24
+    0000007C 0400F001               MOVI20      #61441,R4  ; H'0000F001
+    00000080 D260                   MOV.L       L178+8,R2  ; _SetError
+    00000082 424B                   JSR/N       @R2
+    00000084              L24:
+               main.c        189        err = cre_tsk( ID_TSK_IO,      &ctsk_io);     if( err != E_OK )   SetError( E_SYS_TSKHDL );
+    00000084 D567                   MOV.L       L178+40,R5 ; _ctsk_io
+    00000086 DE61                   MOV.L       L178+16,R14; _v4_cre_tsk
+    00000088 4E0B                   JSR         @R14
+    0000008A E407                   MOV         #7,R4      ; H'00000007
+    0000008C 2008                   TST         R0,R0
+    0000008E 8903                   BT          L26
+    00000090 0400F001               MOVI20      #61441,R4  ; H'0000F001
+    00000094 D25B                   MOV.L       L178+8,R2  ; _SetError
+    00000096 424B                   JSR/N       @R2
+    00000098              L26:
+               main.c        190        err = cre_tsk( ID_TSK_MOTWAIT, &ctsk_motwait);    if( err != E_OK )   SetError( E_SYS_TSKHDL );
+    00000098 D563                   MOV.L       L178+44,R5 ; _ctsk_motwait
+    0000009A 4E0B                   JSR         @R14
+    0000009C E408                   MOV         #8,R4      ; H'00000008
+    0000009E 2008                   TST         R0,R0
+    000000A0 8903                   BT          L28
+    000000A2 0400F001               MOVI20      #61441,R4  ; H'0000F001
+    000000A6 D257                   MOV.L       L178+8,R2  ; _SetError
+    000000A8 424B                   JSR/N       @R2
+    000000AA              L28:
+               main.c        191        err = cre_tsk( ID_TSK_MOTACT,  &ctsk_motact); if( err != E_OK )   SetError( E_SYS_TSKHDL );
+    000000AA D560                   MOV.L       L178+48,R5 ; _ctsk_motact
+    000000AC 4E0B                   JSR         @R14
+    000000AE E409                   MOV         #9,R4      ; H'00000009
+    000000B0 2008                   TST         R0,R0
+    000000B2 8903                   BT          L30
+    000000B4 0400F001               MOVI20      #61441,R4  ; H'0000F001
+    000000B8 D252                   MOV.L       L178+8,R2  ; _SetError
+    000000BA 424B                   JSR/N       @R2
+    000000BC              L30:
+               main.c        192        err = cre_tsk( ID_TSK_MOTEND,  &ctsk_motend); if( err != E_OK )   SetError( E_SYS_TSKHDL );
+    000000BC D55C                   MOV.L       L178+52,R5 ; _ctsk_motend
+    000000BE 4E0B                   JSR         @R14
+    000000C0 E40A                   MOV         #10,R4     ; H'0000000A
+    000000C2 2008                   TST         R0,R0
+    000000C4 8903                   BT          L32
+    000000C6 0400F001               MOVI20      #61441,R4  ; H'0000F001
+    000000CA D24E                   MOV.L       L178+8,R2  ; _SetError
+    000000CC 424B                   JSR/N       @R2
+    000000CE              L32:
+               main.c        193        err = cre_tsk( ID_TSK_INT,     &ctsk_int);        if( err != E_OK )   SetError( E_SYS_TSKHDL );
+    000000CE D559                   MOV.L       L178+56,R5 ; _ctsk_int
+    000000D0 4E0B                   JSR         @R14
+    000000D2 E40B                   MOV         #11,R4     ; H'0000000B
+    000000D4 2008                   TST         R0,R0
+    000000D6 8903                   BT          L34
+    000000D8 0400F001               MOVI20      #61441,R4  ; H'0000F001
+    000000DC D249                   MOV.L       L178+8,R2  ; _SetError
+    000000DE 424B                   JSR/N       @R2
+    000000E0              L34:
+               main.c        194        err = cre_tsk( ID_TSK_LED,     &ctsk_led);        if( err != E_OK )   SetError( E_SYS_TSKHDL );
+    000000E0 D555                   MOV.L       L178+60,R5 ; _ctsk_led
+    000000E2 4E0B                   JSR         @R14
+    000000E4 E40C                   MOV         #12,R4     ; H'0000000C
+    000000E6 2008                   TST         R0,R0
+    000000E8 8903                   BT          L36
+    000000EA 0400F001               MOVI20      #61441,R4  ; H'0000F001
+    000000EE D245                   MOV.L       L178+8,R2  ; _SetError
+    000000F0 424B                   JSR/N       @R2
+    000000F2              L36:
+               main.c        195        err = cre_tsk( ID_TSK_PUNIT,   &ctsk_punit);  if( err != E_OK )   SetError( E_SYS_TSKHDL );
+    000000F2 D552                   MOV.L       L178+64,R5 ; _ctsk_punit
+    000000F4 DE45                   MOV.L       L178+16,R14; _v4_cre_tsk
+    000000F6 4E0B                   JSR         @R14
+    000000F8 E40D                   MOV         #13,R4     ; H'0000000D
+    000000FA 2008                   TST         R0,R0
+    000000FC 8903                   BT          L38
+    000000FE 0400F001               MOVI20      #61441,R4  ; H'0000F001
+    00000102 D240                   MOV.L       L178+8,R2  ; _SetError
+    00000104 424B                   JSR/N       @R2
+    00000106              L38:
+               main.c        196        err = cre_tsk( ID_TSK_TMPCNT,  &ctsk_tmpcnt); if( err != E_OK )   SetError( E_SYS_TSKHDL );
+    00000106 D54E                   MOV.L       L178+68,R5 ; _ctsk_tmpcnt
+    00000108 4E0B                   JSR         @R14
+    0000010A E40E                   MOV         #14,R4     ; H'0000000E
+    0000010C 2008                   TST         R0,R0
+    0000010E 8903                   BT          L40
+    00000110 0400F001               MOVI20      #61441,R4  ; H'0000F001
+    00000114 D23B                   MOV.L       L178+8,R2  ; _SetError
+    00000116 424B                   JSR/N       @R2
+    00000118              L40:
+               main.c        197    
+               main.c        198      //*************************************
+               main.c        199        // アラームハンドラ生成
+               main.c        200      //*************************************
+               main.c        201        err = cre_alm( ID_ALM_R0DAT,   &calm_r0dat ); if( err != E_OK )   SetError( E_SYS_TSKHDL );
+    00000118 D54A                   MOV.L       L178+72,R5 ; _calm_r0dat
+    0000011A DE4B                   MOV.L       L178+76,R14; _v4_cre_alm
+    0000011C 4E0B                   JSR         @R14
+    0000011E E401                   MOV         #1,R4      ; H'00000001
+    00000120 2008                   TST         R0,R0
+    00000122 8903                   BT          L42
+    00000124 0400F001               MOVI20      #61441,R4  ; H'0000F001
+    00000128 D236                   MOV.L       L178+8,R2  ; _SetError
+    0000012A 424B                   JSR/N       @R2
+    0000012C              L42:
+               main.c        202        err = cre_alm( ID_ALM_R0ACK,   &calm_r0ack ); if( err != E_OK )   SetError( E_SYS_TSKHDL );
+    0000012C D547                   MOV.L       L178+80,R5 ; _calm_r0ack
+    0000012E 4E0B                   JSR         @R14
+    00000130 E403                   MOV         #3,R4      ; H'00000003
+    00000132 2008                   TST         R0,R0
+    00000134 8903                   BT          L44
+    00000136 0400F001               MOVI20      #61441,R4  ; H'0000F001
+    0000013A D232                   MOV.L       L178+8,R2  ; _SetError
+    0000013C 424B                   JSR/N       @R2
+    0000013E              L44:
+               main.c        203    //    err = cre_alm( ID_ALM_R2DAT,   &calm_r2dat );   if( err != E_OK )   SetError( E_SYS_TSKHDL );
+               main.c        204        err = cre_alm( ID_ALM_R2RSP,   &calm_r2rsp ); if( err != E_OK )   SetError( E_SYS_TSKHDL );
+    0000013E D544                   MOV.L       L178+84,R5 ; _calm_r2rsp
+    00000140 4E0B                   JSR         @R14
+    00000142 E405                   MOV         #5,R4      ; H'00000005
+    00000144 2008                   TST         R0,R0
+    00000146 8903                   BT          L46
+    00000148 0400F001               MOVI20      #61441,R4  ; H'0000F001
+    0000014C D22D                   MOV.L       L178+8,R2  ; _SetError
+    0000014E 424B                   JSR/N       @R2
+    00000150              L46:
+               main.c        205    
+               main.c        206      //*************************************
+               main.c        207        // メモリプール生成
+               main.c        208      //*************************************
+               main.c        209    //    err = cre_mpf( ID_MPF_RX0,     &cmpf_rx0 );     if( err != E_OK )   SetError( E_SYS_MEMPOL );   // -> RX0
+               main.c        210        err = cre_mpf( ID_MPF_TX0,     &cmpf_tx0 );       if( err != E_OK )   SetError( E_SYS_MEMPOL );   // -> TX0
+    00000150 D540                   MOV.L       L178+88,R5 ; _cmpf_tx0
+    00000152 D241                   MOV.L       L178+92,R2 ; _v4_cre_mpf
+    00000154 420B                   JSR         @R2
+    00000156 E402                   MOV         #2,R4      ; H'00000002
+    00000158 2008                   TST         R0,R0
+    0000015A 8903                   BT          L48
+    0000015C 0400F002               MOVI20      #61442,R4  ; H'0000F002
+    00000160 D228                   MOV.L       L178+8,R2  ; _SetError
+    00000162 424B                   JSR/N       @R2
+    00000164              L48:
+               main.c        211        err = cre_mpf( ID_MPF_TXEX,    &cmpf_txex);       if( err != E_OK )   SetError( E_SYS_MEMPOL );   // -> TX2
+    00000164 D53D                   MOV.L       L178+96,R5 ; _cmpf_txex
+    00000166 DE3C                   MOV.L       L178+92,R14; _v4_cre_mpf
+    00000168 4E0B                   JSR         @R14
+    0000016A E403                   MOV         #3,R4      ; H'00000003
+    0000016C 2008                   TST         R0,R0
+    0000016E 8903                   BT          L50
+    00000170 0400F002               MOVI20      #61442,R4  ; H'0000F002
+    00000174 D223                   MOV.L       L178+8,R2  ; _SetError
+    00000176 424B                   JSR/N       @R2
+    00000178              L50:
+               main.c        212        err = cre_mpf( ID_MPF_CMD,     &cmpf_cmd );       if( err != E_OK )   SetError( E_SYS_MEMPOL );   // -> CMD
+    00000178 D539                   MOV.L       L178+100,R5; _cmpf_cmd
+    0000017A 4E0B                   JSR         @R14
+    0000017C E404                   MOV         #4,R4      ; H'00000004
+    0000017E 2008                   TST         R0,R0
+    00000180 8903                   BT          L52
+    00000182 0400F002               MOVI20      #61442,R4  ; H'0000F002
+    00000186 D21F                   MOV.L       L178+8,R2  ; _SetError
+    00000188 424B                   JSR/N       @R2
+    0000018A              L52:
+               main.c        213        err = cre_mpf( ID_MPF_EEP,     &cmpf_eep );       if( err != E_OK )   SetError( E_SYS_MEMPOL );   // 
+    0000018A D536                   MOV.L       L178+104,R5; _cmpf_eep
+    0000018C 4E0B                   JSR         @R14
+    0000018E E405                   MOV         #5,R4      ; H'00000005
+    00000190 2008                   TST         R0,R0
+    00000192 8903                   BT          L54
+    00000194 0400F002               MOVI20      #61442,R4  ; H'0000F002
+    00000198 D21A                   MOV.L       L178+8,R2  ; _SetError
+    0000019A 424B                   JSR/N       @R2
+    0000019C              L54:
+               main.c        214        err = cre_mpf( ID_MPF_IO,      &cmpf_io );        if( err != E_OK )   SetError( E_SYS_MEMPOL );   // -> IO
+    0000019C D532                   MOV.L       L178+108,R5; _cmpf_io
+    0000019E 4E0B                   JSR         @R14
+    000001A0 E406                   MOV         #6,R4      ; H'00000006
+    000001A2 2008                   TST         R0,R0
+    000001A4 8903                   BT          L56
+    000001A6 0400F002               MOVI20      #61442,R4  ; H'0000F002
+    000001AA D216                   MOV.L       L178+8,R2  ; _SetError
+    000001AC 424B                   JSR/N       @R2
+    000001AE              L56:
+               main.c        215        err = cre_mpf( ID_MPF_MOTWAIT, &cmpf_motwait);    if( err != E_OK )   SetError( E_SYS_MEMPOL );   // -> MOTWAIT
+    000001AE D52F                   MOV.L       L178+112,R5; _cmpf_motwait
+    000001B0 4E0B                   JSR         @R14
+    000001B2 E407                   MOV         #7,R4      ; H'00000007
+    000001B4 2008                   TST         R0,R0
+    000001B6 8903                   BT          L58
+    000001B8 0400F002               MOVI20      #61442,R4  ; H'0000F002
+    000001BC D211                   MOV.L       L178+8,R2  ; _SetError
+    000001BE 424B                   JSR/N       @R2
+    000001C0              L58:
+               main.c        216        err = cre_mpf( ID_MPF_MOTACT,  &cmpf_motact );    if( err != E_OK )   SetError( E_SYS_MEMPOL );   // -> MOTACT
+    000001C0 D52B                   MOV.L       L178+116,R5; _cmpf_motact
+    000001C2 4E0B                   JSR         @R14
+    000001C4 E408                   MOV         #8,R4      ; H'00000008
+    000001C6 2008                   TST         R0,R0
+    000001C8 8903                   BT          L60
+    000001CA 0400F002               MOVI20      #61442,R4  ; H'0000F002
+    000001CE D20D                   MOV.L       L178+8,R2  ; _SetError
+    000001D0 424B                   JSR/N       @R2
+    000001D2              L60:
+               main.c        217        err = cre_mpf( ID_MPF_MOTEND,  &cmpf_motend );    if( err != E_OK )   SetError( E_SYS_MEMPOL );   // -> MOTEND
+    000001D2 D528                   MOV.L       L178+120,R5; _cmpf_motend
+    000001D4 DE20                   MOV.L       L178+92,R14; _v4_cre_mpf
+    000001D6 4E0B                   JSR         @R14
+    000001D8 E409                   MOV         #9,R4      ; H'00000009
+    000001DA 2008                   TST         R0,R0
+    000001DC 8903                   BT          L62
+    000001DE 0400F002               MOVI20      #61442,R4  ; H'0000F002
+    000001E2 D208                   MOV.L       L178+8,R2  ; _SetError
+    000001E4 424B                   JSR/N       @R2
+    000001E6              L62:
+               main.c        218        err = cre_mpf( ID_MPF_INT,     &cmpf_int );       if( err != E_OK )   SetError( E_SYS_MEMPOL );   // -> INT
+    000001E6 D524                   MOV.L       L178+124,R5; _cmpf_int
+    000001E8 4E0B                   JSR         @R14
+    000001EA E40A                   MOV         #10,R4     ; H'0000000A
+    000001EC 2008                   TST         R0,R0
+    000001EE 8903                   BT          L64
+    000001F0 0400F002               MOVI20      #61442,R4  ; H'0000F002
+    000001F4 D203                   MOV.L       L178+8,R2  ; _SetError
+    000001F6 424B                   JSR/N       @R2
+    000001F8              L64:
+    000001F8 A040                   BRA         L177
+    000001FA E40B                   MOV         #11,R4     ; H'0000000B
+    000001FC              L178:
+    000001FC <00000000>             .DATA.L     _SegInit
+    00000200 <00000000>             .DATA.L     _sysini
+    00000204 <00000000>             .DATA.L     _SetError
+    00000208 <00000000>             .DATA.L     _ctsk_rx0
+    0000020C <00000000>             .DATA.L     _v4_cre_tsk
+    00000210 <00000000>             .DATA.L     _ctsk_tx0
+    00000214 <00000000>             .DATA.L     _ctsk_rxEx
+    00000218 <00000000>             .DATA.L     _ctsk_txEx
+    0000021C <00000000>             .DATA.L     _ctsk_cmd
+    00000220 <00000000>             .DATA.L     _ctsk_eep
+    00000224 <00000000>             .DATA.L     _ctsk_io
+    00000228 <00000000>             .DATA.L     _ctsk_motwait
+    0000022C <00000000>             .DATA.L     _ctsk_motact
+    00000230 <00000000>             .DATA.L     _ctsk_motend
+    00000234 <00000000>             .DATA.L     _ctsk_int
+    00000238 <00000000>             .DATA.L     _ctsk_led
+    0000023C <00000000>             .DATA.L     _ctsk_punit
+    00000240 <00000000>             .DATA.L     _ctsk_tmpcnt
+    00000244 <00000000>             .DATA.L     _calm_r0dat
+    00000248 <00000000>             .DATA.L     _v4_cre_alm
+    0000024C <00000000>             .DATA.L     _calm_r0ack
+    00000250 <00000000>             .DATA.L     _calm_r2rsp
+    00000254 <00000000>             .DATA.L     _cmpf_tx0
+    00000258 <00000000>             .DATA.L     _v4_cre_mpf
+    0000025C <00000000>             .DATA.L     _cmpf_txex
+    00000260 <00000000>             .DATA.L     _cmpf_cmd
+    00000264 <00000000>             .DATA.L     _cmpf_eep
+    00000268 <00000000>             .DATA.L     _cmpf_io
+    0000026C <00000000>             .DATA.L     _cmpf_motwait
+    00000270 <00000000>             .DATA.L     _cmpf_motact
+    00000274 <00000000>             .DATA.L     _cmpf_motend
+    00000278 <00000000>             .DATA.L     _cmpf_int
+    0000027C              L177:
+               main.c        219        err = cre_mpf( ID_MPF_LED,     &cmpf_led );       if( err != E_OK )   SetError( E_SYS_MEMPOL );   // -> LED
+    0000027C D57D                   MOV.L       L180+2,R5  ; _cmpf_led
+    0000027E 4E4B                   JSR/N       @R14
+    00000280 2008                   TST         R0,R0
+    00000282 8903                   BT          L66
+    00000284 0400F002               MOVI20      #61442,R4  ; H'0000F002
+    00000288 D27B                   MOV.L       L180+6,R2  ; _SetError
+    0000028A 424B                   JSR/N       @R2
+    0000028C              L66:
+               main.c        220        err = cre_mpf( ID_MPF_PUNIT,   &cmpf_punit ); if( err != E_OK )   SetError( E_SYS_MEMPOL );   // -> LED
+    0000028C D57B                   MOV.L       L180+10,R5 ; _cmpf_punit
+    0000028E 4E0B                   JSR         @R14
+    00000290 E40C                   MOV         #12,R4     ; H'0000000C
+    00000292 2008                   TST         R0,R0
+    00000294 8903                   BT          L68
+    00000296 0400F002               MOVI20      #61442,R4  ; H'0000F002
+    0000029A D277                   MOV.L       L180+6,R2  ; _SetError
+    0000029C 424B                   JSR/N       @R2
+    0000029E              L68:
+               main.c        221        err = cre_mpf( ID_MPF_TMPCNT,  &cmpf_tmpcnt );    if( err != E_OK )   SetError( E_SYS_MEMPOL );   // -> LED
+    0000029E D578                   MOV.L       L180+14,R5 ; _cmpf_tmpcnt
+    000002A0 4E0B                   JSR         @R14
+    000002A2 E40D                   MOV         #13,R4     ; H'0000000D
+    000002A4 2008                   TST         R0,R0
+    000002A6 8903                   BT          L70
+    000002A8 0400F002               MOVI20      #61442,R4  ; H'0000F002
+    000002AC D272                   MOV.L       L180+6,R2  ; _SetError
+    000002AE 424B                   JSR/N       @R2
+    000002B0              L70:
+               main.c        222    
+               main.c        223      //*************************************
+               main.c        224        // メールBOXの作成
+               main.c        225      //*************************************
+               main.c        226        err = cre_mbx( ID_MBX_RX0 ,    &cmbx_rx0  );  if( err != E_OK )   SetError( E_SYS_MEMPOL );
+    000002B0 D574                   MOV.L       L180+18,R5 ; _cmbx_rx0
+    000002B2 D275                   MOV.L       L180+22,R2 ; _v4_cre_mbx
+    000002B4 420B                   JSR         @R2
+    000002B6 E401                   MOV         #1,R4      ; H'00000001
+    000002B8 2008                   TST         R0,R0
+    000002BA 8903                   BT          L72
+    000002BC 0400F002               MOVI20      #61442,R4  ; H'0000F002
+    000002C0 D26D                   MOV.L       L180+6,R2  ; _SetError
+    000002C2 424B                   JSR/N       @R2
+    000002C4              L72:
+               main.c        227        err = cre_mbx( ID_MBX_TX0 ,    &cmbx_tx0  );  if( err != E_OK )   SetError( E_SYS_MEMPOL );
+    000002C4 D571                   MOV.L       L180+26,R5 ; _cmbx_tx0
+    000002C6 DE70                   MOV.L       L180+22,R14; _v4_cre_mbx
+    000002C8 4E0B                   JSR         @R14
+    000002CA E402                   MOV         #2,R4      ; H'00000002
+    000002CC 2008                   TST         R0,R0
+    000002CE 8903                   BT          L74
+    000002D0 0400F002               MOVI20      #61442,R4  ; H'0000F002
+    000002D4 D268                   MOV.L       L180+6,R2  ; _SetError
+    000002D6 424B                   JSR/N       @R2
+    000002D8              L74:
+               main.c        228      err = cre_mbx( ID_MBX_RXEX,    &cmbx_rxEx );    if( err != E_OK )   SetError( E_SYS_MEMPOL );
+    000002D8 D56D                   MOV.L       L180+30,R5 ; _cmbx_rxEx
+    000002DA 4E0B                   JSR         @R14
+    000002DC E403                   MOV         #3,R4      ; H'00000003
+    000002DE 2008                   TST         R0,R0
+    000002E0 8903                   BT          L76
+    000002E2 0400F002               MOVI20      #61442,R4  ; H'0000F002
+    000002E6 D264                   MOV.L       L180+6,R2  ; _SetError
+    000002E8 424B                   JSR/N       @R2
+    000002EA              L76:
+               main.c        229      err = cre_mbx( ID_MBX_TXEX,    &cmbx_txEx );    if( err != E_OK )   SetError( E_SYS_MEMPOL );
+    000002EA D56A                   MOV.L       L180+34,R5 ; _cmbx_txEx
+    000002EC 4E0B                   JSR         @R14
+    000002EE E404                   MOV         #4,R4      ; H'00000004
+    000002F0 2008                   TST         R0,R0
+    000002F2 8903                   BT          L78
+    000002F4 0400F002               MOVI20      #61442,R4  ; H'0000F002
+    000002F8 D25F                   MOV.L       L180+6,R2  ; _SetError
+    000002FA 424B                   JSR/N       @R2
+    000002FC              L78:
+               main.c        230        err = cre_mbx( ID_MBX_CMD ,    &cmbx_cmd  );  if( err != E_OK )   SetError( E_SYS_MEMPOL );
+    000002FC D566                   MOV.L       L180+38,R5 ; _cmbx_cmd
+    000002FE 4E0B                   JSR         @R14
+    00000300 E405                   MOV         #5,R4      ; H'00000005
+    00000302 2008                   TST         R0,R0
+    00000304 8903                   BT          L80
+    00000306 0400F002               MOVI20      #61442,R4  ; H'0000F002
+    0000030A D25B                   MOV.L       L180+6,R2  ; _SetError
+    0000030C 424B                   JSR/N       @R2
+    0000030E              L80:
+               main.c        231        err = cre_mbx( ID_MBX_EEP ,    &cmbx_eep  );  if( err != E_OK )   SetError( E_SYS_MEMPOL );
+    0000030E D563                   MOV.L       L180+42,R5 ; _cmbx_eep
+    00000310 4E0B                   JSR         @R14
+    00000312 E406                   MOV         #6,R4      ; H'00000006
+    00000314 2008                   TST         R0,R0
+    00000316 8903                   BT          L82
+    00000318 0400F002               MOVI20      #61442,R4  ; H'0000F002
+    0000031C D256                   MOV.L       L180+6,R2  ; _SetError
+    0000031E 424B                   JSR/N       @R2
+    00000320              L82:
+               main.c        232        err = cre_mbx( ID_MBX_IO ,     &cmbx_io   );  if( err != E_OK )   SetError( E_SYS_MEMPOL );
+    00000320 D55F                   MOV.L       L180+46,R5 ; _cmbx_io
+    00000322 4E0B                   JSR         @R14
+    00000324 E407                   MOV         #7,R4      ; H'00000007
+    00000326 2008                   TST         R0,R0
+    00000328 8903                   BT          L84
+    0000032A 0400F002               MOVI20      #61442,R4  ; H'0000F002
+    0000032E D252                   MOV.L       L180+6,R2  ; _SetError
+    00000330 424B                   JSR/N       @R2
+    00000332              L84:
+               main.c        233        err = cre_mbx( ID_MBX_MOTWAIT, &cmbx_motwait);    if( err != E_OK )   SetError( E_SYS_MEMPOL );
+    00000332 D55C                   MOV.L       L180+50,R5 ; _cmbx_motwait
+    00000334 DE54                   MOV.L       L180+22,R14; _v4_cre_mbx
+    00000336 4E0B                   JSR         @R14
+    00000338 E408                   MOV         #8,R4      ; H'00000008
+    0000033A 2008                   TST         R0,R0
+    0000033C 8903                   BT          L86
+    0000033E 0400F002               MOVI20      #61442,R4  ; H'0000F002
+    00000342 D24D                   MOV.L       L180+6,R2  ; _SetError
+    00000344 424B                   JSR/N       @R2
+    00000346              L86:
+               main.c        234      err = cre_mbx( ID_MBX_MOTACT,  &cmbx_motact);   if( err != E_OK )   SetError( E_SYS_MEMPOL );
+    00000346 D558                   MOV.L       L180+54,R5 ; _cmbx_motact
+    00000348 4E0B                   JSR         @R14
+    0000034A E409                   MOV         #9,R4      ; H'00000009
+    0000034C 2008                   TST         R0,R0
+    0000034E 8903                   BT          L88
+    00000350 0400F002               MOVI20      #61442,R4  ; H'0000F002
+    00000354 D248                   MOV.L       L180+6,R2  ; _SetError
+    00000356 424B                   JSR/N       @R2
+    00000358              L88:
+               main.c        235      err = cre_mbx( ID_MBX_MOTEND,  &cmbx_motend);   if( err != E_OK )   SetError( E_SYS_MEMPOL );
+    00000358 D554                   MOV.L       L180+58,R5 ; _cmbx_motend
+    0000035A 4E0B                   JSR         @R14
+    0000035C E40A                   MOV         #10,R4     ; H'0000000A
+    0000035E 2008                   TST         R0,R0
+    00000360 8903                   BT          L90
+    00000362 0400F002               MOVI20      #61442,R4  ; H'0000F002
+    00000366 D244                   MOV.L       L180+6,R2  ; _SetError
+    00000368 424B                   JSR/N       @R2
+    0000036A              L90:
+               main.c        236        err = cre_mbx( ID_MBX_INT,     &cmbx_int   ); if( err != E_OK )   SetError( E_SYS_MEMPOL );
+    0000036A D551                   MOV.L       L180+62,R5 ; _cmbx_int
+    0000036C 4E0B                   JSR         @R14
+    0000036E E40B                   MOV         #11,R4     ; H'0000000B
+    00000370 2008                   TST         R0,R0
+    00000372 8903                   BT          L92
+    00000374 0400F002               MOVI20      #61442,R4  ; H'0000F002
+    00000378 D23F                   MOV.L       L180+6,R2  ; _SetError
+    0000037A 424B                   JSR/N       @R2
+    0000037C              L92:
+               main.c        237        err = cre_mbx( ID_MBX_LED,     &cmbx_led   ); if( err != E_OK )   SetError( E_SYS_MEMPOL );
+    0000037C D54D                   MOV.L       L180+66,R5 ; _cmbx_led
+    0000037E 4E0B                   JSR         @R14
+    00000380 E40C                   MOV         #12,R4     ; H'0000000C
+    00000382 2008                   TST         R0,R0
+    00000384 8903                   BT          L94
+    00000386 0400F002               MOVI20      #61442,R4  ; H'0000F002
+    0000038A D23B                   MOV.L       L180+6,R2  ; _SetError
+    0000038C 424B                   JSR/N       @R2
+    0000038E              L94:
+               main.c        238        err = cre_mbx( ID_MBX_PUNIT,   &cmbx_punit ); if( err != E_OK )   SetError( E_SYS_MEMPOL );
+    0000038E D54A                   MOV.L       L180+70,R5 ; _cmbx_punit
+    00000390 4E0B                   JSR         @R14
+    00000392 E40D                   MOV         #13,R4     ; H'0000000D
+    00000394 2008                   TST         R0,R0
+    00000396 8903                   BT          L96
+    00000398 0400F002               MOVI20      #61442,R4  ; H'0000F002
+    0000039C D236                   MOV.L       L180+6,R2  ; _SetError
+    0000039E 424B                   JSR/N       @R2
+    000003A0              L96:
+               main.c        239        err = cre_mbx( ID_MBX_TMPCNT,  &cmbx_tmpcnt );    if( err != E_OK )   SetError( E_SYS_MEMPOL );
+    000003A0 D546                   MOV.L       L180+74,R5 ; _cmbx_tmpcnt
+    000003A2 D239                   MOV.L       L180+22,R2 ; _v4_cre_mbx
+    000003A4 420B                   JSR         @R2
+    000003A6 E40E                   MOV         #14,R4     ; H'0000000E
+    000003A8 2008                   TST         R0,R0
+    000003AA 8903                   BT          L98
+    000003AC 0400F002               MOVI20      #61442,R4  ; H'0000F002
+    000003B0 D231                   MOV.L       L180+6,R2  ; _SetError
+    000003B2 424B                   JSR/N       @R2
+    000003B4              L98:
+               main.c        240    
+               main.c        241      //*************************************
+               main.c        242      // データキューの作成
+               main.c        243      //*************************************
+               main.c        244      err = cre_dtq( ID_DTQ_RXD,  &cdtq_rx0 );        if( err != E_OK )   SetError( E_SYS_MAILQU );
+    000003B4 D542                   MOV.L       L180+78,R5 ; _cdtq_rx0
+    000003B6 DE43                   MOV.L       L180+82,R14; _v4_cre_dtq
+    000003B8 4E0B                   JSR         @R14
+    000003BA E401                   MOV         #1,R4      ; H'00000001
+    000003BC 2008                   TST         R0,R0
+    000003BE 8903                   BT          L100
+    000003C0 0400F003               MOVI20      #61443,R4  ; H'0000F003
+    000003C4 D22C                   MOV.L       L180+6,R2  ; _SetError
+    000003C6 424B                   JSR/N       @R2
+    000003C8              L100:
+               main.c        245      err = cre_dtq( ID_DTQ_RXEX,&cdtq_rxEx );        if( err != E_OK )   SetError( E_SYS_MAILQU );
+    000003C8 D53F                   MOV.L       L180+86,R5 ; _cdtq_rxEx
+    000003CA 4E0B                   JSR         @R14
+    000003CC E402                   MOV         #2,R4      ; H'00000002
+    000003CE 2008                   TST         R0,R0
+    000003D0 8903                   BT          L102
+    000003D2 0400F003               MOVI20      #61443,R4  ; H'0000F003
+    000003D6 D228                   MOV.L       L180+6,R2  ; _SetError
+    000003D8 424B                   JSR/N       @R2
+    000003DA              L102:
+               main.c        246    
+               main.c        247      //*************************************
+               main.c        248        // セマフォ
+               main.c        249      //*************************************
+               main.c        250      err = cre_sem( ID_SEM_INIT0 , &csem_init0 );    if( err != E_OK )   SetError( E_SYS_SEMAPH );
+    000003DA D53C                   MOV.L       L180+90,R5 ; _csem_init0
+    000003DC DE3C                   MOV.L       L180+94,R14; _v4_cre_sem
+    000003DE 4E0B                   JSR         @R14
+    000003E0 E401                   MOV         #1,R4      ; H'00000001
+    000003E2 2008                   TST         R0,R0
+    000003E4 8903                   BT          L104
+    000003E6 0400F004               MOVI20      #61444,R4  ; H'0000F004
+    000003EA D223                   MOV.L       L180+6,R2  ; _SetError
+    000003EC 424B                   JSR/N       @R2
+    000003EE              L104:
+               main.c        251        err = cre_sem( ID_SEM_PAUSE , &csem_pause );  if( err != E_OK )   SetError( E_SYS_SEMAPH );
+    000003EE D539                   MOV.L       L180+98,R5 ; _csem_pause
+    000003F0 4E0B                   JSR         @R14
+    000003F2 E402                   MOV         #2,R4      ; H'00000002
+    000003F4 2008                   TST         R0,R0
+    000003F6 8903                   BT          L106
+    000003F8 0400F004               MOVI20      #61444,R4  ; H'0000F004
+    000003FC D21E                   MOV.L       L180+6,R2  ; _SetError
+    000003FE 424B                   JSR/N       @R2
+    00000400              L106:
+               main.c        252      err = cre_sem( ID_SEM_HDMOV , &csem_hdmov );    if( err != E_OK )   SetError( E_SYS_SEMAPH );
+    00000400 D535                   MOV.L       L180+102,R5; _csem_hdmov
+    00000402 4E0B                   JSR         @R14
+    00000404 E403                   MOV         #3,R4      ; H'00000003
+    00000406 2008                   TST         R0,R0
+    00000408 8903                   BT          L108
+    0000040A 0400F004               MOVI20      #61444,R4  ; H'0000F004
+    0000040E D21A                   MOV.L       L180+6,R2  ; _SetError
+    00000410 424B                   JSR/N       @R2
+    00000412              L108:
+               main.c        253      err = cre_sem( ID_SEM_TPGET , &csem_tpget );    if( err != E_OK )   SetError( E_SYS_SEMAPH );
+    00000412 D532                   MOV.L       L180+106,R5; _csem_tpget
+    00000414 DE2E                   MOV.L       L180+94,R14; _v4_cre_sem
+    00000416 4E0B                   JSR         @R14
+    00000418 E404                   MOV         #4,R4      ; H'00000004
+    0000041A 2008                   TST         R0,R0
+    0000041C 8903                   BT          L110
+    0000041E 0400F004               MOVI20      #61444,R4  ; H'0000F004
+    00000422 D215                   MOV.L       L180+6,R2  ; _SetError
+    00000424 424B                   JSR/N       @R2
+    00000426              L110:
+               main.c        254      err = cre_sem( ID_SEM_TPRLS , &csem_tprls );    if( err != E_OK )   SetError( E_SYS_SEMAPH );
+    00000426 D52E                   MOV.L       L180+110,R5; _csem_tprls
+    00000428 4E0B                   JSR         @R14
+    0000042A E405                   MOV         #5,R4      ; H'00000005
+    0000042C 2008                   TST         R0,R0
+    0000042E 8903                   BT          L112
+    00000430 0400F004               MOVI20      #61444,R4  ; H'0000F004
+    00000434 D210                   MOV.L       L180+6,R2  ; _SetError
+    00000436 424B                   JSR/N       @R2
+    00000438              L112:
+               main.c        255        err = cre_sem( ID_SEM_DROPN , &csem_dropn );  if( err != E_OK )   SetError( E_SYS_SEMAPH );
+    00000438 D52A                   MOV.L       L180+114,R5; _csem_dropn
+    0000043A 4E0B                   JSR         @R14
+    0000043C E406                   MOV         #6,R4      ; H'00000006
+    0000043E 2008                   TST         R0,R0
+    00000440 8903                   BT          L114
+    00000442 0400F004               MOVI20      #61444,R4  ; H'0000F004
+    00000446 D20C                   MOV.L       L180+6,R2  ; _SetError
+    00000448 424B                   JSR/N       @R2
+    0000044A              L114:
+               main.c        256        err = cre_sem( ID_SEM_SKSET , &csem_skset );  if( err != E_OK )   SetError( E_SYS_SEMAPH );
+    0000044A D527                   MOV.L       L180+118,R5; _csem_skset
+    0000044C 4E0B                   JSR         @R14
+    0000044E E407                   MOV         #7,R4      ; H'00000007
+    00000450 2008                   TST         R0,R0
+    00000452 8903                   BT          L116
+    00000454 0400F004               MOVI20      #61444,R4  ; H'0000F004
+    00000458 D207                   MOV.L       L180+6,R2  ; _SetError
+    0000045A 424B                   JSR/N       @R2
+    0000045C              L116:
+               main.c        257      err = cre_sem( ID_SEM_SUCK0 , &csem_suck0 );    if( err != E_OK )   SetError( E_SYS_SEMAPH );
+    0000045C D523                   MOV.L       L180+122,R5; _csem_suck0
+    0000045E 4E0B                   JSR         @R14
+    00000460 E408                   MOV         #8,R4      ; H'00000008
+    00000462 2008                   TST         R0,R0
+    00000464 8944                   BT          L118
+    00000466 0400F004               MOVI20      #61444,R4  ; H'0000F004
+    0000046A D203                   MOV.L       L180+6,R2  ; _SetError
+    0000046C 424B                   JSR/N       @R2
+    0000046E A03F                   BRA         L179
+    00000470 0009                   NOP
+    00000472              L180:
+    00000472 00000002               .RES.W      1
+    00000474 <00000000>             .DATA.L     _cmpf_led
+    00000478 <00000000>             .DATA.L     _SetError
+    0000047C <00000000>             .DATA.L     _cmpf_punit
+    00000480 <00000000>             .DATA.L     _cmpf_tmpcnt
+    00000484 <00000000>             .DATA.L     _cmbx_rx0
+    00000488 <00000000>             .DATA.L     _v4_cre_mbx
+    0000048C <00000000>             .DATA.L     _cmbx_tx0
+    00000490 <00000000>             .DATA.L     _cmbx_rxEx
+    00000494 <00000000>             .DATA.L     _cmbx_txEx
+    00000498 <00000000>             .DATA.L     _cmbx_cmd
+    0000049C <00000000>             .DATA.L     _cmbx_eep
+    000004A0 <00000000>             .DATA.L     _cmbx_io
+    000004A4 <00000000>             .DATA.L     _cmbx_motwait
+    000004A8 <00000000>             .DATA.L     _cmbx_motact
+    000004AC <00000000>             .DATA.L     _cmbx_motend
+    000004B0 <00000000>             .DATA.L     _cmbx_int
+    000004B4 <00000000>             .DATA.L     _cmbx_led
+    000004B8 <00000000>             .DATA.L     _cmbx_punit
+    000004BC <00000000>             .DATA.L     _cmbx_tmpcnt
+    000004C0 <00000000>             .DATA.L     _cdtq_rx0
+    000004C4 <00000000>             .DATA.L     _v4_cre_dtq
+    000004C8 <00000000>             .DATA.L     _cdtq_rxEx
+    000004CC <00000000>             .DATA.L     _csem_init0
+    000004D0 <00000000>             .DATA.L     _v4_cre_sem
+    000004D4 <00000000>             .DATA.L     _csem_pause
+    000004D8 <00000000>             .DATA.L     _csem_hdmov
+    000004DC <00000000>             .DATA.L     _csem_tpget
+    000004E0 <00000000>             .DATA.L     _csem_tprls
+    000004E4 <00000000>             .DATA.L     _csem_dropn
+    000004E8 <00000000>             .DATA.L     _csem_skset
+    000004EC <00000000>             .DATA.L     _csem_suck0
+    000004F0              L179:
+    000004F0              L118:
+               main.c        258      err = cre_sem( ID_SEM_DTSET , &csem_dtset );    if( err != E_OK )   SetError( E_SYS_SEMAPH );
+    000004F0 D584                   MOV.L       L182,R5    ; _csem_dtset
+    000004F2 4E0B                   JSR         @R14
+    000004F4 E409                   MOV         #9,R4      ; H'00000009
+    000004F6 2008                   TST         R0,R0
+    000004F8 8903                   BT          L120
+    000004FA 0400F004               MOVI20      #61444,R4  ; H'0000F004
+    000004FE D282                   MOV.L       L182+4,R2  ; _SetError
+    00000500 424B                   JSR/N       @R2
+    00000502              L120:
+               main.c        259      err = cre_sem( ID_SEM_DOT00 , &csem_dot00 );    if( err != E_OK )   SetError( E_SYS_SEMAPH );
+    00000502 D582                   MOV.L       L182+8,R5  ; _csem_dot00
+    00000504 DE82                   MOV.L       L182+12,R14; _v4_cre_sem
+    00000506 4E0B                   JSR         @R14
+    00000508 E40A                   MOV         #10,R4     ; H'0000000A
+    0000050A 2008                   TST         R0,R0
+    0000050C 8903                   BT          L122
+    0000050E 0400F004               MOVI20      #61444,R4  ; H'0000F004
+    00000512 D27D                   MOV.L       L182+4,R2  ; _SetError
+    00000514 424B                   JSR/N       @R2
+    00000516              L122:
+               main.c        260        err = cre_sem( ID_SEM_MXSET , &csem_mxset );  if( err != E_OK )   SetError( E_SYS_SEMAPH );
+    00000516 D57F                   MOV.L       L182+16,R5 ; _csem_mxset
+    00000518 4E0B                   JSR         @R14
+    0000051A E40B                   MOV         #11,R4     ; H'0000000B
+    0000051C 2008                   TST         R0,R0
+    0000051E 8903                   BT          L124
+    00000520 0400F004               MOVI20      #61444,R4  ; H'0000F004
+    00000524 D278                   MOV.L       L182+4,R2  ; _SetError
+    00000526 424B                   JSR/N       @R2
+    00000528              L124:
+               main.c        261        err = cre_sem( ID_SEM_MIX00 , &csem_mix00 );  if( err != E_OK )   SetError( E_SYS_SEMAPH );
+    00000528 D57B                   MOV.L       L182+20,R5 ; _csem_mix00
+    0000052A 4E0B                   JSR         @R14
+    0000052C E40C                   MOV         #12,R4     ; H'0000000C
+    0000052E 2008                   TST         R0,R0
+    00000530 8903                   BT          L126
+    00000532 0400F004               MOVI20      #61444,R4  ; H'0000F004
+    00000536 D274                   MOV.L       L182+4,R2  ; _SetError
+    00000538 424B                   JSR/N       @R2
+    0000053A              L126:
+               main.c        262      err = cre_sem( ID_SEM_THMOV , &csem_thmov );    if( err != E_OK )   SetError( E_SYS_SEMAPH );
+    0000053A D578                   MOV.L       L182+24,R5 ; _csem_thmov
+    0000053C 4E0B                   JSR         @R14
+    0000053E E40D                   MOV         #13,R4     ; H'0000000D
+    00000540 2008                   TST         R0,R0
+    00000542 8903                   BT          L128
+    00000544 0400F004               MOVI20      #61444,R4  ; H'0000F004
+    00000548 D26F                   MOV.L       L182+4,R2  ; _SetError
+    0000054A 424B                   JSR/N       @R2
+    0000054C              L128:
+               main.c        263      err = cre_sem( ID_SEM_CPOPN , &csem_cpopn );    if( err != E_OK )   SetError( E_SYS_SEMAPH );
+    0000054C D574                   MOV.L       L182+28,R5 ; _csem_cpopn
+    0000054E 4E0B                   JSR         @R14
+    00000550 E40E                   MOV         #14,R4     ; H'0000000E
+    00000552 2008                   TST         R0,R0
+    00000554 8903                   BT          L130
+    00000556 0400F004               MOVI20      #61444,R4  ; H'0000F004
+    0000055A D26B                   MOV.L       L182+4,R2  ; _SetError
+    0000055C 424B                   JSR/N       @R2
+    0000055E              L130:
+               main.c        264      err = cre_sem( ID_SEM_CPCLS , &csem_cpcls );    if( err != E_OK )   SetError( E_SYS_SEMAPH );
+    0000055E D571                   MOV.L       L182+32,R5 ; _csem_cpcls
+    00000560 4E0B                   JSR         @R14
+    00000562 E40F                   MOV         #15,R4     ; H'0000000F
+    00000564 2008                   TST         R0,R0
+    00000566 8903                   BT          L132
+    00000568 0400F004               MOVI20      #61444,R4  ; H'0000F004
+    0000056C D266                   MOV.L       L182+4,R2  ; _SetError
+    0000056E 424B                   JSR/N       @R2
+    00000570              L132:
+               main.c        265      err = cre_sem( ID_SEM_BCDSP , &csem_bcdsp );    if( err != E_OK )   SetError( E_SYS_SEMAPH );
+    00000570 D56D                   MOV.L       L182+36,R5 ; _csem_bcdsp
+    00000572 DE67                   MOV.L       L182+12,R14; _v4_cre_sem
+    00000574 4E0B                   JSR         @R14
+    00000576 E410                   MOV         #16,R4     ; H'00000010
+    00000578 2008                   TST         R0,R0
+    0000057A 8903                   BT          L134
+    0000057C 0400F004               MOVI20      #61444,R4  ; H'0000F004
+    00000580 D261                   MOV.L       L182+4,R2  ; _SetError
+    00000582 424B                   JSR/N       @R2
+    00000584              L134:
+               main.c        266        err = cre_sem( ID_SEM_TURN1 , &csem_turn1 );  if( err != E_OK )   SetError( E_SYS_SEMAPH );
+    00000584 D569                   MOV.L       L182+40,R5 ; _csem_turn1
+    00000586 4E0B                   JSR         @R14
+    00000588 E411                   MOV         #17,R4     ; H'00000011
+    0000058A 2008                   TST         R0,R0
+    0000058C 8903                   BT          L136
+    0000058E 0400F004               MOVI20      #61444,R4  ; H'0000F004
+    00000592 D25D                   MOV.L       L182+4,R2  ; _SetError
+    00000594 424B                   JSR/N       @R2
+    00000596              L136:
+               main.c        267      err = cre_sem( ID_SEM_BZCNT , &csem_bzcnt );    if( err != E_OK )   SetError( E_SYS_SEMAPH );
+    00000596 D566                   MOV.L       L182+44,R5 ; _csem_bzcnt
+    00000598 4E0B                   JSR         @R14
+    0000059A E412                   MOV         #18,R4     ; H'00000012
+    0000059C 2008                   TST         R0,R0
+    0000059E 8903                   BT          L138
+    000005A0 0400F004               MOVI20      #61444,R4  ; H'0000F004
+    000005A4 D258                   MOV.L       L182+4,R2  ; _SetError
+    000005A6 424B                   JSR/N       @R2
+    000005A8              L138:
+               main.c        268      err = cre_sem( ID_SEM_LEDON , &csem_ledon );    if( err != E_OK )   SetError( E_SYS_SEMAPH );
+    000005A8 D562                   MOV.L       L182+48,R5 ; _csem_ledon
+    000005AA 4E0B                   JSR         @R14
+    000005AC E413                   MOV         #19,R4     ; H'00000013
+    000005AE 2008                   TST         R0,R0
+    000005B0 8903                   BT          L140
+    000005B2 0400F004               MOVI20      #61444,R4  ; H'0000F004
+    000005B6 D254                   MOV.L       L182+4,R2  ; _SetError
+    000005B8 424B                   JSR/N       @R2
+    000005BA              L140:
+               main.c        269      err = cre_sem( ID_SEM_MEMRW , &csem_memrw );    if( err != E_OK )   SetError( E_SYS_SEMAPH );
+    000005BA D55F                   MOV.L       L182+52,R5 ; _csem_memrw
+    000005BC 4E0B                   JSR         @R14
+    000005BE E414                   MOV         #20,R4     ; H'00000014
+    000005C0 2008                   TST         R0,R0
+    000005C2 8903                   BT          L142
+    000005C4 0400F004               MOVI20      #61444,R4  ; H'0000F004
+    000005C8 D24F                   MOV.L       L182+4,R2  ; _SetError
+    000005CA 424B                   JSR/N       @R2
+    000005CC              L142:
+               main.c        270    
+               main.c        271      //*************************************
+               main.c        272        // タスク起動
+               main.c        273      //*************************************
+               main.c        274        err = sta_tsk(ID_TSK_RX0, 0);                 if( err != E_OK )   SetError( E_SYS_TSKSTA );
+    000005CC ED00                   MOV         #0,R13     ; H'00000000
+    000005CE E401                   MOV         #1,R4      ; H'00000001
+    000005D0 DE5A                   MOV.L       L182+56,R14; _v4_sta_tsk
+    000005D2 4E0B                   JSR         @R14
+    000005D4 65D3                   MOV         R13,R5
+    000005D6 2008                   TST         R0,R0
+    000005D8 8903                   BT          L144
+    000005DA 0400F005               MOVI20      #61445,R4  ; H'0000F005
+    000005DE D24A                   MOV.L       L182+4,R2  ; _SetError
+    000005E0 424B                   JSR/N       @R2
+    000005E2              L144:
+               main.c        275        err = sta_tsk(ID_TSK_TX0, 0);                 if( err != E_OK )   SetError( E_SYS_TSKSTA );
+    000005E2 E402                   MOV         #2,R4      ; H'00000002
+    000005E4 4E0B                   JSR         @R14
+    000005E6 65D3                   MOV         R13,R5
+    000005E8 2008                   TST         R0,R0
+    000005EA 8903                   BT          L146
+    000005EC 0400F005               MOVI20      #61445,R4  ; H'0000F005
+    000005F0 D245                   MOV.L       L182+4,R2  ; _SetError
+    000005F2 424B                   JSR/N       @R2
+    000005F4              L146:
+               main.c        276        err = sta_tsk(ID_TSK_TXEX, 0);                    if( err != E_OK )   SetError( E_SYS_TSKSTA );
+    000005F4 E404                   MOV         #4,R4      ; H'00000004
+    000005F6 4E0B                   JSR         @R14
+    000005F8 65D3                   MOV         R13,R5
+    000005FA 2008                   TST         R0,R0
+    000005FC 8903                   BT          L148
+    000005FE 0400F005               MOVI20      #61445,R4  ; H'0000F005
+    00000602 D241                   MOV.L       L182+4,R2  ; _SetError
+    00000604 424B                   JSR/N       @R2
+    00000606              L148:
+               main.c        277        err = sta_tsk(ID_TSK_RXEX, 0);                    if( err != E_OK )   SetError( E_SYS_TSKSTA );
+    00000606 E403                   MOV         #3,R4      ; H'00000003
+    00000608 4E0B                   JSR         @R14
+    0000060A 65D3                   MOV         R13,R5
+    0000060C 2008                   TST         R0,R0
+    0000060E 8903                   BT          L150
+    00000610 0400F005               MOVI20      #61445,R4  ; H'0000F005
+    00000614 D23C                   MOV.L       L182+4,R2  ; _SetError
+    00000616 424B                   JSR/N       @R2
+    00000618              L150:
+               main.c        278        err = sta_tsk(ID_TSK_CMD, 0);                 if( err != E_OK )   SetError( E_SYS_TSKSTA );
+    00000618 E405                   MOV         #5,R4      ; H'00000005
+    0000061A 4E0B                   JSR         @R14
+    0000061C 65D3                   MOV         R13,R5
+    0000061E 2008                   TST         R0,R0
+    00000620 8903                   BT          L152
+    00000622 0400F005               MOVI20      #61445,R4  ; H'0000F005
+    00000626 D238                   MOV.L       L182+4,R2  ; _SetError
+    00000628 424B                   JSR/N       @R2
+    0000062A              L152:
+               main.c        279        err = sta_tsk(ID_TSK_EEP, 0);                 if( err != E_OK )   SetError( E_SYS_TSKSTA );
+    0000062A E406                   MOV         #6,R4      ; H'00000006
+    0000062C 4E0B                   JSR         @R14
+    0000062E 65D3                   MOV         R13,R5
+    00000630 2008                   TST         R0,R0
+    00000632 8903                   BT          L154
+    00000634 0400F005               MOVI20      #61445,R4  ; H'0000F005
+    00000638 D233                   MOV.L       L182+4,R2  ; _SetError
+    0000063A 424B                   JSR/N       @R2
+    0000063C              L154:
+               main.c        280        err = sta_tsk(ID_TSK_IO, 0);                  if( err != E_OK )   SetError( E_SYS_TSKSTA );
+    0000063C E407                   MOV         #7,R4      ; H'00000007
+    0000063E 4E0B                   JSR         @R14
+    00000640 65D3                   MOV         R13,R5
+    00000642 2008                   TST         R0,R0
+    00000644 8903                   BT          L156
+    00000646 0400F005               MOVI20      #61445,R4  ; H'0000F005
+    0000064A D22F                   MOV.L       L182+4,R2  ; _SetError
+    0000064C 424B                   JSR/N       @R2
+    0000064E              L156:
+               main.c        281        err = sta_tsk(ID_TSK_MOTWAIT, 0);             if( err != E_OK )   SetError( E_SYS_TSKSTA );
+    0000064E E408                   MOV         #8,R4      ; H'00000008
+    00000650 4E0B                   JSR         @R14
+    00000652 65D3                   MOV         R13,R5
+    00000654 2008                   TST         R0,R0
+    00000656 8903                   BT          L158
+    00000658 0400F005               MOVI20      #61445,R4  ; H'0000F005
+    0000065C D22A                   MOV.L       L182+4,R2  ; _SetError
+    0000065E 424B                   JSR/N       @R2
+    00000660              L158:
+               main.c        282        err = sta_tsk(ID_TSK_MOTACT, 0);              if( err != E_OK )   SetError( E_SYS_TSKSTA );
+    00000660 E409                   MOV         #9,R4      ; H'00000009
+    00000662 4E0B                   JSR         @R14
+    00000664 65D3                   MOV         R13,R5
+    00000666 2008                   TST         R0,R0
+    00000668 8903                   BT          L160
+    0000066A 0400F005               MOVI20      #61445,R4  ; H'0000F005
+    0000066E D226                   MOV.L       L182+4,R2  ; _SetError
+    00000670 424B                   JSR/N       @R2
+    00000672              L160:
+               main.c        283        err = sta_tsk(ID_TSK_MOTEND, 0);              if( err != E_OK )   SetError( E_SYS_TSKSTA );
+    00000672 E40A                   MOV         #10,R4     ; H'0000000A
+    00000674 4E0B                   JSR         @R14
+    00000676 65D3                   MOV         R13,R5
+    00000678 2008                   TST         R0,R0
+    0000067A 8903                   BT          L162
+    0000067C 0400F005               MOVI20      #61445,R4  ; H'0000F005
+    00000680 D221                   MOV.L       L182+4,R2  ; _SetError
+    00000682 424B                   JSR/N       @R2
+    00000684              L162:
+               main.c        284        err = sta_tsk(ID_TSK_INT, 0);                 if( err != E_OK )   SetError( E_SYS_TSKSTA );
+    00000684 E40B                   MOV         #11,R4     ; H'0000000B
+    00000686 4E0B                   JSR         @R14
+    00000688 65D3                   MOV         R13,R5
+    0000068A 2008                   TST         R0,R0
+    0000068C 8903                   BT          L164
+    0000068E 0400F005               MOVI20      #61445,R4  ; H'0000F005
+    00000692 D21D                   MOV.L       L182+4,R2  ; _SetError
+    00000694 424B                   JSR/N       @R2
+    00000696              L164:
+               main.c        285        err = sta_tsk(ID_TSK_LED, 0);                 if( err != E_OK )   SetError( E_SYS_TSKSTA );
+    00000696 E40C                   MOV         #12,R4     ; H'0000000C
+    00000698 4E0B                   JSR         @R14
+    0000069A 65D3                   MOV         R13,R5
+    0000069C 2008                   TST         R0,R0
+    0000069E 8903                   BT          L166
+    000006A0 0400F005               MOVI20      #61445,R4  ; H'0000F005
+    000006A4 D218                   MOV.L       L182+4,R2  ; _SetError
+    000006A6 424B                   JSR/N       @R2
+    000006A8              L166:
+               main.c        286        err = sta_tsk(ID_TSK_PUNIT, 0);                   if( err != E_OK )   SetError( E_SYS_TSKSTA );
+    000006A8 E40D                   MOV         #13,R4     ; H'0000000D
+    000006AA 4E0B                   JSR         @R14
+    000006AC 65D3                   MOV         R13,R5
+    000006AE 2008                   TST         R0,R0
+    000006B0 8903                   BT          L168
+    000006B2 0400F005               MOVI20      #61445,R4  ; H'0000F005
+    000006B6 D214                   MOV.L       L182+4,R2  ; _SetError
+    000006B8 424B                   JSR/N       @R2
+    000006BA              L168:
+               main.c        287        err = sta_tsk(ID_TSK_TMPCNT, 0);              if( err != E_OK )   SetError( E_SYS_TSKSTA );
+    000006BA E40E                   MOV         #14,R4     ; H'0000000E
+    000006BC 4E0B                   JSR         @R14
+    000006BE 65D3                   MOV         R13,R5
+    000006C0 2008                   TST         R0,R0
+    000006C2 8903                   BT          L170
+    000006C4 0400F005               MOVI20      #61445,R4  ; H'0000F005
+    000006C8 D20F                   MOV.L       L182+4,R2  ; _SetError
+    000006CA 424B                   JSR/N       @R2
+    000006CC              L170:
+               main.c        288    
+               main.c        289      //*************************************
+               main.c        290        // 周期ハンドラ起動
+               main.c        291      //*************************************
+               main.c        292      CycInit();
+    000006CC D11C                   MOV.L       L182+60,R1 ; _CycInit
+    000006CE 414B                   JSR/N       @R1
+               main.c        293        err = cre_cyc( ID_HDR_CYC, &chdr_ccyc );      if( err != E_OK )   SetError( E_SYS_CYCHDL );
+    000006D0 D51C                   MOV.L       L182+64,R5 ; _chdr_ccyc
+    000006D2 D61D                   MOV.L       L182+68,R6 ; _v4_cre_cyc
+    000006D4 460B                   JSR         @R6
+    000006D6 E401                   MOV         #1,R4      ; H'00000001
+    000006D8 2008                   TST         R0,R0
+    000006DA 8903                   BT          L172
+    000006DC 0400F006               MOVI20      #61446,R4  ; H'0000F006
+    000006E0 D209                   MOV.L       L182+4,R2  ; _SetError
+    000006E2 424B                   JSR/N       @R2
+    000006E4              L172:
+               main.c        294    
+               main.c        295      //*************************************
+               main.c        296        // 周期タイマ割込み起動
+               main.c        297      //*************************************
+               main.c        298        err = intsta();                                   if( err != E_OK )   SetError( E_SYS_CYCHDL );
+    000006E4 D219                   MOV.L       L182+72,R2 ; _intsta
+    000006E6 424B                   JSR/N       @R2
+    000006E8 2008                   TST         R0,R0
+    000006EA 8903                   BT          L174
+    000006EC 0400F006               MOVI20      #61446,R4  ; H'0000F006
+    000006F0 D205                   MOV.L       L182+4,R2  ; _SetError
+    000006F2 424B                   JSR/N       @R2
+    000006F4              L174:
+               main.c        299    
+               main.c        300      //*************************************
+               main.c        301      // マルチタスクへ移行
+               main.c        302      //*************************************
+               main.c        303        err = syssta();                                   if( err != E_OK )   SetError( E_SYS_MLTACT );
+    000006F4 D216                   MOV.L       L182+76,R2 ; _syssta
+    000006F6 424B                   JSR/N       @R2
+    000006F8 2008                   TST         R0,R0
+    000006FA 892D                   BT          L176
+    000006FC 0400F000               MOVI20      #61440,R4  ; H'0000F000
+    00000700 A028                   BRA         L181
+    00000702 0009                   NOP
+    00000704              L182:
+    00000704 <00000000>             .DATA.L     _csem_dtset
+    00000708 <00000000>             .DATA.L     _SetError
+    0000070C <00000000>             .DATA.L     _csem_dot00
+    00000710 <00000000>             .DATA.L     _v4_cre_sem
+    00000714 <00000000>             .DATA.L     _csem_mxset
+    00000718 <00000000>             .DATA.L     _csem_mix00
+    0000071C <00000000>             .DATA.L     _csem_thmov
+    00000720 <00000000>             .DATA.L     _csem_cpopn
+    00000724 <00000000>             .DATA.L     _csem_cpcls
+    00000728 <00000000>             .DATA.L     _csem_bcdsp
+    0000072C <00000000>             .DATA.L     _csem_turn1
+    00000730 <00000000>             .DATA.L     _csem_bzcnt
+    00000734 <00000000>             .DATA.L     _csem_ledon
+    00000738 <00000000>             .DATA.L     _csem_memrw
+    0000073C <00000000>             .DATA.L     _v4_sta_tsk
+    00000740 <00000000>             .DATA.L     _CycInit
+    00000744 <00000000>             .DATA.L     _chdr_ccyc
+    00000748 <00000000>             .DATA.L     _v4_cre_cyc
+    0000074C <00000000>             .DATA.L     _intsta
+    00000750 <00000000>             .DATA.L     _syssta
+    00000754              L181:
+    00000754 D202                   MOV.L       L183+2,R2  ; _SetError
+    00000756 424B                   JSR/N       @R2
+    00000758              L176:
+               main.c        304    
+               main.c        305    
+               main.c        306        return 0;
+    00000758 E000                   MOV         #0,R0      ; H'00000000
+    0000075A 4DF4                   MOVMU.L     @R15+,R13
+               main.c        307    }
+    0000075C 006B                   RTS/N
+    0000075E              L183:
+    0000075E 00000002               .RES.W      1
+    00000760 <00000000>             .DATA.L     _SetError
+               main.c        308    
+               main.c        309    /* end */
+C   00000000              _CFG:                            ; static: CFG
+    00000000 0000000E00             .DATA.L     H'0000000E,H'00000015,H'00000001,H'0000000E,H'00000001,H'00000001,H'00000001,
+             0000150000 +                       H'0000000D,H'00000002,H'00000009,H'00000008,H'00000001,H'00000001,H'00000001,
+             0001000000 +                       H'00000150,H'00000150
+             0E00000001   
+             0000000100   
+             0000010000   
+             000D000000   
+             0200000009   
+             0000000800   
+             0000010000   
+             0001000000   
+             0100000150   
+             00000150     
+    00000040 0000000000             .DATA.L     H'00000000,H'00000000,H'00000000
+             0000000000   
+             0000         
+    0000004C 0000000300             .DATA.L     H'00000003,H'00000001,H'00000001,H'00000008
+             0000010000   
+             0001000000   
+             08           
+    0000005C              _norti_ver:                      ; static: norti_ver
+    0000005C <00000000>   
+                                    .DATA.L     __NORTI_VER
+    00000060              _KNL_SR:                         ; static: KNL_SR
+    00000060 00E0                   .DATA.W     H'00E0
+    00000062              __KERNEL_NNM:                    ; static: _KERNEL_NNM
+    00000062 00                     .DATA.B     H'00
+    00000063 00000001               .RES.B      1
+    00000064              _pSYSMEM:                        ; static: pSYSMEM
+    00000064 00000000               .DATA.L     H'00000000
+    00000068              _pMPLMEM:                        ; static: pMPLMEM
+    00000068 00000000               .DATA.L     H'00000000
+    0000006C              _pSTKMEM:                        ; static: pSTKMEM
+    0000006C 00000000               .DATA.L     H'00000000
+    00000070              _ctsk_rx0:                       ; static: ctsk_rx0
+    00000070 0000000000             .DATA.L     H'00000000,H'00000000
+             000000       
+    00000078 <00000000>   
+                                    .DATA.L     _TskRx0
+    0000007C 00000003               .DATA.L     H'00000003
+    00000080 0000040000             .DATA.L     H'00000400,H'00000000
+             000000       
+    00000088 <00000000>   
+                                    .DATA.L     L184
+    0000008C              _ctsk_tx0:                       ; static: ctsk_tx0
+    0000008C 0000000000             .DATA.L     H'00000000,H'00000000
+             000000       
+    00000094 <00000000>   
+                                    .DATA.L     _TskTx0
+    00000098 00000002               .DATA.L     H'00000002
+    0000009C 0000040000             .DATA.L     H'00000400,H'00000000
+             000000       
+    000000A4 <00000000>   
+                                    .DATA.L     L185
+    000000A8              _ctsk_rxEx:                      ; static: ctsk_rxEx
+    000000A8 0000000000             .DATA.L     H'00000000,H'00000000
+             000000       
+    000000B0 <00000000>   
+                                    .DATA.L     _TskRxEx
+    000000B4 00000003               .DATA.L     H'00000003
+    000000B8 0000040000             .DATA.L     H'00000400,H'00000000
+             000000       
+    000000C0 <00000000>   
+                                    .DATA.L     L186
+    000000C4              _ctsk_txEx:                      ; static: ctsk_txEx
+    000000C4 0000000000             .DATA.L     H'00000000,H'00000000
+             000000       
+    000000CC <00000000>   
+                                    .DATA.L     _TskTxEx
+    000000D0 00000003               .DATA.L     H'00000003
+    000000D4 0000040000             .DATA.L     H'00000400,H'00000000
+             000000       
+    000000DC <00000000>   
+                                    .DATA.L     L187
+    000000E0              _ctsk_cmd:                       ; static: ctsk_cmd
+    000000E0 0000000000             .DATA.L     H'00000000,H'00000000
+             000000       
+    000000E8 <00000000>   
+                                    .DATA.L     _TskCmd
+    000000EC 00000003               .DATA.L     H'00000003
+    000000F0 0000080000             .DATA.L     H'00000800,H'00000000
+             000000       
+    000000F8 <00000000>   
+                                    .DATA.L     L188
+    000000FC              _ctsk_io:                        ; static: ctsk_io
+    000000FC 0000000000             .DATA.L     H'00000000,H'00000000
+             000000       
+    00000104 <00000000>   
+                                    .DATA.L     _TskIo
+    00000108 00000003               .DATA.L     H'00000003
+    0000010C 0000020000             .DATA.L     H'00000200,H'00000000
+             000000       
+    00000114 <00000000>   
+                                    .DATA.L     L189
+    00000118              _ctsk_motwait:                   ; static: ctsk_motwait
+    00000118 0000000000             .DATA.L     H'00000000,H'00000000
+             000000       
+    00000120 <00000000>   
+                                    .DATA.L     _TskMotWait
+    00000124 00000003               .DATA.L     H'00000003
+    00000128 0000050000             .DATA.L     H'00000500,H'00000000
+             000000       
+    00000130 <00000000>   
+                                    .DATA.L     L190
+    00000134              _ctsk_motact:                    ; static: ctsk_motact
+    00000134 0000000000             .DATA.L     H'00000000,H'00000000
+             000000       
+    0000013C <00000000>   
+                                    .DATA.L     _TskMotAct
+    00000140 00000003               .DATA.L     H'00000003
+    00000144 0000050000             .DATA.L     H'00000500,H'00000000
+             000000       
+    0000014C <00000000>   
+                                    .DATA.L     L191
+    00000150              _ctsk_motend:                    ; static: ctsk_motend
+    00000150 0000000000             .DATA.L     H'00000000,H'00000000
+             000000       
+    00000158 <00000000>   
+                                    .DATA.L     _TskMotEnd
+    0000015C 00000003               .DATA.L     H'00000003
+    00000160 0000050000             .DATA.L     H'00000500,H'00000000
+             000000       
+    00000168 <00000000>   
+                                    .DATA.L     L192
+    0000016C              _ctsk_int:                       ; static: ctsk_int
+    0000016C 0000000000             .DATA.L     H'00000000,H'00000000
+             000000       
+    00000174 <00000000>   
+                                    .DATA.L     _TskInt
+    00000178 00000003               .DATA.L     H'00000003
+    0000017C 0000050000             .DATA.L     H'00000500,H'00000000
+             000000       
+    00000184 <00000000>   
+                                    .DATA.L     L193
+    00000188              _ctsk_led:                       ; static: ctsk_led
+    00000188 0000000000             .DATA.L     H'00000000,H'00000000
+             000000       
+    00000190 <00000000>   
+                                    .DATA.L     _TskLed
+    00000194 00000005               .DATA.L     H'00000005
+    00000198 0000020000             .DATA.L     H'00000200,H'00000000
+             000000       
+    000001A0 <00000000>   
+                                    .DATA.L     L194
+    000001A4              _ctsk_eep:                       ; static: ctsk_eep
+    000001A4 0000000000             .DATA.L     H'00000000,H'00000000
+             000000       
+    000001AC <00000000>   
+                                    .DATA.L     _TskEep
+    000001B0 00000003               .DATA.L     H'00000003
+    000001B4 0000040000             .DATA.L     H'00000400,H'00000000
+             000000       
+    000001BC <00000000>   
+                                    .DATA.L     L195
+    000001C0              _ctsk_punit:                     ; static: ctsk_punit
+    000001C0 0000000000             .DATA.L     H'00000000,H'00000000
+             000000       
+    000001C8 <00000000>   
+                                    .DATA.L     _TskPunit
+    000001CC 00000003               .DATA.L     H'00000003
+    000001D0 0000040000             .DATA.L     H'00000400,H'00000000
+             000000       
+    000001D8 <00000000>   
+                                    .DATA.L     L196
+    000001DC              _ctsk_tmpcnt:                    ; static: ctsk_tmpcnt
+    000001DC 0000000000             .DATA.L     H'00000000,H'00000000
+             000000       
+    000001E4 <00000000>   
+                                    .DATA.L     _TskTmpCnt
+    000001E8 00000003               .DATA.L     H'00000003
+    000001EC 0000040000             .DATA.L     H'00000400,H'00000000
+             000000       
+    000001F4 <00000000>   
+                                    .DATA.L     L197
+    000001F8              _cmpf_tx0:                       ; static: cmpf_tx0
+    000001F8 0000000000             .DATA.L     H'00000000,H'00000008,H'00000060,H'00000000
+             0000080000   
+             0060000000   
+             00           
+    00000208 <00000000>   
+                                    .DATA.L     L198
+    0000020C              _cmpf_txex:                      ; static: cmpf_txex
+    0000020C 0000000000             .DATA.L     H'00000000,H'00000004,H'00000060,H'00000000
+             0000040000   
+             0060000000   
+             00           
+    0000021C <00000000>   
+                                    .DATA.L     L199
+    00000220              _cmpf_cmd:                       ; static: cmpf_cmd
+    00000220 0000000000             .DATA.L     H'00000000,H'0000000C,H'00000060,H'00000000
+             00000C0000   
+             0060000000   
+             00           
+    00000230 <00000000>   
+                                    .DATA.L     L200
+    00000234              _cmpf_io:                        ; static: cmpf_io
+    00000234 0000000000             .DATA.L     H'00000000,H'00000004,H'00000060,H'00000000
+             0000040000   
+             0060000000   
+             00           
+    00000244 <00000000>   
+                                    .DATA.L     L201
+    00000248              _cmpf_motwait:                   ; static: cmpf_motwait
+    00000248 0000000000             .DATA.L     H'00000000,H'00000008,H'00000060,H'00000000
+             0000080000   
+             0060000000   
+             00           
+    00000258 <00000000>   
+                                    .DATA.L     L202
+    0000025C              _cmpf_motact:                    ; static: cmpf_motact
+    0000025C 0000000000             .DATA.L     H'00000000,H'00000008,H'00000060,H'00000000
+             0000080000   
+             0060000000   
+             00           
+    0000026C <00000000>   
+                                    .DATA.L     L203
+    00000270              _cmpf_motend:                    ; static: cmpf_motend
+    00000270 0000000000             .DATA.L     H'00000000,H'00000008,H'00000060,H'00000000
+             0000080000   
+             0060000000   
+             00           
+    00000280 <00000000>   
+                                    .DATA.L     L204
+    00000284              _cmpf_int:                       ; static: cmpf_int
+    00000284 0000000000             .DATA.L     H'00000000,H'00000008,H'00000060,H'00000000
+             0000080000   
+             0060000000   
+             00           
+    00000294 <00000000>   
+                                    .DATA.L     L205
+    00000298              _cmpf_led:                       ; static: cmpf_led
+    00000298 0000000000             .DATA.L     H'00000000,H'00000004,H'00000060,H'00000000
+             0000040000   
+             0060000000   
+             00           
+    000002A8 <00000000>   
+                                    .DATA.L     L206
+    000002AC              _cmpf_eep:                       ; static: cmpf_eep
+    000002AC 0000000000             .DATA.L     H'00000000,H'00000004,H'00000060,H'00000000
+             0000040000   
+             0060000000   
+             00           
+    000002BC <00000000>   
+                                    .DATA.L     L207
+    000002C0              _cmpf_punit:                     ; static: cmpf_punit
+    000002C0 0000000000             .DATA.L     H'00000000,H'00000008,H'00000060,H'00000000
+             0000080000   
+             0060000000   
+             00           
+    000002D0 <00000000>   
+                                    .DATA.L     L208
+    000002D4              _cmpf_tmpcnt:                    ; static: cmpf_tmpcnt
+    000002D4 0000000000             .DATA.L     H'00000000,H'00000004,H'00000060,H'00000000
+             0000040000   
+             0060000000   
+             00           
+    000002E4 <00000000>   
+                                    .DATA.L     L209
+    000002E8              _cmbx_rx0:                       ; static: cmbx_rx0
+    000002E8 00000000               .DATA.L     H'00000000
+    000002EC 00000000               .DATA.L     H'00000000
+    000002F0 00000000               .DATA.L     H'00000000
+    000002F4 <00000000>   
+                                    .DATA.L     L210
+    000002F8              _cmbx_tx0:                       ; static: cmbx_tx0
+    000002F8 00000000               .DATA.L     H'00000000
+    000002FC 00000000               .DATA.L     H'00000000
+    00000300 00000000               .DATA.L     H'00000000
+    00000304 <00000000>   
+                                    .DATA.L     L211
+    00000308              _cmbx_txEx:                      ; static: cmbx_txEx
+    00000308 00000000               .DATA.L     H'00000000
+    0000030C 00000000               .DATA.L     H'00000000
+    00000310 00000000               .DATA.L     H'00000000
+    00000314 <00000000>   
+                                    .DATA.L     L212
+    00000318              _cmbx_rxEx:                      ; static: cmbx_rxEx
+    00000318 00000000               .DATA.L     H'00000000
+    0000031C 00000000               .DATA.L     H'00000000
+    00000320 00000000               .DATA.L     H'00000000
+    00000324 <00000000>   
+                                    .DATA.L     L213
+    00000328              _cmbx_cmd:                       ; static: cmbx_cmd
+    00000328 00000000               .DATA.L     H'00000000
+    0000032C 00000000               .DATA.L     H'00000000
+    00000330 00000000               .DATA.L     H'00000000
+    00000334 <00000000>   
+                                    .DATA.L     L214
+    00000338              _cmbx_eep:                       ; static: cmbx_eep
+    00000338 00000000               .DATA.L     H'00000000
+    0000033C 00000000               .DATA.L     H'00000000
+    00000340 00000000               .DATA.L     H'00000000
+    00000344 <00000000>   
+                                    .DATA.L     L215
+    00000348              _cmbx_io:                        ; static: cmbx_io
+    00000348 00000000               .DATA.L     H'00000000
+    0000034C 00000000               .DATA.L     H'00000000
+    00000350 00000000               .DATA.L     H'00000000
+    00000354 <00000000>   
+                                    .DATA.L     L216
+    00000358              _cmbx_motwait:                   ; static: cmbx_motwait
+    00000358 00000000               .DATA.L     H'00000000
+    0000035C 00000000               .DATA.L     H'00000000
+    00000360 00000000               .DATA.L     H'00000000
+    00000364 <00000000>   
+                                    .DATA.L     L217
+    00000368              _cmbx_motact:                    ; static: cmbx_motact
+    00000368 00000000               .DATA.L     H'00000000
+    0000036C 00000000               .DATA.L     H'00000000
+    00000370 00000000               .DATA.L     H'00000000
+    00000374 <00000000>   
+                                    .DATA.L     L218
+    00000378              _cmbx_motend:                    ; static: cmbx_motend
+    00000378 00000000               .DATA.L     H'00000000
+    0000037C 00000000               .DATA.L     H'00000000
+    00000380 00000000               .DATA.L     H'00000000
+    00000384 <00000000>   
+                                    .DATA.L     L219
+    00000388              _cmbx_int:                       ; static: cmbx_int
+    00000388 00000000               .DATA.L     H'00000000
+    0000038C 00000000               .DATA.L     H'00000000
+    00000390 00000000               .DATA.L     H'00000000
+    00000394 <00000000>   
+                                    .DATA.L     L220
+    00000398              _cmbx_led:                       ; static: cmbx_led
+    00000398 00000000               .DATA.L     H'00000000
+    0000039C 00000000               .DATA.L     H'00000000
+    000003A0 00000000               .DATA.L     H'00000000
+    000003A4 <00000000>   
+                                    .DATA.L     L221
+    000003A8              _cmbx_punit:                     ; static: cmbx_punit
+    000003A8 00000000               .DATA.L     H'00000000
+    000003AC 00000000               .DATA.L     H'00000000
+    000003B0 00000000               .DATA.L     H'00000000
+    000003B4 <00000000>   
+                                    .DATA.L     L222
+    000003B8              _cmbx_tmpcnt:                    ; static: cmbx_tmpcnt
+    000003B8 00000000               .DATA.L     H'00000000
+    000003BC 00000000               .DATA.L     H'00000000
+    000003C0 00000000               .DATA.L     H'00000000
+    000003C4 <00000000>   
+                                    .DATA.L     L223
+    000003C8              _calm_r0dat:                     ; static: calm_r0dat
+    000003C8 0000000000             .DATA.L     H'00000000,H'00000000
+             000000       
+    000003D0 <00000000>   
+                                    .DATA.L     _AlmComR0Dat
+    000003D4              _calm_r0ack:                     ; static: calm_r0ack
+    000003D4 0000000000             .DATA.L     H'00000000,H'00000000
+             000000       
+    000003DC <00000000>   
+                                    .DATA.L     _AlmComR0Ack
+    000003E0              _calm_r2dat:                     ; static: calm_r2dat
+    000003E0 0000000000             .DATA.L     H'00000000,H'00000000
+             000000       
+    000003E8 <00000000>   
+                                    .DATA.L     _AlmComR2Dat
+    000003EC              _calm_r2rsp:                     ; static: calm_r2rsp
+    000003EC 0000000000             .DATA.L     H'00000000,H'00000000
+             000000       
+    000003F4 <00000000>   
+                                    .DATA.L     _AlmCom2RspTmo
+    000003F8              _chdr_ccyc:                      ; static: chdr_ccyc
+    000003F8 0000000200             .DATA.L     H'00000002,H'00000000
+             000000       
+    00000400 <00000000>   
+                                    .DATA.L     _HdrCyc
+    00000404 0000000100             .DATA.L     H'00000001,H'00000064
+             000064       
+    0000040C              _cdtq_rx0:                       ; static: cdtq_rx0
+    0000040C 0000000000             .DATA.L     H'00000000,H'00000400,H'00000000
+             0004000000   
+             0000         
+    00000418 <00000000>   
+                                    .DATA.L     L224
+    0000041C              _cdtq_rxEx:                      ; static: cdtq_rxEx
+    0000041C 0000000000             .DATA.L     H'00000000,H'00000300,H'00000000
+             0003000000   
+             0000         
+    00000428 <00000000>   
+                                    .DATA.L     L225
+    0000042C              _csem_init0:                     ; static: csem_init0
+    0000042C 0000000000             .DATA.L     H'00000000,H'00000001,H'00000001
+             0000010000   
+             0001         
+    00000438 <00000000>   
+                                    .DATA.L     L226
+    0000043C              _csem_pause:                     ; static: csem_pause
+    0000043C 0000000000             .DATA.L     H'00000000,H'00000001,H'00000001
+             0000010000   
+             0001         
+    00000448 <00000000>   
+                                    .DATA.L     L227
+    0000044C              _csem_hdmov:                     ; static: csem_hdmov
+    0000044C 0000000000             .DATA.L     H'00000000,H'00000001,H'00000001
+             0000010000   
+             0001         
+    00000458 <00000000>   
+                                    .DATA.L     L228
+    0000045C              _csem_tpget:                     ; static: csem_tpget
+    0000045C 0000000000             .DATA.L     H'00000000,H'00000001,H'00000001
+             0000010000   
+             0001         
+    00000468 <00000000>   
+                                    .DATA.L     L229
+    0000046C              _csem_tprls:                     ; static: csem_tprls
+    0000046C 0000000000             .DATA.L     H'00000000,H'00000001,H'00000001
+             0000010000   
+             0001         
+    00000478 <00000000>   
+                                    .DATA.L     L230
+    0000047C              _csem_dropn:                     ; static: csem_dropn
+    0000047C 0000000000             .DATA.L     H'00000000,H'00000001,H'00000001
+             0000010000   
+             0001         
+    00000488 <00000000>   
+                                    .DATA.L     L231
+    0000048C              _csem_skset:                     ; static: csem_skset
+    0000048C 0000000000             .DATA.L     H'00000000,H'00000001,H'00000001
+             0000010000   
+             0001         
+    00000498 <00000000>   
+                                    .DATA.L     L232
+    0000049C              _csem_suck0:                     ; static: csem_suck0
+    0000049C 0000000000             .DATA.L     H'00000000,H'00000001,H'00000001
+             0000010000   
+             0001         
+    000004A8 <00000000>   
+                                    .DATA.L     L233
+    000004AC              _csem_dtset:                     ; static: csem_dtset
+    000004AC 0000000000             .DATA.L     H'00000000,H'00000001,H'00000001
+             0000010000   
+             0001         
+    000004B8 <00000000>   
+                                    .DATA.L     L234
+    000004BC              _csem_dot00:                     ; static: csem_dot00
+    000004BC 0000000000             .DATA.L     H'00000000,H'00000001,H'00000001
+             0000010000   
+             0001         
+    000004C8 <00000000>   
+                                    .DATA.L     L235
+    000004CC              _csem_mxset:                     ; static: csem_mxset
+    000004CC 0000000000             .DATA.L     H'00000000,H'00000001,H'00000001
+             0000010000   
+             0001         
+    000004D8 <00000000>   
+                                    .DATA.L     L236
+    000004DC              _csem_mix00:                     ; static: csem_mix00
+    000004DC 0000000000             .DATA.L     H'00000000,H'00000001,H'00000001
+             0000010000   
+             0001         
+    000004E8 <00000000>   
+                                    .DATA.L     L237
+    000004EC              _csem_thmov:                     ; static: csem_thmov
+    000004EC 0000000000             .DATA.L     H'00000000,H'00000001,H'00000001
+             0000010000   
+             0001         
+    000004F8 <00000000>   
+                                    .DATA.L     L238
+    000004FC              _csem_cpopn:                     ; static: csem_cpopn
+    000004FC 0000000000             .DATA.L     H'00000000,H'00000001,H'00000001
+             0000010000   
+             0001         
+    00000508 <00000000>   
+                                    .DATA.L     L239
+    0000050C              _csem_cpcls:                     ; static: csem_cpcls
+    0000050C 0000000000             .DATA.L     H'00000000,H'00000001,H'00000001
+             0000010000   
+             0001         
+    00000518 <00000000>   
+                                    .DATA.L     L240
+    0000051C              _csem_bcdsp:                     ; static: csem_bcdsp
+    0000051C 0000000000             .DATA.L     H'00000000,H'00000001,H'00000001
+             0000010000   
+             0001         
+    00000528 <00000000>   
+                                    .DATA.L     L241
+    0000052C              _csem_turn1:                     ; static: csem_turn1
+    0000052C 0000000000             .DATA.L     H'00000000,H'00000001,H'00000001
+             0000010000   
+             0001         
+    00000538 <00000000>   
+                                    .DATA.L     L242
+    0000053C              _csem_bzcnt:                     ; static: csem_bzcnt
+    0000053C 0000000000             .DATA.L     H'00000000,H'00000001,H'00000001
+             0000010000   
+             0001         
+    00000548 <00000000>   
+                                    .DATA.L     L243
+    0000054C              _csem_ledon:                     ; static: csem_ledon
+    0000054C 0000000000             .DATA.L     H'00000000,H'00000001,H'00000001
+             0000010000   
+             0001         
+    00000558 <00000000>   
+                                    .DATA.L     L244
+    0000055C              _csem_memrw:                     ; static: csem_memrw
+    0000055C 0000000000             .DATA.L     H'00000000,H'00000001,H'00000001
+             0000010000   
+             0001         
+    00000568 <00000000>   
+                                    .DATA.L     L245
+D   00000000              _kernel_def:                     ; static: kernel_def
+    00000000 <00000000>   
+             <00000000>             .DATA.L     __pTCB,__pSEM,__pFLG,__pMBX,__pMBF,__pPOR,__pMPL,__pMPF,__pCYC,__pALM,__pDTQ,__pMTX,
+             <00000000> +                       __pISR,__pSVC,_CFG,_RDQ,_TMQ,_CHQ,_AHQ,_SYSCK
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+C   0000056C              L184:
+    0000056C 54736B5278             .SDATA      "TskRx0"
+             30           
+    00000572 00                     .DATA.B     H'00
+    00000573 00                     .DATAB.B    1,0
+    00000574              L185:
+    00000574 54736B5478             .SDATA      "TskTx0"
+             30           
+    0000057A 00                     .DATA.B     H'00
+    0000057B 00                     .DATAB.B    1,0
+    0000057C              L186:
+    0000057C 54736B5278             .SDATA      "TskRxEx"
+             4578         
+    00000583 00                     .DATA.B     H'00
+    00000584              L187:
+    00000584 54736B5478             .SDATA      "TskTxEx"
+             4578         
+    0000058B 00                     .DATA.B     H'00
+    0000058C              L188:
+    0000058C 54736B436D             .SDATA      "TskCmd"
+             64           
+    00000592 00                     .DATA.B     H'00
+    00000593 00                     .DATAB.B    1,0
+    00000594              L189:
+    00000594 54736B496F             .SDATA      "TskIo"
+    00000599 00                     .DATA.B     H'00
+    0000059A 00                     .DATAB.B    2,0
+    0000059C              L190:
+    0000059C 54736B4D6F             .SDATA      "TskMotWait"
+             7457616974   
+    000005A6 00                     .DATA.B     H'00
+    000005A7 00                     .DATAB.B    1,0
+    000005A8              L191:
+    000005A8 54736B4D6F             .SDATA      "TskMotAct"
+             74416374     
+    000005B1 00                     .DATA.B     H'00
+    000005B2 00                     .DATAB.B    2,0
+    000005B4              L192:
+    000005B4 54736B4D6F             .SDATA      "TskMotEnd"
+             74456E64     
+    000005BD 00                     .DATA.B     H'00
+    000005BE 00                     .DATAB.B    2,0
+    000005C0              L193:
+    000005C0 54736B496E             .SDATA      "TskInt"
+             74           
+    000005C6 00                     .DATA.B     H'00
+    000005C7 00                     .DATAB.B    1,0
+    000005C8              L194:
+    000005C8 54736B4C65             .SDATA      "TskLed"
+             64           
+    000005CE 00                     .DATA.B     H'00
+    000005CF 00                     .DATAB.B    1,0
+    000005D0              L195:
+    000005D0 54736B4565             .SDATA      "TskEep"
+             70           
+    000005D6 00                     .DATA.B     H'00
+    000005D7 00                     .DATAB.B    1,0
+    000005D8              L196:
+    000005D8 54736B5075             .SDATA      "TskPunit"
+             6E6974       
+    000005E0 00                     .DATA.B     H'00
+    000005E1 00                     .DATAB.B    3,0
+    000005E4              L197:
+    000005E4 54736B546D             .SDATA      "TskTmpCnt"
+             70436E74     
+    000005ED 00                     .DATA.B     H'00
+    000005EE 00                     .DATAB.B    2,0
+    000005F0              L198:
+    000005F0 6D70665F74             .SDATA      "mpf_tx0"
+             7830         
+    000005F7 00                     .DATA.B     H'00
+    000005F8              L199:
+    000005F8 6D70665F74             .SDATA      "mpf_txex"
+             786578       
+    00000600 00                     .DATA.B     H'00
+    00000601 00                     .DATAB.B    3,0
+    00000604              L200:
+    00000604 6D70665F63             .SDATA      "mpf_cmd"
+             6D64         
+    0000060B 00                     .DATA.B     H'00
+    0000060C              L201:
+    0000060C 6D70665F69             .SDATA      "mpf_io"
+             6F           
+    00000612 00                     .DATA.B     H'00
+    00000613 00                     .DATAB.B    1,0
+    00000614              L202:
+    00000614 6D70665F6D             .SDATA      "mpf_motwait"
+             6F74776169   
+             74           
+    0000061F 00                     .DATA.B     H'00
+    00000620              L203:
+    00000620 6D70665F6D             .SDATA      "mpf_motact"
+             6F74616374   
+    0000062A 00                     .DATA.B     H'00
+    0000062B 00                     .DATAB.B    1,0
+    0000062C              L204:
+    0000062C 6D70665F6D             .SDATA      "mpf_motend"
+             6F74656E64   
+    00000636 00                     .DATA.B     H'00
+    00000637 00                     .DATAB.B    1,0
+    00000638              L205:
+    00000638 6D70665F69             .SDATA      "mpf_int"
+             6E74         
+    0000063F 00                     .DATA.B     H'00
+    00000640              L206:
+    00000640 6D70665F6C             .SDATA      "mpf_led"
+             6564         
+    00000647 00                     .DATA.B     H'00
+    00000648              L207:
+    00000648 6D70665F65             .SDATA      "mpf_eep"
+             6570         
+    0000064F 00                     .DATA.B     H'00
+    00000650              L208:
+    00000650 6D70665F70             .SDATA      "mpf_punit"
+             756E6974     
+    00000659 00                     .DATA.B     H'00
+    0000065A 00                     .DATAB.B    2,0
+    0000065C              L209:
+    0000065C 6D70665F74             .SDATA      "mpf_tmpcnt"
+             6D70636E74   
+    00000666 00                     .DATA.B     H'00
+    00000667 00                     .DATAB.B    1,0
+    00000668              L210:
+    00000668 6D62785F72             .SDATA      "mbx_rx0"
+             7830         
+    0000066F 00                     .DATA.B     H'00
+    00000670              L211:
+    00000670 6D62785F74             .SDATA      "mbx_tx0"
+             7830         
+    00000677 00                     .DATA.B     H'00
+    00000678              L212:
+    00000678 6D62785F74             .SDATA      "mbx_txEx"
+             784578       
+    00000680 00                     .DATA.B     H'00
+    00000681 00                     .DATAB.B    3,0
+    00000684              L213:
+    00000684 6D62785F72             .SDATA      "mbx_rxEx"
+             784578       
+    0000068C 00                     .DATA.B     H'00
+    0000068D 00                     .DATAB.B    3,0
+    00000690              L214:
+    00000690 6D62785F63             .SDATA      "mbx_cmd"
+             6D64         
+    00000697 00                     .DATA.B     H'00
+    00000698              L215:
+    00000698 6D62785F65             .SDATA      "mbx_eep"
+             6570         
+    0000069F 00                     .DATA.B     H'00
+    000006A0              L216:
+    000006A0 6D62785F69             .SDATA      "mbx_io"
+             6F           
+    000006A6 00                     .DATA.B     H'00
+    000006A7 00                     .DATAB.B    1,0
+    000006A8              L217:
+    000006A8 6D62785F6D             .SDATA      "mbx_motwait"
+             6F74776169   
+             74           
+    000006B3 00                     .DATA.B     H'00
+    000006B4              L218:
+    000006B4 6D62785F6D             .SDATA      "mbx_motact"
+             6F74616374   
+    000006BE 00                     .DATA.B     H'00
+    000006BF 00                     .DATAB.B    1,0
+    000006C0              L219:
+    000006C0 6D62785F6D             .SDATA      "mbx_motend"
+             6F74656E64   
+    000006CA 00                     .DATA.B     H'00
+    000006CB 00                     .DATAB.B    1,0
+    000006CC              L220:
+    000006CC 6D62785F69             .SDATA      "mbx_int"
+             6E74         
+    000006D3 00                     .DATA.B     H'00
+    000006D4              L221:
+    000006D4 6D62785F6C             .SDATA      "mbx_led"
+             6564         
+    000006DB 00                     .DATA.B     H'00
+    000006DC              L222:
+    000006DC 6D62785F70             .SDATA      "mbx_punit"
+             756E6974     
+    000006E5 00                     .DATA.B     H'00
+    000006E6 00                     .DATAB.B    2,0
+    000006E8              L223:
+    000006E8 6D62785F74             .SDATA      "mbx_tmpcnt"
+             6D70636E74   
+    000006F2 00                     .DATA.B     H'00
+    000006F3 00                     .DATAB.B    1,0
+    000006F4              L224:
+    000006F4 6474715F72             .SDATA      "dtq_rx0"
+             7830         
+    000006FB 00                     .DATA.B     H'00
+    000006FC              L225:
+    000006FC 6474715F72             .SDATA      "dtq_rxEx"
+             784578       
+    00000704 00                     .DATA.B     H'00
+    00000705 00                     .DATAB.B    3,0
+    00000708              L226:
+    00000708 73656D5F69             .SDATA      "sem_init0"
+             6E697430     
+    00000711 00                     .DATA.B     H'00
+    00000712 00                     .DATAB.B    2,0
+    00000714              L227:
+    00000714 73656D5F70             .SDATA      "sem_pause"
+             61757365     
+    0000071D 00                     .DATA.B     H'00
+    0000071E 00                     .DATAB.B    2,0
+    00000720              L228:
+    00000720 73656D5F68             .SDATA      "sem_hdmov"
+             646D6F76     
+    00000729 00                     .DATA.B     H'00
+    0000072A 00                     .DATAB.B    2,0
+    0000072C              L229:
+    0000072C 73656D5F74             .SDATA      "sem_tpget"
+             70676574     
+    00000735 00                     .DATA.B     H'00
+    00000736 00                     .DATAB.B    2,0
+    00000738              L230:
+    00000738 73656D5F74             .SDATA      "sem_tprls"
+             70726C73     
+    00000741 00                     .DATA.B     H'00
+    00000742 00                     .DATAB.B    2,0
+    00000744              L231:
+    00000744 73656D5F64             .SDATA      "sem_dropn"
+             726F706E     
+    0000074D 00                     .DATA.B     H'00
+    0000074E 00                     .DATAB.B    2,0
+    00000750              L232:
+    00000750 73656D5F73             .SDATA      "sem_skset"
+             6B736574     
+    00000759 00                     .DATA.B     H'00
+    0000075A 00                     .DATAB.B    2,0
+    0000075C              L233:
+    0000075C 73656D5F73             .SDATA      "sem_suck0"
+             75636B30     
+    00000765 00                     .DATA.B     H'00
+    00000766 00                     .DATAB.B    2,0
+    00000768              L234:
+    00000768 73656D5F64             .SDATA      "sem_dtset"
+             74736574     
+    00000771 00                     .DATA.B     H'00
+    00000772 00                     .DATAB.B    2,0
+    00000774              L235:
+    00000774 73656D5F64             .SDATA      "sem_dot00"
+             6F743030     
+    0000077D 00                     .DATA.B     H'00
+    0000077E 00                     .DATAB.B    2,0
+    00000780              L236:
+    00000780 73656D5F6D             .SDATA      "sem_mxset"
+             78736574     
+    00000789 00                     .DATA.B     H'00
+    0000078A 00                     .DATAB.B    2,0
+    0000078C              L237:
+    0000078C 73656D5F6D             .SDATA      "sem_mix00"
+             69783030     
+    00000795 00                     .DATA.B     H'00
+    00000796 00                     .DATAB.B    2,0
+    00000798              L238:
+    00000798 73656D5F74             .SDATA      "sem_thmov"
+             686D6F76     
+    000007A1 00                     .DATA.B     H'00
+    000007A2 00                     .DATAB.B    2,0
+    000007A4              L239:
+    000007A4 73656D5F63             .SDATA      "sem_cpopn"
+             706F706E     
+    000007AD 00                     .DATA.B     H'00
+    000007AE 00                     .DATAB.B    2,0
+    000007B0              L240:
+    000007B0 73656D5F63             .SDATA      "sem_cpcls"
+             70636C73     
+    000007B9 00                     .DATA.B     H'00
+    000007BA 00                     .DATAB.B    2,0
+    000007BC              L241:
+    000007BC 73656D5F62             .SDATA      "sem_bcdsp"
+             63647370     
+    000007C5 00                     .DATA.B     H'00
+    000007C6 00                     .DATAB.B    2,0
+    000007C8              L242:
+    000007C8 73656D5F74             .SDATA      "sem_turn1"
+             75726E31     
+    000007D1 00                     .DATA.B     H'00
+    000007D2 00                     .DATAB.B    2,0
+    000007D4              L243:
+    000007D4 73656D5F62             .SDATA      "sem_bzcnt"
+             7A636E74     
+    000007DD 00                     .DATA.B     H'00
+    000007DE 00                     .DATAB.B    2,0
+    000007E0              L244:
+    000007E0 73656D5F6C             .SDATA      "sem_ledon"
+             65646F6E     
+    000007E9 00                     .DATA.B     H'00
+    000007EA 00                     .DATAB.B    2,0
+    000007EC              L245:
+    000007EC 73656D5F6D             .SDATA      "sem_memrw"
+             656D7277     
+    000007F5 00                     .DATA.B     H'00
+B   00000000              __pTCB:                          ; static: _pTCB
+    00000000 00000004               .RES.L      15
+    0000003C              __pSEM:                          ; static: _pSEM
+    0000003C 00000004               .RES.L      21
+    00000090              __pFLG:                          ; static: _pFLG
+    00000090 00000004               .RES.L      1
+    00000094              __pMBX:                          ; static: _pMBX
+    00000094 00000004               .RES.L      14
+    000000CC              __pMBF:                          ; static: _pMBF
+    000000CC 00000004               .RES.L      1
+    000000D0              __pPOR:                          ; static: _pPOR
+    000000D0 00000004               .RES.L      1
+    000000D4              __pMPL:                          ; static: _pMPL
+    000000D4 00000004               .RES.L      1
+    000000D8              __pMPF:                          ; static: _pMPF
+    000000D8 00000004               .RES.L      13
+    0000010C              __pCYC:                          ; static: _pCYC
+    0000010C 00000004               .RES.L      2
+    00000114              __pALM:                          ; static: _pALM
+    00000114 00000004               .RES.L      9
+    00000138              __pDTQ:                          ; static: _pDTQ
+    00000138 00000004               .RES.L      3
+    00000144              __pMTX:                          ; static: _pMTX
+    00000144 00000004               .RES.L      1
+    00000148              __pISR:                          ; static: _pISR
+    00000148 00000004               .RES.L      1
+    0000014C              __pSVC:                          ; static: _pSVC
+    0000014C 00000004               .RES.L      8
+    0000016C              _SYSCK:                          ; static: SYSCK
+    0000016C 00000004               .RES.L      2
+    00000174              _IMASK:                          ; static: IMASK
+    00000174 00000002               .RES.W      1
+    00000176              _IDLCNT:                         ; static: IDLCNT
+    00000176 00000002               .RES.W      1
+    00000178              _SYSTCB:                         ; static: SYSTCB
+    00000178 00000004               .RES.L      5
+    0000018C              _SYSER:                          ; static: SYSER
+    0000018C 00000004               .RES.L      1
+    00000190              _NOWPRI:                         ; static: NOWPRI
+    00000190 00000001               .RES.B      1
+    00000191              _DELAY:                          ; static: DELAY
+    00000191 00000001               .RES.B      1
+    00000192              _INEST:                          ; static: INEST
+    00000192 00000001               .RES.B      1
+    00000193              _DDISP:                          ; static: DDISP
+    00000193 00000001               .RES.B      1
+    00000194              _SDISP:                          ; static: SDISP
+    00000194 00000001               .RES.B      1
+    00000195              _TMREQ:                          ; static: TMREQ
+    00000195 00000001               .RES.B      1
+    00000196              _PREVTSK:                        ; static: PREVTSK
+    00000196 00000001               .RES.B      1
+    00000197              _APLPRI:                         ; static: APLPRI
+    00000197 00000001               .RES.B      1
+    00000198              _TMQMS:                          ; static: TMQMS
+    00000198 00000001               .RES.B      1
+    00000199              _CHQMS:                          ; static: CHQMS
+    00000199 00000001               .RES.B      1
+    0000019A              _AHQMS:                          ; static: AHQMS
+    0000019A 00000001               .RES.B      1
+    0000019B 00000001               .RES.B      1
+    0000019C              _CTXPTN:                         ; static: CTXPTN
+    0000019C 00000004               .RES.L      1
+    000001A0              _CTXPTR:                         ; static: CTXPTR
+    000001A0 00000004               .RES.L      1
+    000001A4              _WID:                            ; static: WID
+    000001A4 00000004               .RES.L      1
+    000001A8              _ISP:                            ; static: ISP
+    000001A8 00000004               .RES.L      1
+    000001AC              _SYSTOP:                         ; static: SYSTOP
+    000001AC 00000004               .RES.L      1
+    000001B0              _MPLTOP:                         ; static: MPLTOP
+    000001B0 00000004               .RES.L      1
+    000001B4              _STKTOP:                         ; static: STKTOP
+    000001B4 00000004               .RES.L      1
+    000001B8              _RDQ:                            ; static: RDQ
+    000001B8 00000001               .RES.B      10
+    000001C2              _TMQ:                            ; static: TMQ
+    000001C2 00000001               .RES.B      1
+    000001C3              _CHQ:                            ; static: CHQ
+    000001C3 00000001               .RES.B      1
+    000001C4              _AHQ:                            ; static: AHQ
+    000001C4 00000001               .RES.B      1
+    000001C5 00000001               .RES.B      1
+    000001C6 00000002               .RES.W      1
+    000001C8              __kernel_dcall:                  ; static: _kernel_dcall
+    000001C8 00000004               .RES.L      1
+    000001CC              __kernel_mbxfr:                  ; static: _kernel_mbxfr
+    000001CC 00000004               .RES.L      1
+    000001D0              __kernel_rdv_seqno:              ; static: _kernel_rdv_seqno
+    000001D0 00000004               .RES.L      1
+    000001D4              __kernel_ovrisr:                 ; static: _kernel_ovrisr
+    000001D4 00000004               .RES.L      4
+    000001E4              __kernel_ovr:                    ; static: _kernel_ovr
+    000001E4 00000004               .RES.L      3
+    000001F0              __kernel_clk:                    ; static: _kernel_clk
+    000001F0 00000004               .RES.L      2
+    000001F8              _NOWFPU:                         ; static: NOWFPU
+    000001F8 00000004               .RES.L      1
+SH SERIES C/C++ Compiler (V.9.04.03.000)                                                         07-Sep-2023 14:07:49  PAGE    1
+
+
+******** STATISTICS INFORMATION ********
+
+
+********** ERROR INFORMATION ***********
+
+NUMBER OF ERRORS:           0
+NUMBER OF WARNINGS:         0
+
+
+
+
+******* SOURCE LINE INFORMATION ********
+
+COMPILED SOURCE LINE:      309
+
+
+
+******* SECTION SIZE INFORMATION *******
+
+PROGRAM  SECTION (P):                                 00000764 Byte(s)
+CONSTANT SECTION (C):                                 000007F6 Byte(s)
+DATA     SECTION (D):                                 00000050 Byte(s)
+BSS      SECTION (B):                                 000001FC Byte(s)
+
+TOTAL PROGRAM  SECTION: 00000764 Byte(s)
+TOTAL CONSTANT SECTION: 000007F6 Byte(s)
+TOTAL DATA     SECTION: 00000050 Byte(s)
+TOTAL BSS      SECTION: 000001FC Byte(s)
+
+    TOTAL PROGRAM SIZE: 000011A6 Byte(s)
+
+
+
+********** LABEL INFORMATION ***********
+
+NUMBER OF EXTERNAL REFERENCE SYMBOLS:           34
+NUMBER OF EXTERNAL DEFINITION SYMBOLS:         124
+NUMBER OF INTERNAL/EXTERNAL SYMBOLS:           310
+
+
+
+*** COMMAND PARAMETER ***
+
+-subcommand=C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene_Hew\ROM_Big\main.shc
+-cpu=sh2a
+-include="C:\NORTi\INC","C:\NORTi\INC\Dummy","C:\NORTi\INC","C:\NORTi\LIB"
+-object="C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene_Hew\ROM_Big\main.obj"
+-debug
+-listfile="C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene_Hew\ROM_Big\main.lst"
+-show=source,tab=4
+-gbr=auto
+-chgincpath
+-errorpath
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\main.c"
+-global_volatile=0
+-opt_range=all
+-infinite_loop=0
+-del_vacant_loop=0
+-struct_alloc=1
+-lang=c
+-nologo

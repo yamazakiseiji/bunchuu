@@ -1,0 +1,826 @@
+SH SERIES C/C++ Compiler (V.9.04.03.000)                                                         07-Sep-2023 20:41:36  PAGE    1
+
+************ OBJECT LISTING ************
+
+FILE NAME: C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskmotact.c
+
+SCT OFFSET   CODE       C LABEL     INSTRUCTION OPERAND    COMMENT
+
+           tskmotact.          1    /******************************************************************************
+           tskmotact.          2    * モータ制御タスク                                                            *
+           tskmotact.          3    *                                                                             *
+           tskmotact.          4    * File name : tskmot.c                                                        *
+           tskmotact.          5    *                                                                             *
+           tskmotact.          6    * Copyright (c) 2018 NICHIRYO Co., Ltd.                                       *
+           tskmotact.          7    *                                                                             *
+           tskmotact.          8    ******************************************************************************/
+           tskmotact.          9    #include <kernel.h>
+           tskmotact.         10    #include "sh7237.h"
+           tskmotact.         11    #include "iodefine.h"
+           tskmotact.         12    #include "define.h"
+           tskmotact.         13    #include "datastruct.h"
+           tskmotact.         14    #include "tskcmd.h"
+           tskmotact.         15    #include "tskmotact.h"
+           tskmotact.         16    #include "mnet.h"
+           tskmotact.         17    #include "sub.h"
+           tskmotact.         18    #include "tblchr.h"
+           tskmotact.         19    #include "automachine.h"
+           tskmotact.         20    
+           tskmotact.         21    
+           tskmotact.         22    //*************************************
+           tskmotact.         23    // 内部関数
+           tskmotact.         24    //*************************************
+           tskmotact.         25    static void MotActInit();                     // モータ状態初期化
+           tskmotact.         26    static ER MotActProc ( T_CMD_MSG* mrcv );
+           tskmotact.         27    static ER MotActDummy( T_CMD_MSG* mrcv );
+           tskmotact.         28    static ER MotActMove ( T_CMD_MSG* mrcv );
+           tskmotact.         29    static ER MotActMAP  ( T_CMD_MSG* mrcv );
+           tskmotact.         30    static ER MotActSTOP ( T_CMD_MSG* mrcv );
+           tskmotact.         31    
+           tskmotact.         32    
+           tskmotact.         33    //*************************************
+           tskmotact.         34    // データ定義
+           tskmotact.         35    //*************************************
+           tskmotact.         36    static    UB                  bufwk[CMD_BUFSIZ];                          // 
+           tskmotact.         37    static    ST_MOTOR_STATUS     sts;                                        // 
+           tskmotact.         38    
+           tskmotact.         39    
+           tskmotact.         40    /******************************************************************************
+           tskmotact.         41    * 
+           tskmotact.         42    * [概要]  モータ制御タスク
+           tskmotact.         43    * [引数]  
+           tskmotact.         44    * [戻値]  
+           tskmotact.         45    * 
+           tskmotact.         46    ******************************************************************************/
+           tskmotact.         47    TASK TskMotAct( void )
+P   00000000              _TskMotAct:                      ; function: TskMotAct
+                                                           ; frame size=4
+    00000000 7FFC                   ADD         #-4,R15
+           tskmotact.         48    {
+           tskmotact.         49      T_CMD_MSG*  msg;
+           tskmotact.         50      ER          err;
+           tskmotact.         51    
+           tskmotact.         52      MotActInit();
+    00000002 B010                   BSR         __$MotActInit
+    00000004 0009                   NOP
+    00000006 DC8D                   MOV.L       L59,R12    ; _v4_trcv_mbx
+    00000008 DD8D                   MOV.L       L59+4,R13  ; L61
+    0000000A DE8E                   MOV.L       L59+8,R14  ; _api_rel_mpf
+    0000000C              L11:
+           tskmotact.         53    
+           tskmotact.         54      for( ;; )
+           tskmotact.         55      {
+           tskmotact.         56            // コマンド待ち
+           tskmotact.         57          err = rcv_mbx( ID_MBX_MOTACT, (T_MSG**)&msg );
+    0000000C E6FF                   MOV         #-1,R6     ; H'FFFFFFFF
+    0000000E E409                   MOV         #9,R4      ; H'00000009
+    00000010 4C0B                   JSR         @R12
+    00000012 65F3                   MOV         R15,R5
+           tskmotact.         58    
+           tskmotact.         59          // モータ動作処理
+           tskmotact.         60          err = MotActProc(msg);
+    00000014 B013                   BSR         __$MotActProc
+    00000016 64F2                   MOV.L       @R15,R4    ; msg
+    00000018 67F2                   MOV.L       @R15,R7    ; msg
+           tskmotact.         61    
+           tskmotact.         62          // メモリ解放
+           tskmotact.         63          RelMpf( ID_MPF_MOTACT, (VP)msg );
+    0000001A E608                   MOV         #8,R6      ; H'00000008
+    0000001C E53F                   MOV         #63,R5     ; H'0000003F
+    0000001E 4E0B                   JSR         @R14
+    00000020 64D3                   MOV         R13,R4
+    00000022 AFF3                   BRA         L11
+    00000024 0009                   NOP
+           tskmotact.         64      }
+           tskmotact.         65    }
+           tskmotact.         66    /******************************************************************************
+           tskmotact.         67    * 
+           tskmotact.         68    * [概要]  モータ状態初期化
+           tskmotact.         69    * [引数]  
+           tskmotact.         70    * [戻値]  
+           tskmotact.         71    * 
+           tskmotact.         72    ******************************************************************************/
+           tskmotact.         73    static void MotActInit()
+    00000026              __$MotActInit:                   ; function: __$MotActInit
+                                                           ; frame size=4
+    00000026 4F22                   STS.L       PR,@-R15
+    00000028 E63C                   MOV         #60,R6     ; H'0000003C
+           tskmotact.         74    {
+           tskmotact.         75      memset( &bufwk,   CLR,    sizeof( bufwk ) );
+    0000002A D487                   MOV.L       L59+12,R4  ; __$bufwk
+    0000002C D187                   MOV.L       L59+16,R1  ; _memset
+    0000002E 410B                   JSR         @R1
+    00000030 E500                   MOV         #0,R5      ; H'00000000
+    00000032 E618                   MOV         #24,R6     ; H'00000018
+    00000034 E500                   MOV         #0,R5      ; H'00000000
+           tskmotact.         76      memset( &sts,     CLR,    sizeof( ST_MOTOR_STATUS ) );
+    00000036 D486                   MOV.L       L59+20,R4  ; __$sts
+    00000038 D784                   MOV.L       L59+16,R7  ; _memset
+    0000003A 472B                   JMP         @R7
+    0000003C 4F26                   LDS.L       @R15+,PR
+           tskmotact.         77    }
+           tskmotact.         78    /***********************************************************************
+           tskmotact.         79    * 
+           tskmotact.         80    * [概要]  コマンドの解析
+           tskmotact.         81    * [引数]  data:コマンドリクエスト電文
+           tskmotact.         82    * [戻値]  －
+           tskmotact.         83    * 
+           tskmotact.         84    ***********************************************************************/
+           tskmotact.         85    static ER MotActProc( T_CMD_MSG* mrcv )
+    0000003E              __$MotActProc:                   ; function: __$MotActProc
+                                                           ; frame size=12
+    0000003E 4DF0                   MOVMU.L     R13,@-R15
+    00000040 3D41801B               MOVU.B      @(27,R4),R13; (mrcv)->msgid
+    00000044 E22D                   MOV         #45,R2     ; H'0000002D
+           tskmotact.         86    {
+           tskmotact.         87      ER      err = E_SUCCESS;
+           tskmotact.         88      UB      msg;
+           tskmotact.         89    
+           tskmotact.         90      msg = mrcv->msgdata.msgid;
+           tskmotact.         91    
+           tskmotact.         92      if( ( msg >= ID_MSG_HELLO ) && ( msg <= ID_MSG_BASE_CMD_MAX  ))
+    00000046 3D27                   CMP/GT      R2,R13
+    00000048 8D1E                   BT/S        L24
+    0000004A 6E43                   MOV         R4,R14
+    0000004C E618                   MOV         #24,R6     ; H'00000018
+           tskmotact.         93      {
+           tskmotact.         94          // コールファンクション
+           tskmotact.         95          memset( &sts,   CLR,  sizeof( ST_MOTOR_STATUS ) );
+    0000004E D480                   MOV.L       L59+20,R4  ; __$sts
+    00000050 D17E                   MOV.L       L59+16,R1  ; _memset
+    00000052 410B                   JSR         @R1
+    00000054 E500                   MOV         #0,R5      ; H'00000000
+           tskmotact.         96          memcpy( &bufwk[0], &mrcv->msgdata.data[0],CMD_BUFSIZ );
+    00000056 65E3                   MOV         R14,R5
+    00000058 7524                   ADD         #36,R5
+    0000005A D47B                   MOV.L       L59+12,R4  ; __$bufwk
+    0000005C D77D                   MOV.L       L59+24,R7  ; _memcpy
+    0000005E 470B                   JSR         @R7
+    00000060 E63C                   MOV         #60,R6     ; H'0000003C
+           tskmotact.         97    
+           tskmotact.         98          switch( msg )
+    00000062 60D3                   MOV         R13,R0
+    00000064 8809                   CMP/EQ      #9,R0
+    00000066 8905                   BT          L26
+    00000068 880C                   CMP/EQ      #12,R0
+    0000006A 8903                   BT          L26
+    0000006C 880D                   CMP/EQ      #13,R0
+    0000006E 8901                   BT          L26
+    00000070 8811                   CMP/EQ      #17,R0
+    00000072 8B03                   BF          L29
+    00000074              L26:
+           tskmotact.         99          {
+           tskmotact.        100              case ID_MSG_ABSMV :
+           tskmotact.        101              case ID_MSG_LIMIT :
+           tskmotact.        102              case ID_MSG_MAP   :
+           tskmotact.        103              case ID_MSG_RELMV :
+           tskmotact.        104                  MotActMove( mrcv );
+    00000074 B00B                   BSR         __$MotActMove
+    00000076 64E3                   MOV         R14,R4
+    00000078 A006                   BRA         L24
+    0000007A 0009                   NOP
+    0000007C              L29:
+    0000007C 880A                   CMP/EQ      #10,R0
+    0000007E 8901                   BT          L31
+    00000080 8814                   CMP/EQ      #20,R0
+    00000082 8B01                   BF          L24
+    00000084              L31:
+           tskmotact.        105                  break;
+           tskmotact.        106    
+           tskmotact.        107              case ID_MSG_ABORT :
+           tskmotact.        108              case ID_MSG_STOP  :
+           tskmotact.        109                  MotActSTOP( mrcv );
+    00000084 B0BC                   BSR         __$MotActSTOP
+    00000086 64E3                   MOV         R14,R4
+    00000088              L24:
+           tskmotact.        110                  break;
+           tskmotact.        111              default:
+           tskmotact.        112                  break;
+           tskmotact.        113          }
+           tskmotact.        114      }
+           tskmotact.        115    
+           tskmotact.        116      return( err );
+    00000088 E000                   MOV         #0,R0      ; H'00000000
+    0000008A 4DF4                   MOVMU.L     @R15+,R13
+           tskmotact.        117    }
+    0000008C 006B                   RTS/N
+           tskmotact.        118    
+           tskmotact.        119    /***********************************************************************
+           tskmotact.        120    * 
+           tskmotact.        121    * [概要]  ダミールーチン
+           tskmotact.        122    * [引数]  cmd:コマンドリクエスト電文
+           tskmotact.        123    * [戻値]  －
+           tskmotact.        124    * 
+           tskmotact.        125    ***********************************************************************/
+           tskmotact.        126    static ER MotActDummy( T_CMD_MSG* mrcv )
+           tskmotact.        127    {
+           tskmotact.        128      // 必要であればエラー出力
+           tskmotact.        129      return(E_SYS_FNCCAL);
+           tskmotact.        130    }
+           tskmotact.        131    static    UB      prid1;
+           tskmotact.        132    static    UB      bcid;
+           tskmotact.        133    static    UB      msg;
+           tskmotact.        134    
+           tskmotact.        135    /***********************************************************************
+           tskmotact.        136    *
+           tskmotact.        137    * [概要]  移動動作[ ABSMV,RELMV, LIMIT, MAP ]
+           tskmotact.        138    * [引数]  ｺﾏﾝﾄﾞ電文引数ﾃﾞｰﾀ
+           tskmotact.        139    * [戻値]  -
+           tskmotact.        140    * 
+           tskmotact.        141    ***********************************************************************/
+           tskmotact.        142    static ER MotActMove  ( T_CMD_MSG* mrcv )
+    0000008E              __$MotActMove:                   ; function: __$MotActMove
+                                                           ; frame size=376
+    0000008E 49F0                   MOVMU.L     R9,@-R15
+    00000090 03F0FECC               MOVI20      #-308,R3   ; H'FFFFFECC
+    00000094 3F3C                   ADD         R3,R15
+    00000096 E608                   MOV         #8,R6      ; H'00000008
+    00000098 E500                   MOV         #0,R5      ; H'00000000
+           tskmotact.        143    {
+           tskmotact.        144      ER      result = E_SUCCESS;
+           tskmotact.        145      UB      mm = 0;
+           tskmotact.        146      UB      mmpare = 0;
+           tskmotact.        147      ST_ABSMV        absmv;
+           tskmotact.        148      ST_LIMIT        limit;
+           tskmotact.        149      ST_RELMV        relmv;
+           tskmotact.        150      ST_CNTLDATA     msgdat;                                             // 実行タスク制御用ﾃﾞｰﾀ
+           tskmotact.        151    
+           tskmotact.        152      memset( &absmv, CLR,  sizeof( ST_ABSMV ) );                         // 初期化
+    0000009A 6E43                   MOV         R4,R14
+    0000009C D16B                   MOV.L       L59+16,R1  ; _memset
+    0000009E 410B                   JSR         @R1
+    000000A0 64F3                   MOV         R15,R4
+           tskmotact.        153      prid1 = mrcv->msgdata.prid1;                                        // 
+    000000A2 35E14018               MOV.B       @(24:12,R14),R5; (mrcv)->prid1
+    000000A6 D96C                   MOV.L       L59+28,R9  ; __$prid1
+    000000A8 2950                   MOV.B       R5,@R9     ; prid1
+           tskmotact.        154      bcid = mrcv->msgdata.bcid;                                          // ＢＣＩＤ取得
+    000000AA 37E1401A               MOV.B       @(26:12,R14),R7; (mrcv)->bcid
+    000000AE D16B                   MOV.L       L59+32,R1  ; __$bcid
+    000000B0 2170                   MOV.B       R7,@R1     ; bcid
+           tskmotact.        155      msg = mrcv->msgdata.msgid;                                          // メッセージＩＤ取得
+    000000B2 30E1801B               MOVU.B      @(27,R14),R0; (mrcv)->msgid
+    000000B6 DA6A                   MOV.L       L59+36,R10 ; __$msg
+    000000B8 2A00                   MOV.B       R0,@R10    ; msg
+           tskmotact.        156      mm     = mrcv->msgdata.inf;                                         // モータ取得
+           tskmotact.        157      mmpare = mrcv->msgdata.inf2;                                        // モータ取得
+           tskmotact.        158    
+           tskmotact.        159      switch(msg)
+    000000BA 8809                   CMP/EQ      #9,R0
+    000000BC 3DE1401C               MOV.B       @(28:12,R14),R13; (mrcv)->inf
+    000000C0 3BE1801D               MOVU.B      @(29,R14),R11; (mrcv)->inf2
+    000000C4 8907                   BT          L41
+    000000C6 880C                   CMP/EQ      #12,R0
+    000000C8 8916                   BT          L43
+    000000CA 8811                   CMP/EQ      #17,R0
+    000000CC 8928                   BT          L45
+    000000CE 880D                   CMP/EQ      #13,R0
+    000000D0 8938                   BT          L46
+    000000D2 A079                   BRA         L47
+    000000D4 0009                   NOP
+    000000D6              L41:
+           tskmotact.        160      {
+           tskmotact.        161      case ID_MSG_ABSMV:
+           tskmotact.        162          memcpy( &absmv, &bufwk[0], sizeof(ST_ABSMV) );                  // memcpy(コピー先アドレス、コピー元アドレス、コピーサイズ)
+    000000D6 D55C                   MOV.L       L59+12,R5  ; __$bufwk
+    000000D8 E608                   MOV         #8,R6      ; H'00000008
+    000000DA 6C53                   MOV         R5,R12
+    000000DC D75D                   MOV.L       L59+24,R7  ; _memcpy
+    000000DE 470B                   JSR         @R7
+    000000E0 64F3                   MOV         R15,R4
+           tskmotact.        163    
+           tskmotact.        164          result = motor_ABSMV( absmv.mm, absmv.pppp, absmv.st );         // 絶対値移動
+    000000E2 36F18001               MOVU.B      @(1,R15),R6; absmv.st
+    000000E6 34F18000               MOVU.B      @(0,R15),R4; absmv.mm
+    000000EA D15E                   MOV.L       L59+40,R1  ; _motor_ABSMV
+    000000EC 410B                   JSR         @R1
+    000000EE 55F1                   MOV.L       @(4,R15),R5; absmv.pppp
+           tskmotact.        165          mm = absmv.mm;
+    000000F0 3DF14000               MOV.B       @(0:12,R15),R13; absmv.mm
+    000000F4 A034                   BRA         L48
+    000000F6 6E03                   MOV         R0,R14
+    000000F8              L43:
+           tskmotact.        166    
+           tskmotact.        167          break;
+           tskmotact.        168    
+           tskmotact.        169      case ID_MSG_LIMIT:
+           tskmotact.        170          memcpy( &limit, &bufwk[0], sizeof(ST_LIMIT) );
+    000000F8 D553                   MOV.L       L59+12,R5  ; __$bufwk
+    000000FA 64F3                   MOV         R15,R4
+    000000FC 7408                   ADD         #8,R4
+    000000FE E608                   MOV         #8,R6      ; H'00000008
+    00000100 D754                   MOV.L       L59+24,R7  ; _memcpy
+    00000102 470B                   JSR         @R7
+    00000104 6C53                   MOV         R5,R12
+           tskmotact.        171    
+           tskmotact.        172          result = motor_LIMIT(
+           tskmotact.        173                                  limit.mm,
+           tskmotact.        174                                  limit.dr,
+           tskmotact.        175                                  limit.md,
+           tskmotact.        176                                  limit.sp
+           tskmotact.        177                              );                                          // リミット位置移動
+    00000106 36F1800A               MOVU.B      @(10,R15),R6; limit.md
+    0000010A 35F18009               MOVU.B      @(9,R15),R5; limit.dr
+    0000010E 34F18008               MOVU.B      @(8,R15),R4; limit.mm
+    00000112 D155                   MOV.L       L59+44,R1  ; _motor_LIMIT
+    00000114 410B                   JSR         @R1
+    00000116 57F3                   MOV.L       @(12,R15),R7; limit.sp
+           tskmotact.        178          mm = limit.mm;
+    00000118 3DF14008               MOV.B       @(8:12,R15),R13; limit.mm
+    0000011C A020                   BRA         L48
+    0000011E 6E03                   MOV         R0,R14
+    00000120              L45:
+           tskmotact.        179          break;
+           tskmotact.        180    
+           tskmotact.        181      case ID_MSG_RELMV:
+           tskmotact.        182          memcpy( &relmv, &bufwk[0], sizeof(ST_RELMV) );
+    00000120 D549                   MOV.L       L59+12,R5  ; __$bufwk
+    00000122 64F3                   MOV         R15,R4
+    00000124 7410                   ADD         #16,R4
+    00000126 E608                   MOV         #8,R6      ; H'00000008
+    00000128 D74A                   MOV.L       L59+24,R7  ; _memcpy
+    0000012A 470B                   JSR         @R7
+    0000012C 6C53                   MOV         R5,R12
+           tskmotact.        183    
+           tskmotact.        184          result = motor_RELMV( relmv.mm, relmv.pppp, relmv.st );         // 相対値移動
+    0000012E 36F18011               MOVU.B      @(17,R15),R6; relmv.st
+    00000132 34F18010               MOVU.B      @(16,R15),R4; relmv.mm
+    00000136 D14D                   MOV.L       L59+48,R1  ; _motor_RELMV
+    00000138 410B                   JSR         @R1
+    0000013A 55F5                   MOV.L       @(20,R15),R5; relmv.pppp
+           tskmotact.        185          mm = relmv.mm;
+    0000013C 3DF14010               MOV.B       @(16:12,R15),R13; relmv.mm
+    00000140 A00E                   BRA         L48
+    00000142 6E03                   MOV         R0,R14
+    00000144              L46:
+           tskmotact.        186          break;
+           tskmotact.        187    
+           tskmotact.        188      case ID_MSG_MAP:
+           tskmotact.        189          memcpy( &absmv, &bufwk[0], sizeof(ST_ABSMV) );                  // memcpy(コピー先アドレス、コピー元アドレス、コピーサイズ)
+    00000144 D540                   MOV.L       L59+12,R5  ; __$bufwk
+    00000146 E608                   MOV         #8,R6      ; H'00000008
+    00000148 6C53                   MOV         R5,R12
+    0000014A DE42                   MOV.L       L59+24,R14 ; _memcpy
+    0000014C 4E0B                   JSR         @R14
+    0000014E 64F3                   MOV         R15,R4
+           tskmotact.        190    
+           tskmotact.        191          result = motor_ABSMV( absmv.mm, absmv.pppp, absmv.st );         // 絶対値移動
+    00000150 36F18001               MOVU.B      @(1,R15),R6; absmv.st
+    00000154 34F18000               MOVU.B      @(0,R15),R4; absmv.mm
+    00000158 D142                   MOV.L       L59+40,R1  ; _motor_ABSMV
+    0000015A 410B                   JSR         @R1
+    0000015C 55F1                   MOV.L       @(4,R15),R5; absmv.pppp
+    0000015E 6E03                   MOV         R0,R14
+    00000160              L48:
+           tskmotact.        192    //        mm     = mrcv->msgdata.inf;                                     // モータ取得
+           tskmotact.        193    //        mmpare = mrcv->msgdata.inf2;                                    // モータ取得
+           tskmotact.        194          break;
+           tskmotact.        195      }
+           tskmotact.        196    
+           tskmotact.        197      // エラーありか
+           tskmotact.        198      if( result != E_SUCCESS )
+    00000160 2EE8                   TST         R14,R14
+    00000162 8932                   BT          L49
+           tskmotact.        199      {
+           tskmotact.        200          motor_STATUS( mm, &sts );                                       // 状態取得
+    00000164 6CDC                   EXTU.B      R13,R12
+           tskmotact.        201    
+           tskmotact.        202          // 応答メッセージ作成
+           tskmotact.        203          CmdMakeResponse(    &msgdat,
+           tskmotact.        204                              PARAM7,                                     // パラメータ数
+           tskmotact.        205                              STRTBL_MSG[msg],                            // コマンド文字列
+           tskmotact.        206                              result,                                     // エラーコード
+           tskmotact.        207    
+           tskmotact.        208                              (INT)mm,                                    // モータ１番号
+           tskmotact.        209                              sts.pos,                                    // パルスカウント１
+           tskmotact.        210                              sts.enc,                                    // エンコーダ１
+           tskmotact.        211                              sts.cw_limit,                               // CWリミットセンサ(0:OFF,1:ON)
+           tskmotact.        212                              sts.ccw_limit,                              // CCWリミットセンサ(0:OFF,1:ON)
+           tskmotact.        213    
+           tskmotact.        214                              0,                                          // モータ２番号
+           tskmotact.        215                              0,                                          // パルスカウント２
+           tskmotact.        216                              0,                                          // エンコーダ２
+           tskmotact.        217                              0,                                          // CWリミットセンサ(0:OFF,1:ON)
+           tskmotact.        218                              0                                           // CCWリミットセンサ(0:OFF,1:ON)
+           tskmotact.        219                          );
+    00000166 EB00                   MOV         #0,R11     ; H'00000000
+    00000168 D539                   MOV.L       L59+20,R5  ; __$sts
+    0000016A D741                   MOV.L       L59+52,R7  ; _motor_STATUS
+    0000016C 470B                   JSR         @R7
+    0000016E 64C3                   MOV         R12,R4
+    00000170 2FB6                   MOV.L       R11,@-R15
+    00000172 2FB6                   MOV.L       R11,@-R15
+    00000174 2FB6                   MOV.L       R11,@-R15
+    00000176 2FB6                   MOV.L       R11,@-R15
+    00000178 2FB6                   MOV.L       R11,@-R15
+    0000017A D235                   MOV.L       L59+20,R2  ; __$sts
+    0000017C 5125                   MOV.L       @(20,R2),R1; sts.ccw_limit
+    0000017E 2F16                   MOV.L       R1,@-R15
+    00000180 5424                   MOV.L       @(16,R2),R4; sts.cw_limit
+    00000182 2F46                   MOV.L       R4,@-R15
+    00000184 5521                   MOV.L       @(4,R2),R5 ; sts.enc
+    00000186 2F56                   MOV.L       R5,@-R15
+    00000188 6722                   MOV.L       @R2,R7     ; sts.pos
+    0000018A 2F76                   MOV.L       R7,@-R15
+    0000018C 2FC6                   MOV.L       R12,@-R15
+    0000018E E507                   MOV         #7,R5      ; H'00000007
+    00000190 30A18000               MOVU.B      @(0,R10),R0; msg
+    00000194 D137                   MOV.L       L59+56,R1  ; _STRTBL_MSG
+    00000196 4008                   SHLL2       R0
+    00000198 061E                   MOV.L       @(R0,R1),R6; STRTBL_MSG[]
+    0000019A 64F3                   MOV         R15,R4
+    0000019C 7440                   ADD         #64,R4
+    0000019E DB36                   MOV.L       L59+60,R11 ; _CmdMakeResponse
+    000001A0 4B0B                   JSR         @R11
+    000001A2 67E3                   MOV         R14,R7
+    000001A4 7F28                   ADD         #40,R15
+           tskmotact.        220    
+           tskmotact.        221          // 終了通知
+           tskmotact.        222          CmdEndResponse  (
+           tskmotact.        223                              ID_TSK_MOTACT,
+           tskmotact.        224                              prid1,
+           tskmotact.        225                              bcid,
+           tskmotact.        226                              msg,
+           tskmotact.        227                              mm,
+           tskmotact.        228                              NO_DATA,
+           tskmotact.        229                              &msgdat
+           tskmotact.        230                          );
+    000001A6 6CF3                   MOV         R15,R12
+    000001A8 7C18                   ADD         #24,R12
+    000001AA 2FC6                   MOV.L       R12,@-R15
+    000001AC EBFF                   MOV         #-1,R11    ; H'FFFFFFFF
+    000001AE 6BBC                   EXTU.B      R11,R11
+    000001B0 2FB6                   MOV.L       R11,@-R15
+    000001B2 6DDC                   EXTU.B      R13,R13
+    000001B4 2FD6                   MOV.L       R13,@-R15
+    000001B6 E409                   MOV         #9,R4      ; H'00000009
+    000001B8 D128                   MOV.L       L59+32,R1  ; __$bcid
+    000001BA 6590                   MOV.B       @R9,R5     ; prid1
+    000001BC 6610                   MOV.B       @R1,R6     ; bcid
+    000001BE D22F                   MOV.L       L59+64,R2  ; _CmdEndResponse
+    000001C0 420B                   JSR         @R2
+    000001C2 67A0                   MOV.B       @R10,R7    ; msg
+    000001C4 A016                   BRA         L51
+    000001C6 7F0C                   ADD         #12,R15
+    000001C8              L47:
+    000001C8 DC1F                   MOV.L       L59+12,R12 ; __$bufwk
+    000001CA              L49:
+           tskmotact.        231      }
+           tskmotact.        232      else
+           tskmotact.        233      {
+           tskmotact.        234          result = mbx_send   (
+           tskmotact.        235                                  ID_TSK_MOTACT,
+           tskmotact.        236                                  ID_MPF_MOTEND,
+           tskmotact.        237                                  ID_MBX_MOTEND,
+           tskmotact.        238                                  prid1,
+           tskmotact.        239                                  bcid,
+           tskmotact.        240                                  msg,
+           tskmotact.        241                                  mm,
+           tskmotact.        242                                  mmpare,
+           tskmotact.        243                                  &bufwk[0],
+           tskmotact.        244                                  CMD_BUFSIZ
+           tskmotact.        245                              );
+    000001CA E43C                   MOV         #60,R4     ; H'0000003C
+    000001CC 2F46                   MOV.L       R4,@-R15
+    000001CE 2FC6                   MOV.L       R12,@-R15
+    000001D0 2FB6                   MOV.L       R11,@-R15
+    000001D2 6DDC                   EXTU.B      R13,R13
+    000001D4 2FD6                   MOV.L       R13,@-R15
+    000001D6 35A18000               MOVU.B      @(0,R10),R5; msg
+    000001DA 2F56                   MOV.L       R5,@-R15
+    000001DC D11F                   MOV.L       L59+32,R1  ; __$bcid
+    000001DE 36118000               MOVU.B      @(0,R1),R6 ; bcid
+    000001E2 2F66                   MOV.L       R6,@-R15
+    000001E4 E60A                   MOV         #10,R6     ; H'0000000A
+    000001E6 6790                   MOV.B       @R9,R7     ; prid1
+    000001E8 E509                   MOV         #9,R5      ; H'00000009
+    000001EA D225                   MOV.L       L59+68,R2  ; _mbx_send
+    000001EC 420B                   JSR         @R2
+    000001EE 6453                   MOV         R5,R4
+    000001F0 7F18                   ADD         #24,R15
+    000001F2 6E03                   MOV         R0,R14
+    000001F4              L51:
+           tskmotact.        246      }
+           tskmotact.        247    
+           tskmotact.        248      return(result);
+    000001F4 60E3                   MOV         R14,R0
+    000001F6 03000134               MOVI20      #308,R3    ; H'00000134
+    000001FA 3F3C                   ADD         R3,R15
+    000001FC 49F4                   MOVMU.L     @R15+,R9
+           tskmotact.        249    }
+    000001FE 006B                   RTS/N
+           tskmotact.        250    /***********************************************************************
+           tskmotact.        251    *
+           tskmotact.        252    * [概要]  STOP/ABORT    パルスモータ減速・即停止
+           tskmotact.        253    * [引数]  ｺﾏﾝﾄﾞ電文引数ﾃﾞｰﾀ
+           tskmotact.        254    * [戻値]  -
+           tskmotact.        255    * 
+           tskmotact.        256    ***********************************************************************/
+           tskmotact.        257    static ER MotActSTOP   ( T_CMD_MSG* mrcv )
+    00000200              __$MotActSTOP:                   ; function: __$MotActSTOP
+                                                           ; frame size=348
+    00000200 4BF0                   MOVMU.L     R11,@-R15
+    00000202 03F0FEE0               MOVI20      #-288,R3   ; H'FFFFFEE0
+    00000206 3F3C                   ADD         R3,R15
+    00000208 E604                   MOV         #4,R6      ; H'00000004
+    0000020A E500                   MOV         #0,R5      ; H'00000000
+           tskmotact.        258    {
+           tskmotact.        259      ER      result = E_SUCCESS;
+           tskmotact.        260      UB      prid1;
+           tskmotact.        261      UB      bcid;
+           tskmotact.        262      UB      msg; 
+           tskmotact.        263      ST_STOP stop;
+           tskmotact.        264      ST_CNTLDATA         msgdat;                                 // メッセージデータ
+           tskmotact.        265    
+           tskmotact.        266      
+           tskmotact.        267      memset( &stop, CLR,  sizeof( ST_STOP ) );                   // 初期化
+    0000020C 6E43                   MOV         R4,R14
+    0000020E D10F                   MOV.L       L59+16,R1  ; _memset
+    00000210 410B                   JSR         @R1
+    00000212 64F3                   MOV         R15,R4
+           tskmotact.        268      prid1 = mrcv->msgdata.prid1;                                // 
+           tskmotact.        269      bcid = mrcv->msgdata.bcid;                                  // 
+           tskmotact.        270      msg = mrcv->msgdata.msgid;                                  // メッセージＩＤ取得
+    00000214 3DE1801B               MOVU.B      @(27,R14),R13; (mrcv)->msgid
+    00000218 E604                   MOV         #4,R6      ; H'00000004
+    0000021A 3BE18018               MOVU.B      @(24,R14),R11; (mrcv)->prid1
+    0000021E 3CE1801A               MOVU.B      @(26,R14),R12; (mrcv)->bcid
+           tskmotact.        271    
+           tskmotact.        272      // memcpy(コピー先アドレス、コピー元アドレス、コピーサイズ)
+           tskmotact.        273      memcpy( &stop, &bufwk[0], sizeof(ST_STOP) );
+    00000222 D509                   MOV.L       L59+12,R5  ; __$bufwk
+    00000224 D70B                   MOV.L       L59+24,R7  ; _memcpy
+    00000226 470B                   JSR         @R7
+    00000228 64F3                   MOV         R15,R4
+           tskmotact.        274    
+           tskmotact.        275      if( msg == ID_MSG_ABORT )
+    0000022A 60D3                   MOV         R13,R0
+    0000022C 880A                   CMP/EQ      #10,R0
+    0000022E 34F18000               MOVU.B      @(0,R15),R4; stop.mm
+    00000232 8B29                   BF          L54
+           tskmotact.        276      {
+           tskmotact.        277          result = motor_ABORT( stop.mm );                        // 即停止
+    00000234 D213                   MOV.L       L59+72,R2  ; _motor_ABORT
+    00000236 424B                   JSR/N       @R2
+    00000238 A028                   BRA         L55
+    0000023A 0009                   NOP
+    0000023C              L59:
+    0000023C <00000000>             .DATA.L     _v4_trcv_mbx
+    00000240 <00000000>             .DATA.L     L61
+    00000244 <00000000>             .DATA.L     _api_rel_mpf
+    00000248 <00000000>             .DATA.L     __$bufwk
+    0000024C <00000000>             .DATA.L     _memset
+    00000250 <00000000>             .DATA.L     __$sts
+    00000254 <00000000>             .DATA.L     _memcpy
+    00000258 <00000000>             .DATA.L     __$prid1
+    0000025C <00000000>             .DATA.L     __$bcid
+    00000260 <00000000>             .DATA.L     __$msg
+    00000264 <00000000>             .DATA.L     _motor_ABSMV
+    00000268 <00000000>             .DATA.L     _motor_LIMIT
+    0000026C <00000000>             .DATA.L     _motor_RELMV
+    00000270 <00000000>             .DATA.L     _motor_STATUS
+    00000274 <00000000>             .DATA.L     _STRTBL_MSG
+    00000278 <00000000>             .DATA.L     _CmdMakeResponse
+    0000027C <00000000>             .DATA.L     _CmdEndResponse
+    00000280 <00000000>             .DATA.L     _mbx_send
+    00000284 <00000000>             .DATA.L     _motor_ABORT
+    00000288              L54:
+           tskmotact.        278      }
+           tskmotact.        279      else
+           tskmotact.        280      {
+           tskmotact.        281          result = motor_STOP( stop.mm );                         // 減速停止
+    00000288 D229                   MOV.L       L60,R2     ; _motor_STOP
+    0000028A 424B                   JSR/N       @R2
+    0000028C              L55:
+    0000028C 2008                   TST         R0,R0
+           tskmotact.        282      }
+           tskmotact.        283    
+           tskmotact.        284      // エラーありか
+           tskmotact.        285      if( result != E_SUCCESS )
+    0000028E 8D34                   BT/S        L57
+    00000290 6E03                   MOV         R0,R14
+    00000292 34F18000               MOVU.B      @(0,R15),R4; stop.mm
+           tskmotact.        286      {
+           tskmotact.        287          motor_STATUS( stop.mm, &sts );                          // 状態取得
+    00000296 D527                   MOV.L       L60+4,R5   ; __$sts
+    00000298 D127                   MOV.L       L60+8,R1   ; _motor_STATUS
+    0000029A 414B                   JSR/N       @R1
+           tskmotact.        288    
+           tskmotact.        289          // 応答メッセージ作成
+           tskmotact.        290          CmdMakeResponse(    &msgdat,
+           tskmotact.        291                              PARAM7,                             // パラメータ数
+           tskmotact.        292                              STRTBL_MSG[msg],                    // コマンド文字列
+           tskmotact.        293                              result,                             // エラーコード
+           tskmotact.        294    
+           tskmotact.        295                              stop.mm,                            // モータ１番号
+           tskmotact.        296                              sts.pos,                            // パルスカウント１
+           tskmotact.        297                              sts.enc,                            // エンコーダ１
+           tskmotact.        298                              sts.cw_limit,                       // CWリミットセンサ(0:OFF,1:ON)
+           tskmotact.        299                              sts.ccw_limit,                      // CCWリミットセンサ(0:OFF,1:ON)
+           tskmotact.        300    
+           tskmotact.        301                              0,                                  // モータ２番号
+           tskmotact.        302                              0,                                  // パルスカウント２
+           tskmotact.        303                              0,                                  // エンコーダ２
+           tskmotact.        304                              0,                                  // CWリミットセンサ(0:OFF,1:ON)
+           tskmotact.        305                              0                                   // CCWリミットセンサ(0:OFF,1:ON)
+           tskmotact.        306                          );
+    0000029C E400                   MOV         #0,R4      ; H'00000000
+    0000029E 2F46                   MOV.L       R4,@-R15
+    000002A0 2F46                   MOV.L       R4,@-R15
+    000002A2 2F46                   MOV.L       R4,@-R15
+    000002A4 2F46                   MOV.L       R4,@-R15
+    000002A6 2F46                   MOV.L       R4,@-R15
+    000002A8 D222                   MOV.L       L60+4,R2   ; __$sts
+    000002AA 5525                   MOV.L       @(20,R2),R5; sts.ccw_limit
+    000002AC 2F56                   MOV.L       R5,@-R15
+    000002AE 5724                   MOV.L       @(16,R2),R7; sts.cw_limit
+    000002B0 2F76                   MOV.L       R7,@-R15
+    000002B2 5121                   MOV.L       @(4,R2),R1 ; sts.enc
+    000002B4 2F16                   MOV.L       R1,@-R15
+    000002B6 6422                   MOV.L       @R2,R4     ; sts.pos
+    000002B8 2F46                   MOV.L       R4,@-R15
+    000002BA 37F18024               MOVU.B      @(36,R15),R7; stop.mm
+    000002BE 2F76                   MOV.L       R7,@-R15
+    000002C0 60D3                   MOV         R13,R0
+    000002C2 D21E                   MOV.L       L60+12,R2  ; _STRTBL_MSG
+    000002C4 4008                   SHLL2       R0
+    000002C6 E507                   MOV         #7,R5      ; H'00000007
+    000002C8 062E                   MOV.L       @(R0,R2),R6; STRTBL_MSG[]
+    000002CA 64F3                   MOV         R15,R4
+    000002CC 742C                   ADD         #44,R4
+    000002CE D11C                   MOV.L       L60+16,R1  ; _CmdMakeResponse
+    000002D0 410B                   JSR         @R1
+    000002D2 67E3                   MOV         R14,R7
+    000002D4 7F28                   ADD         #40,R15
+           tskmotact.        307    
+           tskmotact.        308          
+           tskmotact.        309          // 終了通知(→TskCmd)
+           tskmotact.        310          CmdEndResponse  (
+           tskmotact.        311                              ID_TSK_MOTACT,
+           tskmotact.        312                              prid1,
+           tskmotact.        313                              bcid,
+           tskmotact.        314                              msg,
+           tskmotact.        315                              stop.mm,
+           tskmotact.        316                              NO_DATA,
+           tskmotact.        317                              &msgdat
+           tskmotact.        318                          );
+    000002D6 62F3                   MOV         R15,R2
+    000002D8 7204                   ADD         #4,R2
+    000002DA 2F26                   MOV.L       R2,@-R15
+    000002DC E6FF                   MOV         #-1,R6     ; H'FFFFFFFF
+    000002DE 666C                   EXTU.B      R6,R6
+    000002E0 2F66                   MOV.L       R6,@-R15
+    000002E2 7FFC                   ADD         #-4,R15
+    000002E4 E409                   MOV         #9,R4      ; H'00000009
+    000002E6 32F1800C               MOVU.B      @(12,R15),R2; stop.mm
+    000002EA 65B3                   MOV         R11,R5
+    000002EC 2F22                   MOV.L       R2,@R15
+    000002EE 66C3                   MOV         R12,R6
+    000002F0 D214                   MOV.L       L60+20,R2  ; _CmdEndResponse
+    000002F2 420B                   JSR         @R2
+    000002F4 67D3                   MOV         R13,R7
+    000002F6 A015                   BRA         L58
+    000002F8 7F0C                   ADD         #12,R15
+    000002FA              L57:
+           tskmotact.        319      }
+           tskmotact.        320      else
+           tskmotact.        321      {
+           tskmotact.        322          result = mbx_send   (
+           tskmotact.        323                                  ID_TSK_MOTACT,
+           tskmotact.        324                                  ID_MPF_MOTEND,
+           tskmotact.        325                                  ID_MBX_MOTEND,
+           tskmotact.        326                                  prid1,
+           tskmotact.        327                                  bcid,
+           tskmotact.        328                                  msg,
+           tskmotact.        329                                  stop.mm,
+           tskmotact.        330                                  NO_DATA,
+           tskmotact.        331                                  &bufwk[0],
+           tskmotact.        332                                  CMD_BUFSIZ
+           tskmotact.        333                              );
+    000002FA EE3C                   MOV         #60,R14    ; H'0000003C
+    000002FC 2FE6                   MOV.L       R14,@-R15
+    000002FE D112                   MOV.L       L60+24,R1  ; __$bufwk
+    00000300 2F16                   MOV.L       R1,@-R15
+    00000302 E2FF                   MOV         #-1,R2     ; H'FFFFFFFF
+    00000304 622C                   EXTU.B      R2,R2
+    00000306 2F26                   MOV.L       R2,@-R15
+    00000308 7FFC                   ADD         #-4,R15
+    0000030A 31F18010               MOVU.B      @(16,R15),R1; stop.mm
+    0000030E 2F12                   MOV.L       R1,@R15
+    00000310 2FD6                   MOV.L       R13,@-R15
+    00000312 2FC6                   MOV.L       R12,@-R15
+    00000314 E60A                   MOV         #10,R6     ; H'0000000A
+    00000316 E509                   MOV         #9,R5      ; H'00000009
+    00000318 67B3                   MOV         R11,R7
+    0000031A D20C                   MOV.L       L60+28,R2  ; _mbx_send
+    0000031C 420B                   JSR         @R2
+    0000031E 6453                   MOV         R5,R4
+    00000320 7F18                   ADD         #24,R15
+    00000322 6E03                   MOV         R0,R14
+    00000324              L58:
+           tskmotact.        334      }
+           tskmotact.        335      return(result);
+    00000324 60E3                   MOV         R14,R0
+    00000326 03000120               MOVI20      #288,R3    ; H'00000120
+    0000032A 3F3C                   ADD         R3,R15
+    0000032C 4BF4                   MOVMU.L     @R15+,R11
+           tskmotact.        336    }
+    0000032E 006B                   RTS/N
+    00000330              L60:
+    00000330 <00000000>             .DATA.L     _motor_STOP
+    00000334 <00000000>             .DATA.L     __$sts
+    00000338 <00000000>             .DATA.L     _motor_STATUS
+    0000033C <00000000>             .DATA.L     _STRTBL_MSG
+    00000340 <00000000>             .DATA.L     _CmdMakeResponse
+    00000344 <00000000>             .DATA.L     _CmdEndResponse
+    00000348 <00000000>             .DATA.L     __$bufwk
+    0000034C <00000000>             .DATA.L     _mbx_send
+C   00000000              L61:
+    00000000 433A5C576F             .SDATA      "C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskmotact.c"
+             726B537061   
+             63655C5175   
+             69636B4765   
+             6E655C536F   
+             66745F4669   
+             726D5C5175   
+             69636B4765   
+             6E655F5072   
+             6F6A656374   
+             5C74736B6D   
+             6F74616374   
+             2E63         
+    0000003E 00                     .DATA.B     H'00
+B   00000000              __$bufwk:                        ; static: __$bufwk
+    00000000 00000001               .RES.B      60
+    0000003C              __$sts:                          ; static: __$sts
+    0000003C 00000004               .RES.L      6
+    00000054              __$prid1:                        ; static: __$prid1
+    00000054 00000001               .RES.B      1
+    00000055              __$bcid:                         ; static: __$bcid
+    00000055 00000001               .RES.B      1
+    00000056              __$msg:                          ; static: __$msg
+    00000056 00000001               .RES.B      1
+SH SERIES C/C++ Compiler (V.9.04.03.000)                                                         07-Sep-2023 20:41:36  PAGE    1
+
+
+******** STATISTICS INFORMATION ********
+
+
+********** ERROR INFORMATION ***********
+
+NUMBER OF ERRORS:           0
+NUMBER OF WARNINGS:         0
+
+
+
+
+******* SOURCE LINE INFORMATION ********
+
+COMPILED SOURCE LINE:      336
+
+
+
+******* SECTION SIZE INFORMATION *******
+
+PROGRAM  SECTION (P):                                 00000350 Byte(s)
+CONSTANT SECTION (C):                                 0000003F Byte(s)
+DATA     SECTION (D):                                 00000000 Byte(s)
+BSS      SECTION (B):                                 00000057 Byte(s)
+
+TOTAL PROGRAM  SECTION: 00000350 Byte(s)
+TOTAL CONSTANT SECTION: 0000003F Byte(s)
+TOTAL DATA     SECTION: 00000000 Byte(s)
+TOTAL BSS      SECTION: 00000057 Byte(s)
+
+    TOTAL PROGRAM SIZE: 000003E6 Byte(s)
+
+
+
+********** LABEL INFORMATION ***********
+
+NUMBER OF EXTERNAL REFERENCE SYMBOLS:           14
+NUMBER OF EXTERNAL DEFINITION SYMBOLS:           1
+NUMBER OF INTERNAL/EXTERNAL SYMBOLS:            35
+
+
+
+*** COMMAND PARAMETER ***
+
+-subcommand=C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene_Hew\ROM_Big\tskmotact.shc
+-cpu=sh2a
+-include="C:\NORTi\INC","C:\NORTi\INC\Dummy","C:\NORTi\INC","C:\NORTi\LIB"
+-object="C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene_Hew\ROM_Big\tskmotact.obj"
+-debug
+-listfile="C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene_Hew\ROM_Big\tskmotact.lst"
+-show=source,tab=4
+-gbr=auto
+-chgincpath
+-errorpath
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskmotact.c"
+-global_volatile=0
+-opt_range=all
+-infinite_loop=0
+-del_vacant_loop=0
+-struct_alloc=1
+-lang=c
+-nologo

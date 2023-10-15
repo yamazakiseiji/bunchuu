@@ -1,0 +1,76 @@
+[HIMDBVersion]
+2.0
+[DATABASE_VERSION]
+"1.2" 
+[CURRENT_PROJECT]
+"QuickGene" 
+[GENERAL_DATA]
+"BuildMultipleSettings" "" 
+[BREAKPOINTS]
+[OPEN_WORKSPACE_FILES]
+"C:\NORTi\INC\n4rsh.h" 
+"C:\NORTi\INC\nocfg4.h" 
+"C:\NORTi\INC\nosys4.h" 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\automachine.c" 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\automachine.h" 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\datastruct.h" 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\define.h" 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\hdrcyc.c" 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\main.c" 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\mnet.c" 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\seg.h" 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\spi.c" 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\sub.c" 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\sub.h" 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tblchr.c" 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tblchr.h" 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskcmd.c" 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskcmd.h" 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskeep.c" 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskeep.h" 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskint.c" 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskled.c" 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskmotact.c" 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskmotend.c" 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskmotwait.c" 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskpunit.h" 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskrx0.c" 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskrxEx.c" 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tsktmpcnt.c" 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tsktx0.c" 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tsktxEx.c" 
+[WORKSPACE_FILE_STATES]
+"C:\NORTi\INC\n4rsh.h" 26 26 1341 246 0 10 
+"C:\NORTi\INC\nocfg4.h" 52 52 1341 246 0 11 
+"C:\NORTi\INC\nosys4.h" 104 104 1341 246 0 8 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\automachine.c" 0 0 1518 366 0 5 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\automachine.h" 0 0 1517 528 0 4 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\datastruct.h" 0 0 1518 366 0 2 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\define.h" 104 104 1398 223 0 3 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\hdrcyc.c" 0 0 1520 442 0 30 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\main.c" 0 0 1517 528 0 12 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\mnet.c" 0 0 1189 460 0 15 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\seg.h" 0 0 1341 246 0 9 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\spi.c" 0 0 1518 366 0 1 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\sub.c" 0 0 1562 538 0 22 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\sub.h" -8 -31 1520 442 1 24 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tblchr.c" 0 0 1517 528 0 23 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tblchr.h" 104 104 1341 246 0 13 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskcmd.c" 0 0 1520 442 0 7 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskcmd.h" 0 0 1319 389 0 25 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskeep.c" 0 0 1520 442 0 0 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskeep.h" 0 0 1341 246 0 14 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskint.c" 26 26 1397 263 0 16 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskled.c" 0 0 1385 367 0 26 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskmotact.c" 52 52 1397 263 0 17 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskmotend.c" 78 78 1397 263 0 18 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskmotwait.c" 0 0 1517 406 0 19 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskpunit.h" 104 104 1388 291 0 27 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskrx0.c" 0 0 1520 442 0 21 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tskrxEx.c" 0 0 1139 365 0 20 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tsktmpcnt.c" 0 0 1255 383 0 28 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tsktx0.c" 0 0 1520 442 0 6 
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\tsktxEx.c" 0 0 1520 442 0 29 
+[LOADED_PROJECTS]
+"QuickGene" 
+[END]

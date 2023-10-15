@@ -1,0 +1,1257 @@
+SH SERIES C/C++ Compiler (V.9.02.00.003)                                                         08-Sep-2023 13:46:36  PAGE    1
+
+************ OBJECT LISTING ************
+
+FILE NAME: C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\tskmotwait.c
+
+SCT OFFSET   CODE       C LABEL     INSTRUCTION OPERAND    COMMENT
+
+           tskmotwait          1    /******************************************************************************
+           tskmotwait          2    * モータウェイト制御タスク                                                    *
+           tskmotwait          3    *                                                                             *
+           tskmotwait          4    * File name : tskmotwait.c                                                    *
+           tskmotwait          5    *                                                                             *
+           tskmotwait          6    * Copyright (c) 2018 NICHIRYO Co., Ltd.                                       *
+           tskmotwait          7    *                                                                             *
+           tskmotwait          8    ******************************************************************************/
+           tskmotwait          9    #include <kernel.h>
+           tskmotwait         10    #include "sh7237.h"
+           tskmotwait         11    #include "iodefine.h"
+           tskmotwait         12    #include "define.h"
+           tskmotwait         13    #include "datastruct.h"
+           tskmotwait         14    #include "tskmotwait.h"
+           tskmotwait         15    #include "tskcmd.h"
+           tskmotwait         16    #include "sub.h"
+           tskmotwait         17    #include "automachine.h"
+           tskmotwait         18    
+           tskmotwait         19    
+           tskmotwait         20    //*************************************
+           tskmotwait         21    // 関数定義
+           tskmotwait         22    //*************************************
+           tskmotwait         23    
+           tskmotwait         24    static  void MotWaitInit();                                               // ウェイト要求処理
+           tskmotwait         25    static  void MotWaitChk();                                                // 
+           tskmotwait         26    static  void MotWaitProc   ( T_CMD_MSG* mrcv );                           // ウェイト要求処理
+           tskmotwait         27    static  void CmdRcvMsg     ( T_CMD_MSG* mrcv );                           // メッセージ受信処理
+           tskmotwait         28    static  ER   MotWaitAnalyze( T_CMD_MSG* mrcv );                           // コマンドの解析
+           tskmotwait         29    static  ER   MotWaitDummy     ( T_CMD_MSG* mrcv );                        // 
+           tskmotwait         30    static  ER   MotWaitRequest   ( T_CMD_MSG* mrcv );                        // モータ動作前のウェイトリクエスト
+           tskmotwait         31    static  ER   MotWaitRequestW  ( T_CMD_MSG* mrcv );                        // モータ動作前のウェイトリクエスト
+           tskmotwait         32    static  ER   MotWaitPDELAY    ( T_CMD_MSG* mrcv );                        // PDELAY  パルスモータのパワー制御待ち時間設定
+           tskmotwait         33    static  ER   MotWaitTimeRequest( T_CMD_MSG* mrcv );
+           tskmotwait         34    static void MotWaitTimeAllInit();
+           tskmotwait         35    static void MotWaitTimeInit(UB bcid);
+           tskmotwait         36    
+           tskmotwait         37    
+           tskmotwait         38    //*************************************
+           tskmotwait         39    // テーブル
+           tskmotwait         40    //*************************************
+           tskmotwait         41    
+           tskmotwait         42    
+           tskmotwait         43    
+           tskmotwait         44    //*************************************
+           tskmotwait         45    // データ定義
+           tskmotwait         46    //*************************************
+           tskmotwait         47    static    ST_MOTWAIT          MotWait[(DVMAX+1)];                         // ウェイト制御データ
+           tskmotwait         48    static    ST_MOTWAIT          WaitTime[BCCTRL_MAX];                           // ウェイト制御データ
+           tskmotwait         49    //static  INT WaitTime[BCCTRL_MAX];                                       // 指定時間ＷＡＩＴ用
+           tskmotwait         50    static    INT IntervalCounter;
+           tskmotwait         51    static    UB  inf2_dbg;
+           tskmotwait         52    
+           tskmotwait         53    /******************************************************************************
+           tskmotwait         54    * 
+           tskmotwait         55    * [概要]  モータ制御タスク
+           tskmotwait         56    * [引数]  
+           tskmotwait         57    * [戻値]  
+           tskmotwait         58    * 
+           tskmotwait         59    ******************************************************************************/
+           tskmotwait         60    TASK TskMotWait( void )
+P   00000000              _TskMotWait:                     ; function: TskMotWait
+                                                           ; frame size=4
+    00000000 7FFC                   ADD         #-4,R15
+           tskmotwait         61    {
+           tskmotwait         62      T_CMD_MSG*  msg;
+           tskmotwait         63      ER          err;
+           tskmotwait         64    
+           tskmotwait         65      MotWaitInit();
+    00000002 B018                   BSR         __$MotWaitInit
+    00000004 0009                   NOP
+           tskmotwait         66      MotWaitTimeAllInit();
+    00000006 B02B                   BSR         __$MotWaitTimeAllInit
+    00000008 0009                   NOP
+    0000000A DE90                   MOV.L       L96,R14    ; _v4_trcv_mbx
+    0000000C DC90                   MOV.L       L96+4,R12  ; L98
+    0000000E DD91                   MOV.L       L96+8,R13  ; _api_rel_mpf
+    00000010              L11:
+           tskmotwait         67      
+           tskmotwait         68      for( ;; )
+           tskmotwait         69      {
+           tskmotwait         70            // コマンド待ち
+           tskmotwait         71            err = trcv_mbx( ID_MBX_MOTWAIT, (T_MSG**)&msg, DLY_10M );
+    00000010 E60A                   MOV         #10,R6     ; H'0000000A
+    00000012 E408                   MOV         #8,R4      ; H'00000008
+    00000014 4E0B                   JSR         @R14
+    00000016 65F3                   MOV         R15,R5
+           tskmotwait         72    
+           tskmotwait         73          if( err == E_TMOUT )
+    00000018 88CE                   CMP/EQ      #-50,R0
+    0000001A 8B03                   BF          L13
+           tskmotwait         74          {
+           tskmotwait         75              MotWaitChk();
+    0000001C B048                   BSR         __$MotWaitChk
+    0000001E 0009                   NOP
+    00000020 AFF6                   BRA         L11
+    00000022 0009                   NOP
+    00000024              L13:
+           tskmotwait         76              continue;
+           tskmotwait         77          }
+           tskmotwait         78          else
+           tskmotwait         79          {
+           tskmotwait         80              MotWaitProc(msg);
+    00000024 B0D6                   BSR         __$MotWaitProc
+    00000026 64F2                   MOV.L       @R15,R4    ; msg
+    00000028 67F2                   MOV.L       @R15,R7    ; msg
+           tskmotwait         81          }
+           tskmotwait         82          // メモリ解放
+           tskmotwait         83          RelMpf( ID_MPF_MOTWAIT, (VP)msg );
+    0000002A E607                   MOV         #7,R6      ; H'00000007
+    0000002C E553                   MOV         #83,R5     ; H'00000053
+    0000002E 4D0B                   JSR         @R13
+    00000030 64C3                   MOV         R12,R4
+    00000032 AFED                   BRA         L11
+    00000034 0009                   NOP
+           tskmotwait         84      }
+           tskmotwait         85    }
+           tskmotwait         86    /******************************************************************************
+           tskmotwait         87    * 
+           tskmotwait         88    * [概要]  モータウェイト初期化
+           tskmotwait         89    * [引数]  
+           tskmotwait         90    * [戻値]  
+           tskmotwait         91    * 
+           tskmotwait         92    ******************************************************************************/
+           tskmotwait         93    static void MotWaitInit()
+    00000036              __$MotWaitInit:                  ; function: __$MotWaitInit
+                                                           ; frame size=0
+    00000036 E0FF                   MOV         #-1,R0     ; H'FFFFFFFF
+           tskmotwait         94    {
+           tskmotwait         95      INT Loop;
+           tskmotwait         96    
+           tskmotwait         97      for( Loop = DVMIN; Loop <= DVMAX; Loop++ )
+    00000038 E507                   MOV         #7,R5      ; H'00000007
+    0000003A E700                   MOV         #0,R7      ; H'00000000
+    0000003C D686                   MOV.L       L96+12,R6  ; H'0000004C+__$MotWait
+    0000003E E40A                   MOV         #10,R4     ; H'0000000A
+    00000040              L16:
+    00000040 4510                   DT          R5
+           tskmotwait         98      {
+           tskmotwait         99          
+           tskmotwait        100          MotWait[Loop].req = CLR;            // default
+    00000042 2670                   MOV.B       R7,@R6     ; MotWait[].req
+           tskmotwait        101          MotWait[Loop].tskid = DEFDAT;       // default
+    00000044 8061                   MOV.B       R0,@(1,R6) ; MotWait[].tskid
+           tskmotwait        102          MotWait[Loop].prid1 = DEFDAT;       // default
+    00000046 8062                   MOV.B       R0,@(2,R6) ; MotWait[].prid1
+           tskmotwait        103          MotWait[Loop].bcid  = DEFDAT;       // default
+    00000048 8063                   MOV.B       R0,@(3,R6) ; MotWait[].bcid
+           tskmotwait        104          MotWait[Loop].msgid = DEFDAT;       // default
+    0000004A 8064                   MOV.B       R0,@(4,R6) ; MotWait[].msgid
+           tskmotwait        105          MotWait[Loop].tim = 100/DLY_10M;    // default
+    0000004C 36412011               MOV.L       R4,@(68:12,R6); MotWait[].tim
+           tskmotwait        106          MotWait[Loop].cnt = CLR;            // default
+    00000050 36712012               MOV.L       R7,@(72:12,R6); MotWait[].cnt
+    00000054 8FF4                   BF/S        L16
+    00000056 764C                   ADD         #76,R6
+           tskmotwait        107    
+           tskmotwait        108      }
+           tskmotwait        109      IntervalCounter = 0;
+    00000058 E200                   MOV         #0,R2      ; H'00000000
+    0000005A D680                   MOV.L       L96+16,R6  ; __$IntervalCounter
+           tskmotwait        110    }
+    0000005C 000B                   RTS
+    0000005E 2622                   MOV.L       R2,@R6     ; IntervalCounter
+           tskmotwait        111    static void MotWaitTimeAllInit()
+    00000060              __$MotWaitTimeAllInit:           ; function: __$MotWaitTimeAllInit
+                                                           ; frame size=12
+    00000060 4DF0                   MOVMU.L     R13,@-R15
+           tskmotwait        112    {
+           tskmotwait        113      INT Loop;
+           tskmotwait        114      
+           tskmotwait        115      for( Loop = 0; Loop < BCCTRL_MAX; Loop++ )
+    00000062 EE13                   MOV         #19,R14    ; H'00000013
+    00000064 ED00                   MOV         #0,R13     ; H'00000000
+    00000066              L19:
+           tskmotwait        116      {
+           tskmotwait        117          MotWaitTimeInit(Loop);
+    00000066 64D3                   MOV         R13,R4
+    00000068 B007                   BSR         __$MotWaitTimeInit
+    0000006A 7D01                   ADD         #1,R13
+    0000006C 4E10                   DT          R14
+    0000006E 8BFA                   BF          L19
+           tskmotwait        118      }
+           tskmotwait        119      
+           tskmotwait        120      IntervalCounter = 0;
+    00000070 E200                   MOV         #0,R2      ; H'00000000
+    00000072 D67A                   MOV.L       L96+16,R6  ; __$IntervalCounter
+    00000074 2622                   MOV.L       R2,@R6     ; IntervalCounter
+    00000076 4DF4                   MOVMU.L     @R15+,R13
+           tskmotwait        121    }
+    00000078 006B                   RTS/N
+           tskmotwait        122    static void MotWaitTimeInit(UB bcid)
+    0000007A              __$MotWaitTimeInit:              ; function: __$MotWaitTimeInit
+                                                           ; frame size=0
+           tskmotwait        123    {
+           tskmotwait        124      WaitTime[bcid].req = CLR;           // default
+    0000007A 644C                   EXTU.B      R4,R4
+    0000007C E04C                   MOV         #76,R0     ; H'0000004C
+    0000007E 4480                   MULR        R0,R4
+    00000080 D577                   MOV.L       L96+20,R5  ; __$WaitTime
+    00000082 E100                   MOV         #0,R1      ; H'00000000
+           tskmotwait        125      WaitTime[bcid].tskid = DEFDAT;      // default
+    00000084 6653                   MOV         R5,R6
+    00000086 7601                   ADD         #1,R6
+    00000088 E2FF                   MOV         #-1,R2     ; H'FFFFFFFF
+    0000008A 6043                   MOV         R4,R0
+    0000008C 0514                   MOV.B       R1,@(R0,R5); WaitTime[].req
+    0000008E 0624                   MOV.B       R2,@(R0,R6); WaitTime[].tskid
+           tskmotwait        126      WaitTime[bcid].prid1 = DEFDAT;      // default
+    00000090 6753                   MOV         R5,R7
+    00000092 7702                   ADD         #2,R7
+           tskmotwait        127      WaitTime[bcid].bcid  = DEFDAT;      // default
+    00000094 6153                   MOV         R5,R1
+    00000096 7103                   ADD         #3,R1
+           tskmotwait        128      WaitTime[bcid].msgid = DEFDAT;      // default
+    00000098 6653                   MOV         R5,R6
+    0000009A 7604                   ADD         #4,R6
+    0000009C 0724                   MOV.B       R2,@(R0,R7); WaitTime[].prid1
+    0000009E 0124                   MOV.B       R2,@(R0,R1); WaitTime[].bcid
+    000000A0 E700                   MOV         #0,R7      ; H'00000000
+    000000A2 0624                   MOV.B       R2,@(R0,R6); WaitTime[].msgid
+           tskmotwait        129      WaitTime[bcid].tim = CLR;           // default
+    000000A4 6253                   MOV         R5,R2
+           tskmotwait        130      WaitTime[bcid].cnt = CLR;           // default
+    000000A6 7548                   ADD         #72,R5
+    000000A8 7244                   ADD         #68,R2
+    000000AA 0276                   MOV.L       R7,@(R0,R2); WaitTime[].tim
+           tskmotwait        131    }
+    000000AC 000B                   RTS
+    000000AE 0576                   MOV.L       R7,@(R0,R5); WaitTime[].cnt
+           tskmotwait        132    
+           tskmotwait        133    /***********************************************************************
+           tskmotwait        134    * 
+           tskmotwait        135    * [概要]  ウェイト監視
+           tskmotwait        136    * [引数]  －
+           tskmotwait        137    * [戻値]  －
+           tskmotwait        138    * 
+           tskmotwait        139    ***********************************************************************/
+           tskmotwait        140    static void MotWaitChk()
+    000000B0              __$MotWaitChk:                   ; function: __$MotWaitChk
+                                                           ; frame size=60
+    000000B0 48F0                   MOVMU.L     R8,@-R15
+    000000B2 7FFC                   ADD         #-4,R15
+    000000B4 DD6B                   MOV.L       L96+24,R13 ; __$MotWait
+           tskmotwait        141    {
+           tskmotwait        142      UB Loop;
+           tskmotwait        143      ER result;
+           tskmotwait        144      ID mpfid;
+           tskmotwait        145      ID mbxid;
+           tskmotwait        146    
+           tskmotwait        147      // ＤＥＬＡＹ時間経過したかチェック
+           tskmotwait        148      for( Loop = DVMIN; Loop <= DVMAX; Loop++  )
+    000000B6 E401                   MOV         #1,R4      ; H'00000001
+    000000B8 6ED3                   MOV         R13,R14
+    000000BA 69D3                   MOV         R13,R9
+    000000BC 7E48                   ADD         #72,R14
+    000000BE 6AD3                   MOV         R13,R10
+    000000C0 7944                   ADD         #68,R9
+    000000C2 6BD3                   MOV         R13,R11
+    000000C4 7A08                   ADD         #8,R10
+    000000C6 6CD3                   MOV         R13,R12
+    000000C8 7B04                   ADD         #4,R11
+    000000CA 3F410000               MOV.B       R4,@(0:12,R15); Loop
+    000000CE 7C03                   ADD         #3,R12
+    000000D0 A03D                   BRA         L23
+    000000D2 E84C                   MOV         #76,R8     ; H'0000004C
+    000000D4              L24:
+           tskmotwait        149      {
+           tskmotwait        150          if( MotWait[Loop].req == SET )
+    000000D4 644C                   EXTU.B      R4,R4
+    000000D6 6083                   MOV         R8,R0
+    000000D8 6643                   MOV         R4,R6
+    000000DA 4680                   MULR        R0,R6
+    000000DC 6063                   MOV         R6,R0
+    000000DE 00DC                   MOV.B       @(R0,R13),R0; MotWait[].req
+    000000E0 8801                   CMP/EQ      #1,R0
+    000000E2 8B31                   BF          L26
+           tskmotwait        151          {
+           tskmotwait        152              MotWait[Loop].cnt --;                                       // デクリメント
+    000000E4 6063                   MOV         R6,R0
+    000000E6 02EE                   MOV.L       @(R0,R14),R2; MotWait[].cnt
+    000000E8 72FF                   ADD         #-1,R2
+           tskmotwait        153    
+           tskmotwait        154              if( MotWait[Loop].cnt <= 0 )
+    000000EA 4215                   CMP/PL      R2
+    000000EC 8D2C                   BT/S        L26
+    000000EE 0E26                   MOV.L       R2,@(R0,R14); MotWait[].cnt
+           tskmotwait        155              {
+           tskmotwait        156    inf2_dbg = MotWait[Loop].motpare;
+    000000F0 62D3                   MOV         R13,R2
+    000000F2 7205                   ADD         #5,R2
+    000000F4 012C                   MOV.B       @(R0,R2),R1; MotWait[].motpare
+    000000F6 D75C                   MOV.L       L96+28,R7  ; __$inf2_dbg
+    000000F8 611C                   EXTU.B      R1,R1
+    000000FA 2710                   MOV.B       R1,@R7     ; inf2_dbg
+           tskmotwait        157                  // 動作指示
+           tskmotwait        158                  result = mbx_send(  MotWait[Loop].tskid,                //  tskid
+           tskmotwait        159                              ID_MPF_MOTACT,                              //  mpfid
+           tskmotwait        160                              ID_MBX_MOTACT,                              //  mbxid
+           tskmotwait        161                              MotWait[Loop].prid1,                        //  prid1
+           tskmotwait        162                              MotWait[Loop].bcid,                         //  bcid
+           tskmotwait        163                              MotWait[Loop].msgid,                        //  msgid
+           tskmotwait        164                              Loop,                                       //  sts
+           tskmotwait        165                              MotWait[Loop].motpare,                      //  sts2
+           tskmotwait        166                              &MotWait[Loop].msgdat[0],                   //  data
+           tskmotwait        167                              CMD_BUFSIZ                                  //  siz
+           tskmotwait        168                          );
+    000000FC E73C                   MOV         #60,R7     ; H'0000003C
+    000000FE 2F76                   MOV.L       R7,@-R15
+    00000100 65A3                   MOV         R10,R5
+    00000102 356C                   ADD         R6,R5
+    00000104 2F56                   MOV.L       R5,@-R15
+    00000106 2F16                   MOV.L       R1,@-R15
+    00000108 2F46                   MOV.L       R4,@-R15
+    0000010A 04BC                   MOV.B       @(R0,R11),R4; MotWait[].msgid
+    0000010C 644C                   EXTU.B      R4,R4
+    0000010E 2F46                   MOV.L       R4,@-R15
+    00000110 06CC                   MOV.B       @(R0,R12),R6; MotWait[].bcid
+    00000112 666C                   EXTU.B      R6,R6
+    00000114 2F66                   MOV.L       R6,@-R15
+    00000116 62D3                   MOV         R13,R2
+    00000118 7201                   ADD         #1,R2
+    0000011A 61D3                   MOV         R13,R1
+    0000011C 7102                   ADD         #2,R1
+    0000011E 052C                   MOV.B       @(R0,R2),R5; MotWait[].tskid
+    00000120 071C                   MOV.B       @(R0,R1),R7; MotWait[].prid1
+    00000122 E609                   MOV         #9,R6      ; H'00000009
+    00000124 645C                   EXTU.B      R5,R4
+    00000126 D251                   MOV.L       L96+32,R2  ; _mbx_send
+    00000128 420B                   JSR         @R2
+    0000012A E508                   MOV         #8,R5      ; H'00000008
+    0000012C 7F18                   ADD         #24,R15
+           tskmotwait        169                  // 監視データクリア
+           tskmotwait        170                  MotWait[Loop].req = CLR;            // default
+    0000012E 6083                   MOV         R8,R0
+    00000130 34F18000               MOVU.B      @(0,R15),R4; Loop
+    00000134 E100                   MOV         #0,R1      ; H'00000000
+           tskmotwait        171                  MotWait[Loop].cnt = CLR;            // default
+           tskmotwait        172                  MotWait[Loop].msgid = DEFDAT;       // default
+           tskmotwait        173                  MotWait[Loop].tim = 100/DLY_10M;        // default
+    00000136 E20A                   MOV         #10,R2     ; H'0000000A
+    00000138 6743                   MOV         R4,R7
+    0000013A 4780                   MULR        R0,R7
+    0000013C 6073                   MOV         R7,R0
+    0000013E 0D14                   MOV.B       R1,@(R0,R13); MotWait[].req
+    00000140 0E16                   MOV.L       R1,@(R0,R14); MotWait[].cnt
+    00000142 E1FF                   MOV         #-1,R1     ; H'FFFFFFFF
+    00000144 0B14                   MOV.B       R1,@(R0,R11); MotWait[].msgid
+    00000146 0926                   MOV.L       R2,@(R0,R9); MotWait[].tim
+    00000148              L26:
+    00000148 7401                   ADD         #1,R4
+    0000014A 3F410000               MOV.B       R4,@(0:12,R15); Loop
+    0000014E              L23:
+    0000014E 624C                   EXTU.B      R4,R2
+    00000150 E107                   MOV         #7,R1      ; H'00000007
+    00000152 3217                   CMP/GT      R1,R2
+    00000154 8BBE                   BF          L24
+           tskmotwait        174              }
+           tskmotwait        175          }
+           tskmotwait        176      }
+           tskmotwait        177      // 指定時間待ったかチェック
+           tskmotwait        178      for( Loop = 0; Loop < BCCTRL_MAX; Loop++ )
+    00000156 0439                   MOVRT       R4
+    00000158 6EF3                   MOV         R15,R14
+    0000015A DC41                   MOV.L       L96+20,R12 ; __$WaitTime
+    0000015C 6DC3                   MOV         R12,R13
+    0000015E 7D44                   ADD         #68,R13
+    00000160 6BC3                   MOV         R12,R11
+    00000162 7C02                   ADD         #2,R12
+    00000164 6043                   MOV         R4,R0
+    00000166 0F44                   MOV.B       R4,@(R0,R15); Loop
+    00000168 7B01                   ADD         #1,R11
+    0000016A EA13                   MOV         #19,R10    ; H'00000013
+    0000016C A02C                   BRA         L29
+    0000016E E901                   MOV         #1,R9      ; H'00000001
+    00000170              L30:
+           tskmotwait        179      {
+           tskmotwait        180          // 待ち時間あり？
+           tskmotwait        181          if( WaitTime[Loop].tim )
+    00000170 644C                   EXTU.B      R4,R4
+    00000172 6083                   MOV         R8,R0
+    00000174 6643                   MOV         R4,R6
+    00000176 4680                   MULR        R0,R6
+    00000178 6063                   MOV         R6,R0
+    0000017A 02DE                   MOV.L       @(R0,R13),R2; WaitTime[].tim
+    0000017C 2228                   TST         R2,R2
+    0000017E 891F                   BT          L32
+           tskmotwait        182          {
+           tskmotwait        183              WaitTime[Loop].tim--;
+    00000180 4210                   DT          R2
+    00000182 8F1D                   BF/S        L32
+    00000184 0D26                   MOV.L       R2,@(R0,R13); WaitTime[].tim
+           tskmotwait        184    
+           tskmotwait        185              // 待ち終了
+           tskmotwait        186              if( WaitTime[Loop].tim == CLR )
+           tskmotwait        187              {   
+           tskmotwait        188                  if( WaitTime[Loop].tskid == ID_TSK_TMPCNT )
+    00000186 00BC                   MOV.B       @(R0,R11),R0; WaitTime[].tskid
+    00000188 880E                   CMP/EQ      #14,R0
+    0000018A 8B02                   BF          L35
+           tskmotwait        189                  {
+           tskmotwait        190                      mpfid = ID_MPF_TMPCNT;
+    0000018C E50D                   MOV         #13,R5     ; H'0000000D
+           tskmotwait        191                      mbxid = ID_MBX_TMPCNT;
+    0000018E A002                   BRA         L36
+    00000190 E10E                   MOV         #14,R1     ; H'0000000E
+    00000192              L35:
+           tskmotwait        192                  }
+           tskmotwait        193                  else
+           tskmotwait        194                  {
+           tskmotwait        195                      mpfid = ID_MPF_CMD;
+    00000192 E504                   MOV         #4,R5      ; H'00000004
+           tskmotwait        196                      mbxid = ID_MBX_CMD;
+    00000194 E105                   MOV         #5,R1      ; H'00000005
+    00000196              L36:
+           tskmotwait        197                  }
+           tskmotwait        198                  
+           tskmotwait        199                  // メッセージ通知
+           tskmotwait        200                  result = mbx_send(
+           tskmotwait        201                                      ID_TSK_MOTWAIT,
+           tskmotwait        202                                      mpfid,
+           tskmotwait        203                                      mbxid,
+           tskmotwait        204                                      WaitTime[Loop].prid1,
+           tskmotwait        205                                      Loop,
+           tskmotwait        206                                      ID_MSG_TIMWAIT,
+           tskmotwait        207                                      NO_DATA,
+           tskmotwait        208                                      NO_DATA,
+           tskmotwait        209                                      &Loop,
+           tskmotwait        210                                      sizeof( Loop )
+           tskmotwait        211                                  );
+    00000196 2F96                   MOV.L       R9,@-R15
+    00000198 2FE6                   MOV.L       R14,@-R15
+    0000019A E7FF                   MOV         #-1,R7     ; H'FFFFFFFF
+    0000019C 677C                   EXTU.B      R7,R7
+    0000019E 2F76                   MOV.L       R7,@-R15
+    000001A0 2F76                   MOV.L       R7,@-R15
+    000001A2 77C9                   ADD         #-55,R7
+    000001A4 677C                   EXTU.B      R7,R7
+    000001A6 2F76                   MOV.L       R7,@-R15
+    000001A8 2F46                   MOV.L       R4,@-R15
+    000001AA 6063                   MOV         R6,R0
+    000001AC 07CC                   MOV.B       @(R0,R12),R7; WaitTime[].prid1
+    000001AE E408                   MOV         #8,R4      ; H'00000008
+    000001B0 D22E                   MOV.L       L96+32,R2  ; _mbx_send
+    000001B2 420B                   JSR         @R2
+    000001B4 6613                   MOV         R1,R6
+    000001B6 7F18                   ADD         #24,R15
+           tskmotwait        212                  MotWaitTimeInit(Loop);
+    000001B8 34F14000               MOV.B       @(0:12,R15),R4; Loop
+    000001BC BF5D                   BSR         __$MotWaitTimeInit
+    000001BE 0009                   NOP
+    000001C0              L32:
+    000001C0 E000                   MOV         #0,R0      ; H'00000000
+    000001C2 04FC                   MOV.B       @(R0,R15),R4; Loop
+    000001C4 7401                   ADD         #1,R4
+    000001C6 0F44                   MOV.B       R4,@(R0,R15); Loop
+    000001C8              L29:
+    000001C8 624C                   EXTU.B      R4,R2
+    000001CA 32A3                   CMP/GE      R10,R2
+    000001CC 8BD0                   BF          L30
+    000001CE 7F04                   ADD         #4,R15
+    000001D0 48F4                   MOVMU.L     @R15+,R8
+           tskmotwait        213              }
+           tskmotwait        214          }
+           tskmotwait        215      }
+           tskmotwait        216    }
+    000001D2 006B                   RTS/N
+           tskmotwait        217    
+           tskmotwait        218    /***********************************************************************
+           tskmotwait        219    * 
+           tskmotwait        220    * [概要]  ウェイト要求処理
+           tskmotwait        221    * [引数]  メッセージデータ
+           tskmotwait        222    * [戻値]  －
+           tskmotwait        223    * 
+           tskmotwait        224    ***********************************************************************/
+           tskmotwait        225    static void MotWaitProc(T_CMD_MSG* mrcv)
+    000001D4              __$MotWaitProc:                  ; function: __$MotWaitProc
+                                                           ; frame size=0
+           tskmotwait        226    {
+           tskmotwait        227      switch( mrcv->msgdata.tskid )
+    000001D4 5045                   MOV.L       @(20,R4),R0; (mrcv)->tskid
+    000001D6 8805                   CMP/EQ      #5,R0
+    000001D8 8903                   BT          L50
+    000001DA 880B                   CMP/EQ      #11,R0
+    000001DC 8901                   BT          L50
+    000001DE 880E                   CMP/EQ      #14,R0
+    000001E0 8B01                   BF          L52
+    000001E2              L50:
+           tskmotwait        228      {
+           tskmotwait        229      case ID_TSK_CMD:
+           tskmotwait        230      case ID_TSK_INT:
+           tskmotwait        231      case ID_TSK_TMPCNT:
+           tskmotwait        232          CmdRcvMsg(mrcv);
+    000001E2 A001                   BRA         __$CmdRcvMsg
+    000001E4 0009                   NOP
+    000001E6              L52:
+    000001E6 006B                   RTS/N
+           tskmotwait        233          break;
+           tskmotwait        234      case ID_TSK_RX0:    // TSK_RX0->
+           tskmotwait        235      case ID_TSK_TX0:    // TSK_TX0->
+           tskmotwait        236      case ID_TSK_RXEX:   // TSK_RX2->
+           tskmotwait        237      case ID_TSK_TXEX:
+           tskmotwait        238      case ID_TSK_EEP:    // TSK_EEP->
+           tskmotwait        239      default:
+           tskmotwait        240          break;
+           tskmotwait        241      }
+           tskmotwait        242    }
+           tskmotwait        243    /***********************************************************************
+           tskmotwait        244    * 
+           tskmotwait        245    * [概要]  メッセージ受信処理
+           tskmotwait        246    * [引数]  メッセージデータ
+           tskmotwait        247    * [戻値]  －
+           tskmotwait        248    * 
+           tskmotwait        249    ***********************************************************************/
+           tskmotwait        250    static void CmdRcvMsg( T_CMD_MSG* mrcv )
+    000001E8              __$CmdRcvMsg:                    ; function: __$CmdRcvMsg
+                                                           ; frame size=0
+           tskmotwait        251    {
+           tskmotwait        252      ER          err;
+           tskmotwait        253    
+           tskmotwait        254      err = MotWaitAnalyze( mrcv );
+           tskmotwait        255    }
+           tskmotwait        256    /***********************************************************************
+           tskmotwait        257    * 
+           tskmotwait        258    * [概要]  コマンドの解析
+           tskmotwait        259    * [引数]  data:コマンドリクエスト電文
+           tskmotwait        260    * [戻値]  －
+           tskmotwait        261    * 
+           tskmotwait        262    ***********************************************************************/
+           tskmotwait        263    static ER MotWaitAnalyze( T_CMD_MSG* mrcv )
+    000001E8              __$MotWaitAnalyze:               ; function: __$MotWaitAnalyze
+                                                           ; frame size=4
+    000001E8 4F22                   STS.L       PR,@-R15
+           tskmotwait        264    {
+           tskmotwait        265      ER          err = E_SUCCESS;
+           tskmotwait        266      UB          msgid;
+           tskmotwait        267    
+           tskmotwait        268      // メッセージＩＤ取得
+           tskmotwait        269      msgid = mrcv->msgdata.msgid;
+           tskmotwait        270    
+           tskmotwait        271      if(
+    000001EA 3641801B               MOVU.B      @(27,R4),R6; (mrcv)->msgid
+    000001EE 4611                   CMP/PZ      R6
+    000001F0 8B29                   BF          L66
+    000001F2 E22D                   MOV         #45,R2     ; H'0000002D
+    000001F4 3627                   CMP/GT      R2,R6
+    000001F6 8B03                   BF          L67
+    000001F8 E2C8                   MOV         #-56,R2    ; H'FFFFFFC8
+    000001FA 622C                   EXTU.B      R2,R2
+    000001FC 3620                   CMP/EQ      R2,R6
+    000001FE 8B22                   BF          L66
+    00000200              L67:
+           tskmotwait        272          (( msgid >= ID_MSG_HELLO ) && ( msgid <= ID_MSG_BASE_CMD_MAX))||
+           tskmotwait        273          ( msgid == ID_MSG_TIMWAIT)
+           tskmotwait        274      )
+           tskmotwait        275      {
+           tskmotwait        276          // コールファンクション
+           tskmotwait        277          switch( msgid )
+    00000200 6063                   MOV         R6,R0
+    00000202 8809                   CMP/EQ      #9,R0
+    00000204 8911                   BT          L70
+    00000206 880A                   CMP/EQ      #10,R0
+    00000208 890F                   BT          L70
+    0000020A 880C                   CMP/EQ      #12,R0
+    0000020C 890D                   BT          L70
+    0000020E 8811                   CMP/EQ      #17,R0
+    00000210 890B                   BT          L70
+    00000212 8814                   CMP/EQ      #20,R0
+    00000214 8909                   BT          L70
+    00000216 880E                   CMP/EQ      #14,R0
+    00000218 890B                   BT          L76
+    0000021A 880D                   CMP/EQ      #13,R0
+    0000021C 890D                   BT          L78
+    0000021E E2C8                   MOV         #-56,R2    ; H'FFFFFFC8
+    00000220 622C                   EXTU.B      R2,R2
+    00000222 3620                   CMP/EQ      R2,R6
+    00000224 890D                   BT          L79
+    00000226 A00E                   BRA         L66
+    00000228 0009                   NOP
+    0000022A              L70:
+           tskmotwait        278          {
+           tskmotwait        279              case ID_MSG_ABSMV :
+           tskmotwait        280              case ID_MSG_ABORT :
+           tskmotwait        281              case ID_MSG_LIMIT :
+           tskmotwait        282              case ID_MSG_RELMV :
+           tskmotwait        283              case ID_MSG_STOP  :
+           tskmotwait        284                  MotWaitRequest( mrcv );
+    0000022A B021                   BSR         __$MotWaitRequest
+    0000022C 0009                   NOP
+    0000022E A00A                   BRA         L66
+    00000230 0009                   NOP
+    00000232              L76:
+           tskmotwait        285                  break;
+           tskmotwait        286              case ID_MSG_PDELAY:
+           tskmotwait        287                  MotWaitPDELAY( mrcv );
+    00000232 B130                   BSR         __$MotWaitPDELAY
+    00000234 0009                   NOP
+    00000236 A006                   BRA         L66
+    00000238 0009                   NOP
+    0000023A              L78:
+           tskmotwait        288                  break;
+           tskmotwait        289              case ID_MSG_MAP   :
+           tskmotwait        290                  MotWaitRequestW( mrcv );
+    0000023A B077                   BSR         __$MotWaitRequestW
+    0000023C 0009                   NOP
+    0000023E A002                   BRA         L66
+    00000240 0009                   NOP
+    00000242              L79:
+           tskmotwait        291                  break;
+           tskmotwait        292              case ID_MSG_TIMWAIT :
+           tskmotwait        293                  MotWaitTimeRequest( mrcv );
+    00000242 B0C8                   BSR         __$MotWaitTimeRequest
+    00000244 0009                   NOP
+    00000246              L66:
+           tskmotwait        294                  break;
+           tskmotwait        295              default:
+           tskmotwait        296                  break;
+           tskmotwait        297          }
+           tskmotwait        298          
+           tskmotwait        299      }
+           tskmotwait        300    
+           tskmotwait        301      return( err );
+    00000246 4F26                   LDS.L       @R15+,PR
+           tskmotwait        302    }
+    00000248 000B                   RTS
+    0000024A E000                   MOV         #0,R0      ; H'00000000
+    0000024C              L96:
+    0000024C <00000000>             .DATA.L     _v4_trcv_mbx
+    00000250 <00000000>             .DATA.L     L98
+    00000254 <00000000>             .DATA.L     _api_rel_mpf
+    00000258 <0000004C>             .DATA.L     H'0000004C+__$MotWait
+    0000025C <00000000>             .DATA.L     __$IntervalCounter
+    00000260 <00000000>             .DATA.L     __$WaitTime
+    00000264 <00000000>             .DATA.L     __$MotWait
+    00000268 <00000000>             .DATA.L     __$inf2_dbg
+    0000026C <00000000>             .DATA.L     _mbx_send
+           tskmotwait        303    
+           tskmotwait        304    /***********************************************************************
+           tskmotwait        305    * 
+           tskmotwait        306    * [概要]  ダミールーチン
+           tskmotwait        307    * [引数]  msg:メッセージID、mm1:モータ、mm2:モータ、data:メッセージデータ
+           tskmotwait        308    * [戻値]  エラーコード
+           tskmotwait        309    * 
+           tskmotwait        310    ***********************************************************************/
+           tskmotwait        311    static ER MotWaitDummy( T_CMD_MSG* mrcv )
+           tskmotwait        312    {
+           tskmotwait        313      // 必要であればエラー出力
+           tskmotwait        314      return(E_SYS_FNCCAL);
+           tskmotwait        315    }
+           tskmotwait        316    
+           tskmotwait        317    /***********************************************************************
+           tskmotwait        318    * 
+           tskmotwait        319    * [概要]  モータ動作前のウェイトリクエスト
+           tskmotwait        320    * [引数]  msg:メッセージID、mm1:モータ、mm2:モータ、data:メッセージデータ
+           tskmotwait        321    * [戻値]  エラーコード
+           tskmotwait        322    * 
+           tskmotwait        323    ***********************************************************************/
+           tskmotwait        324    static ER MotWaitRequest( T_CMD_MSG* mrcv )
+    00000270              __$MotWaitRequest:               ; function: __$MotWaitRequest
+                                                           ; frame size=68
+    00000270 48F0                   MOVMU.L     R8,@-R15
+    00000272 7FF4                   ADD         #-12,R15
+    00000274 3B41801C               MOVU.B      @(28,R4),R11; (mrcv)->inf
+           tskmotwait        325    {
+           tskmotwait        326      ER      result = E_SUCCESS;
+           tskmotwait        327      UB      mm;
+           tskmotwait        328    
+           tskmotwait        329      // １軸目
+           tskmotwait        330      mm = mrcv->msgdata.inf;                                             // モータ取得
+           tskmotwait        331      MotWait[mm].tskid = mrcv->msgdata.tskid;                            // タスクＩＤセット
+    00000278 E04C                   MOV         #76,R0     ; H'0000004C
+    0000027A 5145                   MOV.L       @(20,R4),R1; (mrcv)->tskid
+    0000027C 69B3                   MOV         R11,R9
+           tskmotwait        332      MotWait[mm].prid1 = mrcv->msgdata.prid1;                            // プロセスＩＤ
+           tskmotwait        333      MotWait[mm].bcid  = mrcv->msgdata.bcid;                             // ＢＣＩＤセット
+           tskmotwait        334      MotWait[mm].msgid = mrcv->msgdata.msgid;                            // メッセージＩＤセット
+           tskmotwait        335      MotWait[mm].req   = SET;                                                // ディレイ開始
+    0000027E EA01                   MOV         #1,R10     ; H'00000001
+    00000280 4B80                   MULR        R0,R11
+    00000282 DE95                   MOV.L       L97,R14    ; __$MotWait
+    00000284 68E3                   MOV         R14,R8
+    00000286 7801                   ADD         #1,R8
+    00000288 6CE3                   MOV         R14,R12
+    0000028A 7C02                   ADD         #2,R12
+    0000028C 60B3                   MOV         R11,R0
+    0000028E 0814                   MOV.B       R1,@(R0,R8); MotWait[].tskid
+    00000290 35414018               MOV.B       @(24:12,R4),R5; (mrcv)->prid1
+    00000294 62E3                   MOV         R14,R2
+    00000296 7203                   ADD         #3,R2
+    00000298 0C54                   MOV.B       R5,@(R0,R12); MotWait[].prid1
+    0000029A 61E3                   MOV         R14,R1
+    0000029C 3641401A               MOV.B       @(26:12,R4),R6; (mrcv)->bcid
+    000002A0 1FC1                   MOV.L       R12,@(4,R15)
+           tskmotwait        336      MotWait[mm].cnt   = MotWait[mm].tim;                                // ディレイ時間設定
+    000002A2 6CE3                   MOV         R14,R12
+    000002A4 0264                   MOV.B       R6,@(R0,R2); MotWait[].bcid
+    000002A6 7C44                   ADD         #68,R12
+    000002A8 1F22                   MOV.L       R2,@(8,R15)
+    000002AA 7148                   ADD         #72,R1
+    000002AC 3741401B               MOV.B       @(27:12,R4),R7; (mrcv)->msgid
+    000002B0 02CE                   MOV.L       @(R0,R12),R2; MotWait[].tim
+    000002B2 6D43                   MOV         R4,R13
+    000002B4 2F82                   MOV.L       R8,@R15
+    000002B6 68E3                   MOV         R14,R8
+    000002B8 7804                   ADD         #4,R8
+    000002BA 0EA4                   MOV.B       R10,@(R0,R14); MotWait[].req
+    000002BC 0874                   MOV.B       R7,@(R0,R8); MotWait[].msgid
+    000002BE 6AE3                   MOV         R14,R10
+    000002C0 0126                   MOV.L       R2,@(R0,R1); MotWait[].cnt
+    000002C2 7A05                   ADD         #5,R10
+           tskmotwait        337      MotWait[mm].motpare = mrcv->msgdata.inf2;                           // モータペアセット
+    000002C4 3541401D               MOV.B       @(29:12,R4),R5; (mrcv)->inf2
+           tskmotwait        338      memcpy( &MotWait[mm].msgdat[0],&mrcv->msgdata.data[0],CMD_BUFSIZ ); // データコピー
+    000002C8 7424                   ADD         #36,R4
+    000002CA 7E08                   ADD         #8,R14
+    000002CC 0A54                   MOV.B       R5,@(R0,R10); MotWait[].motpare
+    000002CE 6543                   MOV         R4,R5
+    000002D0 64E3                   MOV         R14,R4
+    000002D2 34BC                   ADD         R11,R4
+    000002D4 D781                   MOV.L       L97+4,R7   ; _memcpy
+    000002D6 470B                   JSR         @R7
+    000002D8 E63C                   MOV         #60,R6     ; H'0000003C
+           tskmotwait        339    
+           tskmotwait        340    inf2_dbg = mrcv->msgdata.inf2;
+    000002DA 31D1401D               MOV.B       @(29:12,R13),R1; (mrcv)->inf2
+    000002DE DD80                   MOV.L       L97+8,R13  ; __$inf2_dbg
+    000002E0 2D10                   MOV.B       R1,@R13    ; inf2_dbg
+    000002E2 E501                   MOV         #1,R5      ; H'00000001
+           tskmotwait        341    
+           tskmotwait        342      motor_POWER( mm, SET ); 
+    000002E4 DD7F                   MOV.L       L97+12,R13 ; _motor_POWER
+    000002E6 4D0B                   JSR         @R13
+    000002E8 6493                   MOV         R9,R4
+           tskmotwait        343    
+           tskmotwait        344      // １軸目
+           tskmotwait        345      if( MotWait[mm].tim == 0 )
+    000002EA 60B3                   MOV         R11,R0
+    000002EC 02CE                   MOV.L       @(R0,R12),R2; MotWait[].tim
+    000002EE 2228                   TST         R2,R2
+    000002F0 8B18                   BF          L82
+           tskmotwait        346      {
+           tskmotwait        347          // 動作指示
+           tskmotwait        348          mbx_send(   MotWait[mm].tskid,                                  // tskid
+           tskmotwait        349                      ID_MPF_MOTACT,                                      // mpfid
+           tskmotwait        350                      ID_MBX_MOTACT,                                      // mbxid
+           tskmotwait        351                      MotWait[mm].prid1,                                  // prid1
+           tskmotwait        352                      MotWait[mm].bcid,                                   // bcid
+           tskmotwait        353                      MotWait[mm].msgid,                                  // msgid
+           tskmotwait        354                      mm,                                                 // sts
+           tskmotwait        355                      MotWait[mm].motpare,                                // sts2
+           tskmotwait        356                      &MotWait[mm].msgdat[0],                             // data
+           tskmotwait        357                      CMD_BUFSIZ                                          // siz
+           tskmotwait        358                  );
+    000002F2 EC3C                   MOV         #60,R12    ; H'0000003C
+    000002F4 2FC6                   MOV.L       R12,@-R15
+    000002F6 3EBC                   ADD         R11,R14
+    000002F8 2FE6                   MOV.L       R14,@-R15
+    000002FA 0DAC                   MOV.B       @(R0,R10),R13; MotWait[].motpare
+    000002FC 6DDC                   EXTU.B      R13,R13
+    000002FE 2FD6                   MOV.L       R13,@-R15
+    00000300 2F96                   MOV.L       R9,@-R15
+    00000302 0E8C                   MOV.B       @(R0,R8),R14; MotWait[].msgid
+    00000304 6EEC                   EXTU.B      R14,R14
+    00000306 2FE6                   MOV.L       R14,@-R15
+    00000308 56F7                   MOV.L       @(28,R15),R6
+    0000030A 016C                   MOV.B       @(R0,R6),R1; MotWait[].bcid
+    0000030C 611C                   EXTU.B      R1,R1
+    0000030E 2F16                   MOV.L       R1,@-R15
+    00000310 E609                   MOV         #9,R6      ; H'00000009
+    00000312 59F6                   MOV.L       @(24,R15),R9
+    00000314 58F7                   MOV.L       @(28,R15),R8
+    00000316 059C                   MOV.B       @(R0,R9),R5; MotWait[].tskid
+    00000318 078C                   MOV.B       @(R0,R8),R7; MotWait[].prid1
+    0000031A 645C                   EXTU.B      R5,R4
+    0000031C D272                   MOV.L       L97+16,R2  ; _mbx_send
+    0000031E 420B                   JSR         @R2
+    00000320 E508                   MOV         #8,R5      ; H'00000008
+    00000322 7F18                   ADD         #24,R15
+    00000324              L82:
+           tskmotwait        359      }
+           tskmotwait        360      return(result);
+    00000324 E000                   MOV         #0,R0      ; H'00000000
+    00000326 7F0C                   ADD         #12,R15
+    00000328 48F4                   MOVMU.L     @R15+,R8
+           tskmotwait        361    }
+    0000032A 006B                   RTS/N
+           tskmotwait        362    
+           tskmotwait        363    /***********************************************************************
+           tskmotwait        364    * 
+           tskmotwait        365    * [概要]  モータ動作前のウェイトリクエスト
+           tskmotwait        366    * [引数]  msg:メッセージID、mm1:モータ、mm2:モータ、data:メッセージデータ
+           tskmotwait        367    * [戻値]  エラーコード
+           tskmotwait        368    * 
+           tskmotwait        369    ***********************************************************************/
+           tskmotwait        370    static ER MotWaitRequestW( T_CMD_MSG* mrcv )
+    0000032C              __$MotWaitRequestW:              ; function: __$MotWaitRequestW
+                                                           ; frame size=64
+    0000032C 48F0                   MOVMU.L     R8,@-R15
+    0000032E 7FF8                   ADD         #-8,R15
+           tskmotwait        371    {
+           tskmotwait        372      UB      mm;
+           tskmotwait        373      UB      mm2;
+           tskmotwait        374      ER      result = E_SUCCESS;
+           tskmotwait        375      
+           tskmotwait        376      // １軸目
+           tskmotwait        377      mm = mrcv->msgdata.inf;                                             // モータ取得
+    00000330 3B41801C               MOVU.B      @(28,R4),R11; (mrcv)->inf
+           tskmotwait        378      mm2 = mrcv->msgdata.inf2;                                           // モータ取得
+           tskmotwait        379      MotWait[mm].tskid = mrcv->msgdata.tskid;                            // タスクＩＤセット
+    00000334 E04C                   MOV         #76,R0     ; H'0000004C
+    00000336 5145                   MOV.L       @(20,R4),R1; (mrcv)->tskid
+    00000338 6CB3                   MOV         R11,R12
+           tskmotwait        380    //    MotWait[mm].tskid = ID_TSK_MOTWAIT;                                 // タスクＩＤ
+           tskmotwait        381      MotWait[mm].prid1 = mrcv->msgdata.prid1;                            // プロセスＩＤ
+           tskmotwait        382      MotWait[mm].bcid = mrcv->msgdata.bcid;                              // ＢＣＩＤ
+           tskmotwait        383      MotWait[mm].msgid = mrcv->msgdata.msgid;                            // メッセージＩＤ
+           tskmotwait        384      MotWait[mm].req = SET;                                              // ディレイ開始
+    0000033A ED01                   MOV         #1,R13     ; H'00000001
+    0000033C 4C80                   MULR        R0,R12
+    0000033E DE66                   MOV.L       L97,R14    ; __$MotWait
+    00000340 68E3                   MOV         R14,R8
+    00000342 7801                   ADD         #1,R8
+    00000344 3A41801D               MOVU.B      @(29,R4),R10; (mrcv)->inf2
+    00000348 60C3                   MOV         R12,R0
+    0000034A 0814                   MOV.B       R1,@(R0,R8); MotWait[].tskid
+    0000034C 35414018               MOV.B       @(24:12,R4),R5; (mrcv)->prid1
+    00000350 69E3                   MOV         R14,R9
+    00000352 7902                   ADD         #2,R9
+    00000354 0954                   MOV.B       R5,@(R0,R9); MotWait[].prid1
+    00000356 61E3                   MOV         R14,R1
+    00000358 3641401A               MOV.B       @(26:12,R4),R6; (mrcv)->bcid
+    0000035C 2F82                   MOV.L       R8,@R15
+    0000035E 68E3                   MOV         R14,R8
+    00000360 7803                   ADD         #3,R8
+    00000362 1F91                   MOV.L       R9,@(4,R15)
+    00000364 0864                   MOV.B       R6,@(R0,R8); MotWait[].bcid
+    00000366 69E3                   MOV         R14,R9
+    00000368 3741401B               MOV.B       @(27:12,R4),R7; (mrcv)->msgid
+    0000036C 0ED4                   MOV.B       R13,@(R0,R14); MotWait[].req
+           tskmotwait        385      MotWait[mm].cnt = MotWait[mm].tim;                                  // ディレイ時間設定
+    0000036E 6DE3                   MOV         R14,R13
+    00000370 7D44                   ADD         #68,R13
+    00000372 7904                   ADD         #4,R9
+    00000374 02DE                   MOV.L       @(R0,R13),R2; MotWait[].tim
+    00000376 7148                   ADD         #72,R1
+           tskmotwait        386      MotWait[mm].motpare = mm2;                                          // モータペアセット
+    00000378 65E3                   MOV         R14,R5
+    0000037A 7505                   ADD         #5,R5
+           tskmotwait        387      memcpy( &MotWait[mm].msgdat[0],&mrcv->msgdata.data[0],CMD_BUFSIZ ); // データコピー
+    0000037C 7424                   ADD         #36,R4
+    0000037E 7E08                   ADD         #8,R14
+    00000380 0974                   MOV.B       R7,@(R0,R9); MotWait[].msgid
+    00000382 E63C                   MOV         #60,R6     ; H'0000003C
+    00000384 0126                   MOV.L       R2,@(R0,R1); MotWait[].cnt
+    00000386 05A4                   MOV.B       R10,@(R0,R5); MotWait[].motpare
+    00000388 6543                   MOV         R4,R5
+    0000038A 64E3                   MOV         R14,R4
+    0000038C D753                   MOV.L       L97+4,R7   ; _memcpy
+    0000038E 470B                   JSR         @R7
+    00000390 34CC                   ADD         R12,R4
+    00000392 E501                   MOV         #1,R5      ; H'00000001
+           tskmotwait        388    
+           tskmotwait        389      motor_POWER( mm, SET );
+    00000394 D253                   MOV.L       L97+12,R2  ; _motor_POWER
+    00000396 420B                   JSR         @R2
+    00000398 64B3                   MOV         R11,R4
+           tskmotwait        390    
+           tskmotwait        391      // WAIT無し
+           tskmotwait        392      if( MotWait[mm].tim == 0 )
+    0000039A 60C3                   MOV         R12,R0
+    0000039C 02DE                   MOV.L       @(R0,R13),R2; MotWait[].tim
+    0000039E 2228                   TST         R2,R2
+    000003A0 8B15                   BF          L85
+           tskmotwait        393      {
+           tskmotwait        394          // 動作指示
+           tskmotwait        395          mbx_send(   MotWait[mm].tskid,                                  // tskid
+           tskmotwait        396                      ID_MPF_MOTACT,                                      // mpfid
+           tskmotwait        397                      ID_MBX_MOTACT,                                      // mbxid
+           tskmotwait        398                      MotWait[mm].prid1,                                  // prid1
+           tskmotwait        399                      MotWait[mm].bcid,                                   // bcid
+           tskmotwait        400                      MotWait[mm].msgid,                                  // msgid
+           tskmotwait        401                      mm,                                                 // sts
+           tskmotwait        402                      mm2,                                                // sts2
+           tskmotwait        403                      &MotWait[mm].msgdat[0],                             // data
+           tskmotwait        404                      CMD_BUFSIZ                                          // siz
+           tskmotwait        405                  );
+    000003A2 ED3C                   MOV         #60,R13    ; H'0000003C
+    000003A4 2FD6                   MOV.L       R13,@-R15
+    000003A6 3ECC                   ADD         R12,R14
+    000003A8 2FE6                   MOV.L       R14,@-R15
+    000003AA 2FA6                   MOV.L       R10,@-R15
+    000003AC 2FB6                   MOV.L       R11,@-R15
+    000003AE 0E9C                   MOV.B       @(R0,R9),R14; MotWait[].msgid
+    000003B0 6EEC                   EXTU.B      R14,R14
+    000003B2 2FE6                   MOV.L       R14,@-R15
+    000003B4 018C                   MOV.B       @(R0,R8),R1; MotWait[].bcid
+    000003B6 611C                   EXTU.B      R1,R1
+    000003B8 2F16                   MOV.L       R1,@-R15
+    000003BA E609                   MOV         #9,R6      ; H'00000009
+    000003BC 59F6                   MOV.L       @(24,R15),R9
+    000003BE 58F7                   MOV.L       @(28,R15),R8
+    000003C0 059C                   MOV.B       @(R0,R9),R5; MotWait[].tskid
+    000003C2 078C                   MOV.B       @(R0,R8),R7; MotWait[].prid1
+    000003C4 645C                   EXTU.B      R5,R4
+    000003C6 D248                   MOV.L       L97+16,R2  ; _mbx_send
+    000003C8 420B                   JSR         @R2
+    000003CA E508                   MOV         #8,R5      ; H'00000008
+    000003CC 7F18                   ADD         #24,R15
+    000003CE              L85:
+           tskmotwait        406      }
+           tskmotwait        407      return(result);
+    000003CE E000                   MOV         #0,R0      ; H'00000000
+    000003D0 7F08                   ADD         #8,R15
+    000003D2 48F4                   MOVMU.L     @R15+,R8
+           tskmotwait        408    }
+    000003D4 006B                   RTS/N
+           tskmotwait        409    
+           tskmotwait        410    /***********************************************************************
+           tskmotwait        411    * 
+           tskmotwait        412    * [概要]  指定時間ＷＡＩＴ
+           tskmotwait        413    * [引数]  mrcv:メッセージデータ
+           tskmotwait        414    * [戻値]  エラーコード
+           tskmotwait        415    * 
+           tskmotwait        416    ***********************************************************************/
+           tskmotwait        417    static ER MotWaitTimeRequest( T_CMD_MSG* mrcv )
+    000003D6              __$MotWaitTimeRequest:           ; function: __$MotWaitTimeRequest
+                                                           ; frame size=52
+    000003D6 4BF0                   MOVMU.L     R11,@-R15
+    000003D8 7FF8                   ADD         #-8,R15
+    000003DA ED00                   MOV         #0,R13     ; H'00000000
+           tskmotwait        418    {
+           tskmotwait        419      ER      result = E_SUCCESS;
+           tskmotwait        420      UB      bcid;
+           tskmotwait        421      UB      prid1;
+           tskmotwait        422      UB      msgid;
+           tskmotwait        423      INT     waittim = CLR;
+           tskmotwait        424      ID      mpfid;
+           tskmotwait        425      ID      mbxid;
+           tskmotwait        426      
+           tskmotwait        427      bcid = mrcv->msgdata.bcid;                                          // ＢＣＩＤセット
+           tskmotwait        428    
+           tskmotwait        429      if( bcid < BCCTRL_MAX )
+    000003DC E213                   MOV         #19,R2     ; H'00000013
+    000003DE 2FD2                   MOV.L       R13,@R15   ; waittim
+    000003E0 3641801A               MOVU.B      @(26,R4),R6; (mrcv)->bcid
+    000003E4 3623                   CMP/GE      R2,R6
+    000003E6 3F610004               MOV.B       R6,@(4:12,R15); bcid
+    000003EA 8D49                   BT/S        L88
+    000003EC 6E43                   MOV         R4,R14
+           tskmotwait        430      {
+           tskmotwait        431          prid1 = mrcv->msgdata.prid1;                                    // 
+           tskmotwait        432          msgid = mrcv->msgdata.msgid;
+           tskmotwait        433          // 指定ＷＡＩＴ時間取得
+           tskmotwait        434          memcpy( &waittim, &mrcv->msgdata.data[0],sizeof( INT ) );
+    000003EE 65E3                   MOV         R14,R5
+    000003F0 7524                   ADD         #36,R5
+    000003F2 E604                   MOV         #4,R6      ; H'00000004
+    000003F4 3BE18018               MOVU.B      @(24,R14),R11; (mrcv)->prid1
+    000003F8 3CE1401B               MOV.B       @(27:12,R14),R12; (mrcv)->msgid
+    000003FC D237                   MOV.L       L97+4,R2   ; _memcpy
+    000003FE 420B                   JSR         @R2
+    00000400 64F3                   MOV         R15,R4
+           tskmotwait        435          
+           tskmotwait        436          // WAIT無し
+           tskmotwait        437          if( waittim == 0 )
+    00000402 61F2                   MOV.L       @R15,R1    ; waittim
+    00000404 2118                   TST         R1,R1
+    00000406 8B1E                   BF          L90
+           tskmotwait        438          {
+           tskmotwait        439              if( mrcv->msgdata.tskid == ID_TSK_TMPCNT )
+    00000408 50E5                   MOV.L       @(20,R14),R0; (mrcv)->tskid
+    0000040A 880E                   CMP/EQ      #14,R0
+    0000040C 8B02                   BF          L92
+           tskmotwait        440              {
+           tskmotwait        441                  mpfid = ID_MPF_TMPCNT;
+    0000040E E50D                   MOV         #13,R5     ; H'0000000D
+           tskmotwait        442                  mbxid = ID_MBX_TMPCNT;
+    00000410 A002                   BRA         L93
+    00000412 E60E                   MOV         #14,R6     ; H'0000000E
+    00000414              L92:
+           tskmotwait        443              }
+           tskmotwait        444              else
+           tskmotwait        445              {
+           tskmotwait        446                  mpfid = ID_MPF_CMD;
+    00000414 E504                   MOV         #4,R5      ; H'00000004
+           tskmotwait        447                  mbxid = ID_MBX_CMD;
+    00000416 E605                   MOV         #5,R6      ; H'00000005
+    00000418              L93:
+           tskmotwait        448              }
+           tskmotwait        449              
+           tskmotwait        450              // メッセージ通知
+           tskmotwait        451              result = mbx_send(
+           tskmotwait        452                                  ID_TSK_MOTWAIT,   // tskid
+           tskmotwait        453                                  mpfid,            // mpfid
+           tskmotwait        454                                  mbxid,            // mbxid
+           tskmotwait        455                                  prid1,            // prid1
+           tskmotwait        456                                  bcid,             // bcid
+           tskmotwait        457                                  ID_MSG_TIMWAIT,   // msgid
+           tskmotwait        458                                  NO_DATA,          // sts
+           tskmotwait        459                                  NO_DATA,          // sts2
+           tskmotwait        460                                  &bcid,            // data
+           tskmotwait        461                                  sizeof( bcid )    // siz
+           tskmotwait        462                              );
+    00000418 E101                   MOV         #1,R1      ; H'00000001
+    0000041A 2F16                   MOV.L       R1,@-R15
+    0000041C 64F3                   MOV         R15,R4
+    0000041E 7408                   ADD         #8,R4
+    00000420 2F46                   MOV.L       R4,@-R15
+    00000422 E1FF                   MOV         #-1,R1     ; H'FFFFFFFF
+    00000424 611C                   EXTU.B      R1,R1
+    00000426 2F16                   MOV.L       R1,@-R15
+    00000428 2F16                   MOV.L       R1,@-R15
+    0000042A 71C9                   ADD         #-55,R1
+    0000042C 671C                   EXTU.B      R1,R7
+    0000042E 2F76                   MOV.L       R7,@-R15
+    00000430 7FFC                   ADD         #-4,R15
+    00000432 E408                   MOV         #8,R4      ; H'00000008
+    00000434 3CF1801C               MOVU.B      @(28,R15),R12; bcid
+    00000438 2FC2                   MOV.L       R12,@R15
+    0000043A DE2B                   MOV.L       L97+16,R14 ; _mbx_send
+    0000043C 4E0B                   JSR         @R14
+    0000043E 67B3                   MOV         R11,R7
+    00000440 7F18                   ADD         #24,R15
+    00000442 A01D                   BRA         L88
+    00000444 6D03                   MOV         R0,R13
+    00000446              L90:
+           tskmotwait        463          }
+           tskmotwait        464          else
+           tskmotwait        465          {
+           tskmotwait        466              // 指定ＷＡＩＴ時間セット
+           tskmotwait        467              WaitTime[bcid].tskid = mrcv->msgdata.tskid;
+    00000446 37F18004               MOVU.B      @(4,R15),R7; bcid
+    0000044A E04C                   MOV         #76,R0     ; H'0000004C
+    0000044C 52E5                   MOV.L       @(20,R14),R2; (mrcv)->tskid
+    0000044E 6473                   MOV         R7,R4
+    00000450 4480                   MULR        R0,R4
+    00000452 D526                   MOV.L       L97+20,R5  ; __$WaitTime
+    00000454 6E53                   MOV         R5,R14
+    00000456 7E01                   ADD         #1,R14
+           tskmotwait        468              WaitTime[bcid].prid1 = prid1;
+           tskmotwait        469              WaitTime[bcid].bcid  = bcid;
+    00000458 6653                   MOV         R5,R6
+    0000045A 7603                   ADD         #3,R6
+    0000045C 6043                   MOV         R4,R0
+    0000045E 0E24                   MOV.B       R2,@(R0,R14); WaitTime[].tskid
+    00000460 6453                   MOV         R5,R4
+    00000462 7402                   ADD         #2,R4
+    00000464 04B4                   MOV.B       R11,@(R0,R4); WaitTime[].prid1
+           tskmotwait        470              WaitTime[bcid].msgid = msgid;
+           tskmotwait        471              WaitTime[bcid].motpare  = 0;
+    00000466 6B53                   MOV         R5,R11
+    00000468 0674                   MOV.B       R7,@(R0,R6); WaitTime[].bcid
+    0000046A 6753                   MOV         R5,R7
+           tskmotwait        472              WaitTime[bcid].tim   = waittim;
+    0000046C 6253                   MOV         R5,R2
+           tskmotwait        473              WaitTime[bcid].cnt   = waittim;
+    0000046E 7548                   ADD         #72,R5
+    00000470 7704                   ADD         #4,R7
+    00000472 7B05                   ADD         #5,R11
+    00000474 07C4                   MOV.B       R12,@(R0,R7); WaitTime[].msgid
+    00000476 EC00                   MOV         #0,R12     ; H'00000000
+    00000478 0BC4                   MOV.B       R12,@(R0,R11); WaitTime[].motpare
+    0000047A 7244                   ADD         #68,R2
+    0000047C 0216                   MOV.L       R1,@(R0,R2); WaitTime[].tim
+    0000047E 0516                   MOV.L       R1,@(R0,R5); WaitTime[].cnt
+    00000480              L88:
+           tskmotwait        474          }
+           tskmotwait        475      }
+           tskmotwait        476      
+           tskmotwait        477      return(result);
+    00000480 60D3                   MOV         R13,R0
+    00000482 7F08                   ADD         #8,R15
+    00000484 4BF4                   MOVMU.L     @R15+,R11
+           tskmotwait        478    }
+    00000486 006B                   RTS/N
+           tskmotwait        479    /***********************************************************************
+           tskmotwait        480    * 
+           tskmotwait        481    * [概要]  モータウェイト状態取得
+           tskmotwait        482    * [引数]  モータ番号
+           tskmotwait        483    * [戻値]  －
+           tskmotwait        484    * 
+           tskmotwait        485    ***********************************************************************/
+           tskmotwait        486    UB GetMotWait( UB mot  )
+    00000488              _GetMotWait:                     ; function: GetMotWait
+                                                           ; frame size=0
+    00000488 644C                   EXTU.B      R4,R4
+    0000048A E04C                   MOV         #76,R0     ; H'0000004C
+    0000048C 4480                   MULR        R0,R4
+           tskmotwait        487    {
+           tskmotwait        488      return( MotWait[mot].req );
+    0000048E D512                   MOV.L       L97,R5     ; __$MotWait
+    00000490 6043                   MOV         R4,R0
+           tskmotwait        489    }
+    00000492 000B                   RTS
+    00000494 005C                   MOV.B       @(R0,R5),R0; MotWait[].req
+           tskmotwait        490    
+           tskmotwait        491    /***********************************************************************
+           tskmotwait        492    *
+           tskmotwait        493    * [概要]  PDELAY  パルスモータのパワー制御待ち時間設定
+           tskmotwait        494    * [引数]  ｺﾏﾝﾄﾞ電文引数ﾃﾞｰﾀ
+           tskmotwait        495    * [戻値]  -
+           tskmotwait        496    * 
+           tskmotwait        497    ***********************************************************************/
+           tskmotwait        498    static ER MotWaitPDELAY ( T_CMD_MSG* mrcv )
+    00000496              __$MotWaitPDELAY:                ; function: __$MotWaitPDELAY
+                                                           ; frame size=20
+    00000496 4F22                   STS.L       PR,@-R15
+    00000498 4F12                   STS.L       MACL,@-R15
+    0000049A 4F02                   STS.L       MACH,@-R15
+    0000049C 7FF8                   ADD         #-8,R15
+           tskmotwait        499    {
+           tskmotwait        500      ER      result = E_SUCCESS;
+           tskmotwait        501      ST_PDELAY pdelay;
+           tskmotwait        502    
+           tskmotwait        503      // memcpy(コピー先アドレス、コピー元アドレス、コピーサイズ)
+           tskmotwait        504      memcpy( &pdelay, &mrcv->msgdata.data[0], sizeof(ST_PDELAY) );
+    0000049E 7424                   ADD         #36,R4
+    000004A0 E608                   MOV         #8,R6      ; H'00000008
+    000004A2 6543                   MOV         R4,R5
+    000004A4 D10D                   MOV.L       L97+4,R1   ; _memcpy
+    000004A6 410B                   JSR         @R1
+    000004A8 64F3                   MOV         R15,R4
+           tskmotwait        505    
+           tskmotwait        506      // ディレイ時間設定
+           tskmotwait        507      MotWait[pdelay.mm].tim = ( pdelay.tttt / DLY_10M );
+    000004AA D711                   MOV.L       L97+24,R7  ; H'66666667
+    000004AC 52F1                   MOV.L       @(4,R15),R2; pdelay.tttt
+    000004AE 31F18000               MOVU.B      @(0,R15),R1; pdelay.mm
+    000004B2 372D                   DMULS.L     R2,R7
+    000004B4 D20F                   MOV.L       L97+28,R2  ; H'00000044+__$MotWait
+    000004B6 050A                   STS         MACH,R5
+    000004B8 4521                   SHAR        R5
+    000004BA 4521                   SHAR        R5
+    000004BC 6053                   MOV         R5,R0
+    000004BE 4004                   ROTL        R0
+    000004C0 C901                   AND         #1,R0
+    000004C2 350C                   ADD         R0,R5
+    000004C4 E04C                   MOV         #76,R0     ; H'0000004C
+    000004C6 4180                   MULR        R0,R1
+    000004C8 6013                   MOV         R1,R0
+    000004CA 0256                   MOV.L       R5,@(R0,R2); MotWait[].tim
+           tskmotwait        508    
+           tskmotwait        509      return(result);
+    000004CC 7F08                   ADD         #8,R15
+    000004CE 4F06                   LDS.L       @R15+,MACH
+    000004D0 4F16                   LDS.L       @R15+,MACL
+    000004D2 4F26                   LDS.L       @R15+,PR
+           tskmotwait        510    }
+    000004D4 000B                   RTS
+    000004D6 E000                   MOV         #0,R0      ; H'00000000
+    000004D8              L97:
+    000004D8 <00000000>             .DATA.L     __$MotWait
+    000004DC <00000000>             .DATA.L     _memcpy
+    000004E0 <00000000>             .DATA.L     __$inf2_dbg
+    000004E4 <00000000>             .DATA.L     _motor_POWER
+    000004E8 <00000000>             .DATA.L     _mbx_send
+    000004EC <00000000>             .DATA.L     __$WaitTime
+    000004F0 66666667               .DATA.L     H'66666667
+    000004F4 <00000044>             .DATA.L     H'00000044+__$MotWait
+C   00000000              L98:
+    00000000 433A5C5573             .SDATA      "C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\tskmotwait.
+             6572735C53 +                       c"
+             65696A6959   
+             616D617A61   
+             6B695C446F   
+             63756D656E   
+             74735C5175   
+             69636B6765   
+             6E655C536F   
+             66745F4669   
+             726D5C5175   
+             69636B4765   
+             6E655F5072   
+             6F6A656374   
+             325C74736B   
+             6D6F747761   
+             69742E63     
+    00000054 00                     .DATA.B     H'00
+B   00000000              __$MotWait:                      ; static: __$MotWait
+    00000000 00000004               .RES.L      152
+    00000260              __$WaitTime:                     ; static: __$WaitTime
+    00000260 00000004               .RES.L      361
+    00000804              __$IntervalCounter:              ; static: __$IntervalCounter
+    00000804 00000004               .RES.L      1
+    00000808              __$inf2_dbg:                     ; static: __$inf2_dbg
+    00000808 00000001               .RES.B      1
+SH SERIES C/C++ Compiler (V.9.02.00.003)                                                         08-Sep-2023 13:46:36  PAGE    1
+
+
+******** STATISTICS INFORMATION ********
+
+
+********** ERROR INFORMATION ***********
+
+NUMBER OF ERRORS:           0
+NUMBER OF WARNINGS:         0
+
+
+
+
+******* SOURCE LINE INFORMATION ********
+
+COMPILED SOURCE LINE:      510
+
+
+
+******* SECTION SIZE INFORMATION *******
+
+PROGRAM  SECTION (P):                                 000004F8 Byte(s)
+CONSTANT SECTION (C):                                 00000055 Byte(s)
+DATA     SECTION (D):                                 00000000 Byte(s)
+BSS      SECTION (B):                                 00000809 Byte(s)
+
+TOTAL PROGRAM  SECTION: 000004F8 Byte(s)
+TOTAL CONSTANT SECTION: 00000055 Byte(s)
+TOTAL DATA     SECTION: 00000000 Byte(s)
+TOTAL BSS      SECTION: 00000809 Byte(s)
+
+    TOTAL PROGRAM SIZE: 00000D56 Byte(s)
+
+
+
+********** LABEL INFORMATION ***********
+
+NUMBER OF EXTERNAL REFERENCE SYMBOLS:            5
+NUMBER OF EXTERNAL DEFINITION SYMBOLS:           2
+NUMBER OF INTERNAL/EXTERNAL SYMBOLS:            36
+
+
+
+*** COMMAND PARAMETER ***
+
+-subcommand=C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\Debug\tskmotwait.shc
+-cpu=sh2a
+-include="C:\NORTi\INC","C:\NORTi\INC\Dummy","C:\NORTi\INC","C:\NORTi\LIB"
+-object="C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\Debug\tskmotwait.obj"
+-debug
+-listfile="C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\Debug\tskmotwait.lst"
+-show=source,tab=4
+-gbr=auto
+-chgincpath
+-errorpath
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\tskmotwait.c"
+-global_volatile=0
+-opt_range=all
+-infinite_loop=0
+-del_vacant_loop=0
+-struct_alloc=1
+-lang=c
+-nologo

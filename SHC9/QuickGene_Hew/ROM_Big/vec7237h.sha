@@ -1,0 +1,13 @@
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\vec7237h.asm"
+-cpu=sh2a
+-endian=big
+-round=zero
+-denormalize=off
+-define=ROMVEC=1
+-debug
+-object="C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene_Hew\ROM_Big\vec7237h.obj"
+-literal=pool,branch,jump,return
+-list="C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene_Hew\ROM_Big\vec7237h.lis"
+-nologo
+-chgincpath
+-errorpath

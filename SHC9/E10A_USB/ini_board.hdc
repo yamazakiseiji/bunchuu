@@ -1,0 +1,62 @@
+!
+!AP-SH2A-2A ボード初期化 バッチファイル
+!
+! 2010-11-04 ・新規作成                                                    [SZ]
+!
+
+TCL ENABLE
+
+proc memset { start_addr value mode } {
+    set end_addr $start_addr
+    if { "BYTE" == "$mode" } then {
+    } elseif { "WORD" == "$mode" } then {
+        incr end_addr 2
+        set end_addr [ format "%x" $end_addr ]
+    } else {
+        incr end_addr 4
+        set end_addr [ format "%x" $end_addr ]
+    }
+    MEMORY_FILL $start_addr $end_addr $value $mode N
+}
+
+!リセット
+RESET
+
+!クロックパルス発振器(CPG)
+memset FFFE0004 A51E WORD
+memset FFFE0002 5A78 WORD
+memset FFFE0010 0101 WORD
+SLEEP 1
+
+!ピンファンクションコントローラ(RFC)
+memset FFFE3810 1111 WORD
+memset FFFE3812 0011 WORD
+memset FFFE3814 1100 WORD
+memset FFFE3816 1055 WORD
+
+memset FFFE388E 0011 WORD
+memset FFFE3890 1005 WORD
+memset FFFE3892 5001 WORD
+memset FFFE3894 1100 WORD
+memset FFFE3896 0011 WORD
+
+memset FFFE3910 1111 WORD
+memset FFFE3912 1111 WORD
+memset FFFE3914 1111 WORD
+memset FFFE3916 1111 WORD
+
+memset FFFE388A 0007 WORD
+memset FFFE388E 7777 WORD
+memset FFFE3990 1111 WORD
+memset FFFE3992 1111 WORD
+memset FFFE3994 1111 WORD
+memset FFFE3996 1111 WORD
+
+!SDRAM
+SLEEP 1
+memset FFFC0010 00004400 LONG
+memset FFFC0034 00002492 LONG
+memset FFFC004C 00000909 LONG
+memset FFFC0050 A55A0008 LONG
+memset FFFC0058 A55A00C0 LONG
+memset FFFC5040 0000 WORD

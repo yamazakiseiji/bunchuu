@@ -1,0 +1,396 @@
+SH SERIES C/C++ Compiler (V.9.02.00.003)                                                         08-Sep-2023 13:46:34  PAGE    1
+
+************ OBJECT LISTING ************
+
+FILE NAME: C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\tblchr.c
+
+SCT OFFSET   CODE       C LABEL     INSTRUCTION OPERAND    COMMENT
+
+             tblchr.c          1    /******************************************************************************
+             tblchr.c          2    * テーブル定義                                                                *
+             tblchr.c          3    *                                                                             *
+             tblchr.c          4    * File name : tblchr.c                                                        *
+             tblchr.c          5    *                                                                             *
+             tblchr.c          6    * Copyright (c) 2018 NICHIRYO Co., Ltd.                                       *
+             tblchr.c          7    *                                                                             *
+             tblchr.c          8    ******************************************************************************/
+             tblchr.c          9    #include "define.h"
+             tblchr.c         10    
+             tblchr.c         11    
+             tblchr.c         12    const char * STRTBL_MSG[45] = 
+             tblchr.c         13    {
+             tblchr.c         14      "HELLO"    , /* 0  HELLO   起動通知                                     */
+             tblchr.c         15      "LOG"      , /* 1  LOG     ファームウェア情報の通知                     */
+             tblchr.c         16      "VER"      , /* 2  VER     バージョン確認                               */
+             tblchr.c         17      "ALLIN"    , /* 3  ALLIN   全I/O入力                                    */
+             tblchr.c         18      "BIN"      , /* 4  BIN     I/O入力                                      */
+             tblchr.c         19      "BOUT"     , /* 5  BOUT    I/O出力                                      */
+             tblchr.c         20      "CINIT"    , /* 6  CINIT   入力カウンタの設定                           */
+             tblchr.c         21      "COUNT"    , /* 7  COUNT   入力カウンタの読み出し                       */
+             tblchr.c         22      "INT"      , /* 8  INT     割り込み設定                                 */
+             tblchr.c         23      "ABSMV"    , /* 9  ABSMV   パルスモータ移動(絶対位置)                   */
+             tblchr.c         24      "ABORT"    , /* 10 ABORT   パルスモータ即停止                           */
+             tblchr.c         25      "ENCODER"  , /* 11 ENCODER エンコーダの設定                             */
+             tblchr.c         26      "LIMIT"    , /* 12 LIMIT   パルスモータ原点復帰                         */
+             tblchr.c         27      "MAP"      , /* 13 MAP     ２軸のパルスモータ移動                       */
+             tblchr.c         28      "PDELAY"   , /* 14 PDELAY  パルスモータのパワー制御待ち時間設定         */
+             tblchr.c         29      "POWER"    , /* 15 POWER   パルスモータの励磁制御                       */
+             tblchr.c         30      "PSET"     , /* 16 PSET    パルスモータのカウンタリセット               */
+             tblchr.c         31      "RELMV"    , /* 17 RELMV   パルスモータ移動(相対位置)                   */
+             tblchr.c         32      "SET"      , /* 18 SET     パルスモータ速度設定                         */
+             tblchr.c         33      "STATUS"   , /* 19 STATUS  パルスモータ状態読み出し                     */
+             tblchr.c         34      "STOP"     , /* 20 STOP    パルスモータ減速停止                         */
+             tblchr.c         35      "BZCNT"    , /* 21 BZCNT                                                */
+             tblchr.c         36      "EEPREAD"  , /* 22 EEPREAD                                              */
+             tblchr.c         37      "EEPWRIT"  , /* 23 EEPWRIT                                              */
+             tblchr.c         38      "reserve"  , /* 24 reserve                                              */
+             tblchr.c         39      "reserve"  , /* 25 reserve                                              */
+             tblchr.c         40      "TMPSET"   , /* 26 reserve                                              */
+             tblchr.c         41      "TMPGET"   , /* 27 reserve                                              */
+             tblchr.c         42      "reserve"  , /* 26 reserve                                              */
+             tblchr.c         43      "VINI"     , /* 29 reserve                                              */
+             tblchr.c         44      "PINI"     , /* 30 reserve                                              */
+             tblchr.c         45      "PREN"     , /* 31 reserve                                              */
+             tblchr.c         46      "PTAN"     , /* 32 reserve                                              */
+             tblchr.c         47      "PCAN"     , /* 33 reserve                                              */
+             tblchr.c         48      "VOUT"     , /* 34 reserve                                              */
+             tblchr.c         49      "PSNS"     , /* 35 reserve                                              */
+             tblchr.c         50      "IMPPDAT"  , /* 36 IMPPDAT                                              */
+             tblchr.c         51      "IMPSPED"  , /* 37 IMPSPED                                              */
+             tblchr.c         52      "IMPPOSI"  , /* 38 IMPPOSI                                              */
+             tblchr.c         53      "IMPOPTN"  , /* 39 IMPOPTN                                              */
+             tblchr.c         54      "EXPRUNL"  , /* 40 EXPRUNL                                              */
+             tblchr.c         55      "EXPCOML"  , /* 41 EXPCOML                                              */
+             tblchr.c         56      "reserve"  , /* 27 reserve                                              */
+             tblchr.c         57      "reserve"  , /* 28 reserve                                              */
+             tblchr.c         58      "reserve"    /* 29 reserve                                              */
+             tblchr.c         59    };
+             tblchr.c         60    
+             tblchr.c         61    
+             tblchr.c         62    
+             tblchr.c         63    const char STRTBL_CW[] = {"CW"};
+             tblchr.c         64    const char STRTBL_BCERR[] = {"ERROR"};
+             tblchr.c         65    const char STRTBL_BCCOM[] = {"COMER"};
+             tblchr.c         66    
+             tblchr.c         67    
+             tblchr.c         68    // ASC変換用
+             tblchr.c         69    const char ASC_CHG[16]  = 
+             tblchr.c         70    {
+             tblchr.c         71      '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'
+             tblchr.c         72    };
+             tblchr.c         73    const char ASC_CHG_LOWER[16]  = 
+             tblchr.c         74    {
+             tblchr.c         75      '0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'
+             tblchr.c         76    };
+             tblchr.c         77    
+             tblchr.c         78    //
+             tblchr.c         79    // === cyc handler =====================================================
+             tblchr.c         80    //
+             tblchr.c         81    
+             tblchr.c         82    
+             tblchr.c         83    
+             tblchr.c         84    //
+             tblchr.c         85    // === seg proc =====================================================
+             tblchr.c         86    //
+             tblchr.c         87    const char num_seg[] = 
+             tblchr.c         88    { 
+             tblchr.c         89      0x3F,0x06,0x5B,0x4F,0x66,0x6D,0x7D,0x27,0x7F,0x6F,0x77,0x7C,0x39,0x5E,0x79,0x71,            /* 00 */    
+             tblchr.c         90      0xBF,0x86,0xDB,0xBF,0xE6,0xED,0xFD,0xA7,0xFF,0xEF,0xF7,0xFC,0xB9,0xDE,0xF9,0xF1             /* 10 */    /* Dot付き*/
+             tblchr.c         91    };
+             tblchr.c         92    
+C   00000000              _STRTBL_CW:                      ; static: STRTBL_CW
+    00000000 4357                   .SDATA      "CW"
+    00000002 00                     .DATA.B     H'00
+    00000003              _STRTBL_BCERR:                   ; static: STRTBL_BCERR
+    00000003 4552524F52             .SDATA      "ERROR"
+    00000008 00                     .DATA.B     H'00
+    00000009              _STRTBL_BCCOM:                   ; static: STRTBL_BCCOM
+    00000009 434F4D4552             .SDATA      "COMER"
+    0000000E 00                     .DATA.B     H'00
+    0000000F              _ASC_CHG:                        ; static: ASC_CHG
+    0000000F 3031323334             .DATA.B     H'30,H'31,H'32,H'33,H'34,H'35,H'36,H'37,H'38,H'39,H'41,H'42,H'43,H'44,H'45,H'46
+             3536373839   
+             4142434445   
+             46           
+    0000001F              _ASC_CHG_LOWER:                  ; static: ASC_CHG_LOWER
+    0000001F 3031323334             .DATA.B     H'30,H'31,H'32,H'33,H'34,H'35,H'36,H'37,H'38,H'39,H'61,H'62,H'63,H'64,H'65,H'66
+             3536373839   
+             6162636465   
+             66           
+    0000002F              _num_seg:                        ; static: num_seg
+    0000002F 3F065B4F66             .DATA.B     H'3F,H'06,H'5B,H'4F,H'66,H'6D,H'7D,H'27,H'7F,H'6F,H'77,H'7C,H'39,H'5E,H'79,H'71,
+             6D7D277F6F +                       H'BF,H'86,H'DB,H'BF,H'E6,H'ED,H'FD,H'A7,H'FF,H'EF,H'F7,H'FC,H'B9,H'DE,H'F9,H'F1
+             777C395E79   
+             71BF86DBBF   
+             E6EDFDA7FF   
+             EFF7FCB9DE   
+             F9F1         
+D   00000000              _STRTBL_MSG:                     ; static: STRTBL_MSG
+    00000000 <00000000>   
+             <00000000>             .DATA.L     L0,L1,L2,L3,L4,L5,L6,L7,L8,L9,L10,L11,L12,L13,L14,L15,L16,L17,L18,L19,L20,L21,L22,
+             <00000000> +                       L23,L24,L24,L25,L26,L24,L27,L28,L29,L30,L31,L32,L33,L34,L35,L36,L37,L38,L39,L24,L24,
+             <00000000> +                       L24
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+             <00000000>   
+C   0000004F 00000001               .RES.B      1
+    00000050              L0:
+    00000050 48454C4C4F             .SDATA      "HELLO"
+    00000055 00                     .DATA.B     H'00
+    00000056 00                     .DATAB.B    2,0
+    00000058              L1:
+    00000058 4C4F47                 .SDATA      "LOG"
+    0000005B 00                     .DATA.B     H'00
+    0000005C              L2:
+    0000005C 564552                 .SDATA      "VER"
+    0000005F 00                     .DATA.B     H'00
+    00000060              L3:
+    00000060 414C4C494E             .SDATA      "ALLIN"
+    00000065 00                     .DATA.B     H'00
+    00000066 00                     .DATAB.B    2,0
+    00000068              L4:
+    00000068 42494E                 .SDATA      "BIN"
+    0000006B 00                     .DATA.B     H'00
+    0000006C              L5:
+    0000006C 424F5554               .SDATA      "BOUT"
+    00000070 00                     .DATA.B     H'00
+    00000071 00                     .DATAB.B    3,0
+    00000074              L6:
+    00000074 43494E4954             .SDATA      "CINIT"
+    00000079 00                     .DATA.B     H'00
+    0000007A 00                     .DATAB.B    2,0
+    0000007C              L7:
+    0000007C 434F554E54             .SDATA      "COUNT"
+    00000081 00                     .DATA.B     H'00
+    00000082 00                     .DATAB.B    2,0
+    00000084              L8:
+    00000084 494E54                 .SDATA      "INT"
+    00000087 00                     .DATA.B     H'00
+    00000088              L9:
+    00000088 4142534D56             .SDATA      "ABSMV"
+    0000008D 00                     .DATA.B     H'00
+    0000008E 00                     .DATAB.B    2,0
+    00000090              L10:
+    00000090 41424F5254             .SDATA      "ABORT"
+    00000095 00                     .DATA.B     H'00
+    00000096 00                     .DATAB.B    2,0
+    00000098              L11:
+    00000098 454E434F44             .SDATA      "ENCODER"
+             4552         
+    0000009F 00                     .DATA.B     H'00
+    000000A0              L12:
+    000000A0 4C494D4954             .SDATA      "LIMIT"
+    000000A5 00                     .DATA.B     H'00
+    000000A6 00                     .DATAB.B    2,0
+    000000A8              L13:
+    000000A8 4D4150                 .SDATA      "MAP"
+    000000AB 00                     .DATA.B     H'00
+    000000AC              L14:
+    000000AC 5044454C41             .SDATA      "PDELAY"
+             59           
+    000000B2 00                     .DATA.B     H'00
+    000000B3 00                     .DATAB.B    1,0
+    000000B4              L15:
+    000000B4 504F574552             .SDATA      "POWER"
+    000000B9 00                     .DATA.B     H'00
+    000000BA 00                     .DATAB.B    2,0
+    000000BC              L16:
+    000000BC 50534554               .SDATA      "PSET"
+    000000C0 00                     .DATA.B     H'00
+    000000C1 00                     .DATAB.B    3,0
+    000000C4              L17:
+    000000C4 52454C4D56             .SDATA      "RELMV"
+    000000C9 00                     .DATA.B     H'00
+    000000CA 00                     .DATAB.B    2,0
+    000000CC              L18:
+    000000CC 534554                 .SDATA      "SET"
+    000000CF 00                     .DATA.B     H'00
+    000000D0              L19:
+    000000D0 5354415455             .SDATA      "STATUS"
+             53           
+    000000D6 00                     .DATA.B     H'00
+    000000D7 00                     .DATAB.B    1,0
+    000000D8              L20:
+    000000D8 53544F50               .SDATA      "STOP"
+    000000DC 00                     .DATA.B     H'00
+    000000DD 00                     .DATAB.B    3,0
+    000000E0              L21:
+    000000E0 425A434E54             .SDATA      "BZCNT"
+    000000E5 00                     .DATA.B     H'00
+    000000E6 00                     .DATAB.B    2,0
+    000000E8              L22:
+    000000E8 4545505245             .SDATA      "EEPREAD"
+             4144         
+    000000EF 00                     .DATA.B     H'00
+    000000F0              L23:
+    000000F0 4545505752             .SDATA      "EEPWRIT"
+             4954         
+    000000F7 00                     .DATA.B     H'00
+    000000F8              L24:
+    000000F8 7265736572             .SDATA      "reserve"
+             7665         
+    000000FF 00                     .DATA.B     H'00
+    00000100              L25:
+    00000100 544D505345             .SDATA      "TMPSET"
+             54           
+    00000106 00                     .DATA.B     H'00
+    00000107 00                     .DATAB.B    1,0
+    00000108              L26:
+    00000108 544D504745             .SDATA      "TMPGET"
+             54           
+    0000010E 00                     .DATA.B     H'00
+    0000010F 00                     .DATAB.B    1,0
+    00000110              L27:
+    00000110 56494E49               .SDATA      "VINI"
+    00000114 00                     .DATA.B     H'00
+    00000115 00                     .DATAB.B    3,0
+    00000118              L28:
+    00000118 50494E49               .SDATA      "PINI"
+    0000011C 00                     .DATA.B     H'00
+    0000011D 00                     .DATAB.B    3,0
+    00000120              L29:
+    00000120 5052454E               .SDATA      "PREN"
+    00000124 00                     .DATA.B     H'00
+    00000125 00                     .DATAB.B    3,0
+    00000128              L30:
+    00000128 5054414E               .SDATA      "PTAN"
+    0000012C 00                     .DATA.B     H'00
+    0000012D 00                     .DATAB.B    3,0
+    00000130              L31:
+    00000130 5043414E               .SDATA      "PCAN"
+    00000134 00                     .DATA.B     H'00
+    00000135 00                     .DATAB.B    3,0
+    00000138              L32:
+    00000138 564F5554               .SDATA      "VOUT"
+    0000013C 00                     .DATA.B     H'00
+    0000013D 00                     .DATAB.B    3,0
+    00000140              L33:
+    00000140 50534E53               .SDATA      "PSNS"
+    00000144 00                     .DATA.B     H'00
+    00000145 00                     .DATAB.B    3,0
+    00000148              L34:
+    00000148 494D505044             .SDATA      "IMPPDAT"
+             4154         
+    0000014F 00                     .DATA.B     H'00
+    00000150              L35:
+    00000150 494D505350             .SDATA      "IMPSPED"
+             4544         
+    00000157 00                     .DATA.B     H'00
+    00000158              L36:
+    00000158 494D50504F             .SDATA      "IMPPOSI"
+             5349         
+    0000015F 00                     .DATA.B     H'00
+    00000160              L37:
+    00000160 494D504F50             .SDATA      "IMPOPTN"
+             544E         
+    00000167 00                     .DATA.B     H'00
+    00000168              L38:
+    00000168 4558505255             .SDATA      "EXPRUNL"
+             4E4C         
+    0000016F 00                     .DATA.B     H'00
+    00000170              L39:
+    00000170 455850434F             .SDATA      "EXPCOML"
+             4D4C         
+    00000177 00                     .DATA.B     H'00
+SH SERIES C/C++ Compiler (V.9.02.00.003)                                                         08-Sep-2023 13:46:34  PAGE    1
+
+
+******** STATISTICS INFORMATION ********
+
+
+********** ERROR INFORMATION ***********
+
+NUMBER OF ERRORS:           0
+NUMBER OF WARNINGS:         0
+
+
+
+
+******* SOURCE LINE INFORMATION ********
+
+COMPILED SOURCE LINE:       92
+
+
+
+******* SECTION SIZE INFORMATION *******
+
+PROGRAM  SECTION (P):                                 00000000 Byte(s)
+CONSTANT SECTION (C):                                 00000178 Byte(s)
+DATA     SECTION (D):                                 000000B4 Byte(s)
+BSS      SECTION (B):                                 00000000 Byte(s)
+
+TOTAL PROGRAM  SECTION: 00000000 Byte(s)
+TOTAL CONSTANT SECTION: 00000178 Byte(s)
+TOTAL DATA     SECTION: 000000B4 Byte(s)
+TOTAL BSS      SECTION: 00000000 Byte(s)
+
+    TOTAL PROGRAM SIZE: 0000022C Byte(s)
+
+
+
+********** LABEL INFORMATION ***********
+
+NUMBER OF EXTERNAL REFERENCE SYMBOLS:            0
+NUMBER OF EXTERNAL DEFINITION SYMBOLS:           7
+NUMBER OF INTERNAL/EXTERNAL SYMBOLS:            47
+
+
+
+*** COMMAND PARAMETER ***
+
+-subcommand=C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\Debug\tblchr.shc
+-cpu=sh2a
+-include="C:\NORTi\INC","C:\NORTi\INC\Dummy","C:\NORTi\INC","C:\NORTi\LIB"
+-object="C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\Debug\tblchr.obj"
+-debug
+-listfile="C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\Debug\tblchr.lst"
+-show=source,tab=4
+-gbr=auto
+-chgincpath
+-errorpath
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\tblchr.c"
+-global_volatile=0
+-opt_range=all
+-infinite_loop=0
+-del_vacant_loop=0
+-struct_alloc=1
+-lang=c
+-nologo

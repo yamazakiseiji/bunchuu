@@ -1,0 +1,5 @@
+-cpu=sh2a
+-output="C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\Debug\QuickGene_Project.lib"
+-gbr=auto
+-ecpp
+-head=runtime,ctype,stdarg,stdio,stdlib,string

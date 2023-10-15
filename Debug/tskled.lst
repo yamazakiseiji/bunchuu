@@ -1,0 +1,971 @@
+SH SERIES C/C++ Compiler (V.9.02.00.003)                                                         08-Sep-2023 13:46:35  PAGE    1
+
+************ OBJECT LISTING ************
+
+FILE NAME: C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\tskled.c
+
+SCT OFFSET   CODE       C LABEL     INSTRUCTION OPERAND    COMMENT
+
+             tskled.c          1    /******************************************************************************
+             tskled.c          2    * パトライト・ＬＥＤ・ブザー制御タスク                                        *
+             tskled.c          3    *                                                                             *
+             tskled.c          4    * File name : tskled.c                                                        *
+             tskled.c          5    *                                                                             *
+             tskled.c          6    * Copyright (c) 2018 NICHIRYO Co., Ltd.                                       *
+             tskled.c          7    *                                                                             *
+             tskled.c          8    ******************************************************************************/
+             tskled.c          9    #include <kernel.h>
+             tskled.c         10    #include "sh7237.h"
+             tskled.c         11    #include "iodefine.h"
+             tskled.c         12    #include "define.h"
+             tskled.c         13    #include "datastruct.h"
+             tskled.c         14    #include "sub.h"
+             tskled.c         15    #include "tskled.h"
+             tskled.c         16    #include "automachine.h"
+             tskled.c         17    
+             tskled.c         18    
+             tskled.c         19    //*************************************
+             tskled.c         20    // 関数定義
+             tskled.c         21    //*************************************
+             tskled.c         22    static void AlternateOutInit();                   // 制御データ初期化
+             tskled.c         23    static void AlternateOutProc();                   // 交互出力監視（パトライト・ＬＥＤ・ブザー）
+             tskled.c         24    static void AlternateOutReq(T_CMD_MSG* mrcv); // 交互出力要求処理
+             tskled.c         25    static void PatLightOut( UB col );                // パトライト出力
+             tskled.c         26    
+             tskled.c         27    //*************************************
+             tskled.c         28    // テーブル
+             tskled.c         29    //*************************************
+             tskled.c         30    
+             tskled.c         31    // =================================
+             tskled.c         32    // 補足．●＝ＬＥＤ
+             tskled.c         33    // =================================
+             tskled.c         34    //     Ch.0  サンプルラックロック1
+             tskled.c         35    //     Ch.1  サンプルラックロック2
+             tskled.c         36    //     Ch.2  サンプルラックロック3
+             tskled.c         37    //     Ch.3  サンプルラックロック4
+             tskled.c         38    //     Ch.4  精製ラックロック1
+             tskled.c         39    //     Ch.5  精製ラックロック2
+             tskled.c         40    //     Ch.6  精製ラックロック3
+             tskled.c         41    //     Ch.7  開栓ハンド
+             tskled.c         42    //     Ch.8  チューブ把持
+             tskled.c         43    //     Ch.9  搬送ハンド
+             tskled.c         44    //     Ch.10 空気弁
+             tskled.c         45    // ●  Ch.11 照明LED
+             tskled.c         46    // ●  Ch.12 パトライト赤
+             tskled.c         47    // ●  Ch.13 パトライト緑
+             tskled.c         48    // ●  Ch.14 パトライト青
+             tskled.c         49    // ●  Ch.15 ブザー1
+             tskled.c         50    // ●  Ch.16 サンプルラックLED1
+             tskled.c         51    // ●  Ch.17 サンプルラックLED2
+             tskled.c         52    // ●  Ch.18 サンプルラックLED3
+             tskled.c         53    // ●  Ch.19 サンプルラックLED4
+             tskled.c         54    //     Ch.20 液面検知開始1
+             tskled.c         55    //     Ch.21 液面検知開始2
+             tskled.c         56    //     Ch.22 吸引開始1
+             tskled.c         57    //     Ch.23 吸引開始2
+             tskled.c         58    // ●  Ch.24 精製ラックLED1
+             tskled.c         59    // ●  Ch.25 精製ラックLED2
+             tskled.c         60    // ●  Ch.26 精製ラックLED3
+             tskled.c         61    //     Ch.27 reserve
+             tskled.c         62    //     Ch.28 ドロップキャッチャCW
+             tskled.c         63    //     Ch.29 ドロップキャッチャCCW
+             tskled.c         64    
+             tskled.c         65    
+             tskled.c         66    // ﾊﾟﾄﾗｲﾄ点滅時間(100msec単位)
+             tskled.c         67    #define SYNCTIM1  7
+             tskled.c         68    #define SYNCTIM2  5
+             tskled.c         69    #define SYNCTIM3  3
+             tskled.c         70    #define PATRBWTIM 21
+             tskled.c         71    #define ACTTWAITIM    1           // 実行前ＷＡＩＴ
+             tskled.c         72    
+             tskled.c         73    // // #define C_RED           1       // 1:赤
+             tskled.c         74    // // #define C_GRN           2       // 2:緑
+             tskled.c         75    // // #define C_BLU           3       // 3:青
+             tskled.c         76    // // #define C_YEL           4       // 4:黄
+             tskled.c         77    // // #define C_PAP           5       // 5:紫
+             tskled.c         78    // // #define C_SKY           6       // 6:水
+             tskled.c         79    // // #define C_WHT           7       // 7:白
+             tskled.c         80    // // #define C_RBW           8       // 8:虹(パトライト色動作確認)
+             tskled.c         81    
+             tskled.c         82    // ブザーパターン１周期(＝ベース周期100msec×20)
+             tskled.c         83    #define BUZ_INTERVAL  30
+             tskled.c         84    
+             tskled.c         85    
+             tskled.c         86    // ブザーパターンテーブル
+             tskled.c         87    const char BUZ_PAT_TBL[8][BUZ_INTERVAL] =
+             tskled.c         88    {
+             tskled.c         89       // 0msec                     1000msec
+             tskled.c         90      { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},//  0:無音
+             tskled.c         91      { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},//  1:ピー
+             tskled.c         92      { 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0},//  2:ピーッピーッ(ON:700 msec,OFF:300 msec)
+             tskled.c         93      { 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0},//  3:ピーッピーッ(ON:500 msec,OFF:500 msec)
+             tskled.c         94      { 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0},//  4:ピーッピーッ(ON:300 msec,OFF:700 msec)
+             tskled.c         95      { 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0},//  5:ピピッピピッ(ON:300 msec,OFF:300 msec)
+             tskled.c         96      { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0},//  6:ピーッピーッ(ON:1000msec,OFF:500msec)
+             tskled.c         97      { 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0},//  7:ピーッピピッ
+             tskled.c         98    };
+             tskled.c         99    
+             tskled.c        100    
+             tskled.c        101    //*************************************
+             tskled.c        102    // データ定義
+             tskled.c        103    //*************************************
+             tskled.c        104    
+             tskled.c        105    static UB         ledreq[MAX_CH+1];           // ＣＨ別ＬＥＤ情報// 2020/2/12 １はじまり対応
+             tskled.c        106    static ST_BZCNT       bzcnt;                  // パトライト・ブザー制御データ
+             tskled.c        107    static ST_LEDON       ledon;                  // ＬＥＤ制御データ
+             tskled.c        108    static ST_LED_STS buzsts;                 // ブザー情報
+             tskled.c        109    static ST_LED_STS patsyc;                 // 光り物シンクロ用
+             tskled.c        110    static UB         rbwcnt;
+             tskled.c        111    static UB         blptn;
+             tskled.c        112    
+             tskled.c        113    /***********************************************************************
+             tskled.c        114    * ｘｘｘ
+             tskled.c        115    * 
+             tskled.c        116    * [概要]
+             tskled.c        117    * ｘｘｘ
+             tskled.c        118    * 
+             tskled.c        119    * 
+             tskled.c        120    ***********************************************************************/
+             tskled.c        121    TASK TskLed( void )
+P   00000000              _TskLed:                         ; function: TskLed
+                                                           ; frame size=4
+    00000000 7FFC                   ADD         #-4,R15
+    00000002 ED93                   MOV         #-109,R13  ; H'FFFFFF93
+             tskled.c        122    {
+             tskled.c        123        T_CMD_MSG*  msg;
+             tskled.c        124      ER          err;
+             tskled.c        125    
+             tskled.c        126      // 初期化
+             tskled.c        127      AlternateOutInit();
+    00000004 B016                   BSR         __$AlternateOutInit
+    00000006 6DDC                   EXTU.B      R13,R13
+    00000008 DE7E                   MOV.L       L135,R14   ; _v4_trcv_mbx
+    0000000A DB7F                   MOV.L       L135+4,R11 ; L137
+    0000000C DC7F                   MOV.L       L135+8,R12 ; _api_rel_mpf
+    0000000E              L11:
+             tskled.c        128      
+             tskled.c        129      for( ;; )
+             tskled.c        130        {
+             tskled.c        131          // メッセージ指示待ち
+             tskled.c        132          err = trcv_mbx( ID_MBX_LED, (T_MSG**)&msg, DLY_100M );
+    0000000E E664                   MOV         #100,R6    ; H'00000064
+    00000010 E40C                   MOV         #12,R4     ; H'0000000C
+    00000012 4E0B                   JSR         @R14
+    00000014 65F3                   MOV         R15,R5
+             tskled.c        133    
+             tskled.c        134          if( err == E_TMOUT )
+    00000016 88CE                   CMP/EQ      #-50,R0
+    00000018 8B03                   BF          L13
+             tskled.c        135          {
+             tskled.c        136              // 交互出力監視
+             tskled.c        137              AlternateOutProc();
+    0000001A B025                   BSR         _AlternateOutProc
+    0000001C 0009                   NOP
+    0000001E AFF6                   BRA         L11
+    00000020 0009                   NOP
+    00000022              L13:
+             tskled.c        138              continue;
+             tskled.c        139          }
+             tskled.c        140          else
+             tskled.c        141          {
+             tskled.c        142              // メッセージ処理
+             tskled.c        143              AlternateOutReq(msg);
+    00000022 B0A3                   BSR         __$AlternateOutReq
+    00000024 64F2                   MOV.L       @R15,R4    ; msg
+    00000026 67F2                   MOV.L       @R15,R7    ; msg
+             tskled.c        144          }
+             tskled.c        145          
+             tskled.c        146          // メモリ解放
+             tskled.c        147          RelMpf( ID_MPF_LED, (VP)msg );
+    00000028 E60B                   MOV         #11,R6     ; H'0000000B
+    0000002A 64B3                   MOV         R11,R4
+    0000002C 4C0B                   JSR         @R12
+    0000002E 65D3                   MOV         R13,R5
+    00000030 AFED                   BRA         L11
+    00000032 0009                   NOP
+             tskled.c        148        }
+             tskled.c        149    }
+             tskled.c        150    /***********************************************************************
+             tskled.c        151    * 
+             tskled.c        152    * [概要]  制御データ初期化
+             tskled.c        153    * [引数]  －
+             tskled.c        154    * [戻値]  －
+             tskled.c        155    * 
+             tskled.c        156    ***********************************************************************/
+             tskled.c        157    static void AlternateOutInit()
+    00000034              __$AlternateOutInit:             ; function: __$AlternateOutInit
+                                                           ; frame size=12
+    00000034 4DF0                   MOVMU.L     R13,@-R15
+    00000036 EEFF                   MOV         #-1,R14    ; H'FFFFFFFF
+    00000038 E640                   MOV         #64,R6     ; H'00000040
+    0000003A 6EEC                   EXTU.B      R14,R14
+             tskled.c        158    {
+             tskled.c        159      memset( &ledreq[0], DEFDAT, (MAX_CH+1) );// 2020/2/12 １はじまり対応
+    0000003C D474                   MOV.L       L135+12,R4 ; __$ledreq
+    0000003E DD75                   MOV.L       L135+16,R13; _memset
+    00000040 4D0B                   JSR         @R13
+    00000042 65E3                   MOV         R14,R5
+    00000044 E604                   MOV         #4,R6      ; H'00000004
+             tskled.c        160      memset( &bzcnt,     DEFDAT, sizeof( ST_BZCNT )   );
+    00000046 D474                   MOV.L       L135+20,R4 ; __$bzcnt
+    00000048 4D0B                   JSR         @R13
+    0000004A 65E3                   MOV         R14,R5
+    0000004C E604                   MOV         #4,R6      ; H'00000004
+             tskled.c        161      memset( &ledon,     DEFDAT, sizeof( ST_LEDON )   );
+    0000004E D473                   MOV.L       L135+24,R4 ; __$ledon
+    00000050 4D0B                   JSR         @R13
+    00000052 65E3                   MOV         R14,R5
+    00000054 E604                   MOV         #4,R6      ; H'00000004
+             tskled.c        162      memset( &buzsts,    DEFDAT, sizeof( ST_LED_STS ) );
+    00000056 D472                   MOV.L       L135+28,R4 ; __$buzsts
+    00000058 4D0B                   JSR         @R13
+    0000005A 65E3                   MOV         R14,R5
+    0000005C E604                   MOV         #4,R6      ; H'00000004
+             tskled.c        163      memset( &patsyc,    CLR,    sizeof( ST_LED_STS ) );
+    0000005E D471                   MOV.L       L135+32,R4 ; __$patsyc
+    00000060 4D0B                   JSR         @R13
+    00000062 E500                   MOV         #0,R5      ; H'00000000
+    00000064 4DF4                   MOVMU.L     @R15+,R13
+             tskled.c        164    }
+    00000066 006B                   RTS/N
+             tskled.c        165    
+             tskled.c        166    /***********************************************************************
+             tskled.c        167    * 
+             tskled.c        168    * [概要]  交互出力監視（パトライト・ＬＥＤ・ブザー）
+             tskled.c        169    * [引数]  －
+             tskled.c        170    * [戻値]  －
+             tskled.c        171    * 
+             tskled.c        172    ***********************************************************************/
+             tskled.c        173    static void AlternateOutProc()
+    00000068              _AlternateOutProc:               ; function: AlternateOutProc
+                                                           ; frame size=24
+    00000068 4AF0                   MOVMU.L     R10,@-R15
+             tskled.c        174    {
+             tskled.c        175      INT Loop;
+             tskled.c        176      UB  synctim;
+             tskled.c        177    
+             tskled.c        178      // パトライト点滅監視
+             tskled.c        179      patsyc.cnt++;
+    0000006A DA6E                   MOV.L       L135+32,R10; __$patsyc
+    0000006C 84A1                   MOV.B       @(1,R10),R0; patsyc.cnt
+    0000006E E607                   MOV         #7,R6      ; H'00000007
+    00000070 7001                   ADD         #1,R0
+             tskled.c        180      if( patsyc.cnt >= SYNCTIM1 )
+    00000072 620C                   EXTU.B      R0,R2
+    00000074 3263                   CMP/GE      R6,R2
+    00000076 8F05                   BF/S        L38
+    00000078 80A1                   MOV.B       R0,@(1,R10); patsyc.cnt
+             tskled.c        181      {
+             tskled.c        182          patsyc.sts ^= LEDON;
+    0000007A 60A0                   MOV.B       @R10,R0    ; patsyc.sts
+    0000007C CA01                   XOR         #1,R0
+    0000007E 2A00                   MOV.B       R0,@R10    ; patsyc.sts
+             tskled.c        183          patsyc.cnt =  CLR;
+    00000080 E000                   MOV         #0,R0      ; H'00000000
+    00000082 80A1                   MOV.B       R0,@(1,R10); patsyc.cnt
+    00000084              L38:
+             tskled.c        184      }
+             tskled.c        185      
+             tskled.c        186      
+             tskled.c        187      // ------------------------
+             tskled.c        188      // ﾊﾟﾄﾗｲﾄ出力
+             tskled.c        189      // ------------------------
+             tskled.c        190      switch( bzcnt.Act )
+    00000084 DE64                   MOV.L       L135+20,R14; __$bzcnt
+    00000086 30E18000               MOVU.B      @(0,R14),R0; bzcnt.Act
+    0000008A 2008                   TST         R0,R0
+    0000008C 8B01                   BF          L39
+             tskled.c        191      {
+             tskled.c        192      // 消灯
+             tskled.c        193      case PATOF:
+             tskled.c        194          // 念のためもう一回出力
+             tskled.c        195          PatLightOut( C_CLR );
+    0000008E A004                   BRA         L41
+    00000090 E4FF                   MOV         #-1,R4     ; H'FFFFFFFF
+    00000092              L39:
+    00000092 8801                   CMP/EQ      #1,R0
+    00000094 8B06                   BF          L42
+             tskled.c        196          bzcnt.Act = DEFDAT;
+             tskled.c        197          break;
+             tskled.c        198    
+             tskled.c        199      // 点灯
+             tskled.c        200      case PATON:
+             tskled.c        201          // 念のためもう一回出力
+             tskled.c        202          PatLightOut( bzcnt.Colptn );
+    00000096 84E1                   MOV.B       @(1,R14),R0; bzcnt.Colptn
+    00000098 6403                   MOV         R0,R4
+    0000009A              L41:
+    0000009A B0FA                   BSR         __$PatLightOut
+    0000009C 0009                   NOP
+    0000009E E2FF                   MOV         #-1,R2     ; H'FFFFFFFF
+    000000A0 A010                   BRA         L44
+    000000A2 2E20                   MOV.B       R2,@R14    ; bzcnt.Act
+    000000A4              L42:
+    000000A4 8802                   CMP/EQ      #2,R0
+    000000A6 8903                   BT          L46
+    000000A8 8803                   CMP/EQ      #3,R0
+    000000AA 8901                   BT          L46
+    000000AC 8804                   CMP/EQ      #4,R0
+    000000AE 8B09                   BF          L44
+    000000B0              L46:
+             tskled.c        203          bzcnt.Act = DEFDAT;
+             tskled.c        204          break;
+             tskled.c        205      
+             tskled.c        206      // 点滅
+             tskled.c        207      case PATBL1:
+             tskled.c        208      case PATBL2:
+             tskled.c        209      case PATBL3:
+             tskled.c        210          if( patsyc.sts == LEDON )
+    000000B0 60A0                   MOV.B       @R10,R0    ; patsyc.sts
+    000000B2 8801                   CMP/EQ      #1,R0
+    000000B4 8B04                   BF          L49
+             tskled.c        211          {
+             tskled.c        212              PatLightOut( bzcnt.Colptn );
+    000000B6 84E1                   MOV.B       @(1,R14),R0; bzcnt.Colptn
+    000000B8 B0EB                   BSR         __$PatLightOut
+    000000BA 6403                   MOV         R0,R4
+    000000BC A002                   BRA         L44
+    000000BE 0009                   NOP
+    000000C0              L49:
+             tskled.c        213          }
+             tskled.c        214          else
+             tskled.c        215          {
+             tskled.c        216              PatLightOut( C_CLR );
+    000000C0 B0E7                   BSR         __$PatLightOut
+    000000C2 E4FF                   MOV         #-1,R4     ; H'FFFFFFFF
+    000000C4              L44:
+             tskled.c        217          }
+             tskled.c        218          break;
+             tskled.c        219      // 指示なし
+             tskled.c        220      default:
+             tskled.c        221          break;
+             tskled.c        222      }
+             tskled.c        223    
+             tskled.c        224    
+             tskled.c        225      // ------------------------
+             tskled.c        226      // ﾌﾞｻﾞｰ出力
+             tskled.c        227      // ------------------------
+             tskled.c        228      switch( bzcnt.Buzptn )
+    000000C4 84E2                   MOV.B       @(2,R14),R0; bzcnt.Buzptn
+    000000C6 650C                   EXTU.B      R0,R5
+    000000C8 2558                   TST         R5,R5
+    000000CA 8D03                   BT/S        L51
+    000000CC 6403                   MOV         R0,R4
+    000000CE 6053                   MOV         R5,R0
+    000000D0 8801                   CMP/EQ      #1,R0
+    000000D2 8B07                   BF          L52
+    000000D4              L51:
+             tskled.c        229      {
+             tskled.c        230      // 停止
+             tskled.c        231      case BUZOF:
+             tskled.c        232      // ブザー1(ピー)
+             tskled.c        233      case BUZ01:
+             tskled.c        234          // 念のためもう一回出力
+             tskled.c        235          buzsts.sts = bzcnt.Buzptn;
+    000000D4 D752                   MOV.L       L135+28,R7 ; __$buzsts
+    000000D6 2740                   MOV.B       R4,@R7     ; buzsts.sts
+             tskled.c        236          pio_BOUT( O_BUZZER1, bzcnt.Buzptn );
+    000000D8 D253                   MOV.L       L135+36,R2 ; _pio_BOUT
+    000000DA 420B                   JSR         @R2
+    000000DC E409                   MOV         #9,R4      ; H'00000009
+             tskled.c        237          bzcnt.Buzptn = DEFDAT;
+    000000DE E0FF                   MOV         #-1,R0     ; H'FFFFFFFF
+    000000E0 A025                   BRA         L53
+    000000E2 80E2                   MOV.B       R0,@(2,R14); bzcnt.Buzptn
+    000000E4              L52:
+    000000E4 8802                   CMP/EQ      #2,R0
+    000000E6 8909                   BT          L55
+    000000E8 8803                   CMP/EQ      #3,R0
+    000000EA 8907                   BT          L55
+    000000EC 8804                   CMP/EQ      #4,R0
+    000000EE 8905                   BT          L55
+    000000F0 8805                   CMP/EQ      #5,R0
+    000000F2 8903                   BT          L55
+    000000F4 8806                   CMP/EQ      #6,R0
+    000000F6 8901                   BT          L55
+    000000F8 8807                   CMP/EQ      #7,R0
+    000000FA 8B18                   BF          L53
+    000000FC              L55:
+             tskled.c        238          break;
+             tskled.c        239      case BUZ02: //  2:
+             tskled.c        240      case BUZ03: //  3:
+             tskled.c        241      case BUZ04: //  4:
+             tskled.c        242      case BUZ05: //  5:
+             tskled.c        243      case BUZ06: //  6:
+             tskled.c        244      case BUZ07: //  7:
+             tskled.c        245          if( buzsts.cnt >= BUZ_INTERVAL )    buzsts.cnt = 0;
+    000000FC D748                   MOV.L       L135+28,R7 ; __$buzsts
+    000000FE 8471                   MOV.B       @(1,R7),R0 ; buzsts.cnt
+    00000100 E11E                   MOV         #30,R1     ; H'0000001E
+    00000102 3012                   CMP/HS      R1,R0
+    00000104 8F03                   BF/S        L61
+    00000106 6603                   MOV         R0,R6
+    00000108 E600                   MOV         #0,R6      ; H'00000000
+    0000010A 6063                   MOV         R6,R0
+    0000010C 8071                   MOV.B       R0,@(1,R7) ; buzsts.cnt
+    0000010E              L61:
+    0000010E 644C                   EXTU.B      R4,R4
+    00000110 6013                   MOV         R1,R0
+    00000112 4480                   MULR        R0,R4
+    00000114 606C                   EXTU.B      R6,R0
+             tskled.c        246    
+             tskled.c        247          buzsts.sts = BUZ_PAT_TBL[bzcnt.Buzptn][buzsts.cnt];
+    00000116 D245                   MOV.L       L135+40,R2 ; _BUZ_PAT_TBL
+             tskled.c        248          pio_BOUT( O_BUZZER1, buzsts.sts );
+             tskled.c        249          buzsts.cnt++;
+    00000118 DC41                   MOV.L       L135+28,R12; __$buzsts
+    0000011A 304C                   ADD         R4,R0
+    0000011C E409                   MOV         #9,R4      ; H'00000009
+    0000011E 0B2C                   MOV.B       @(R0,R2),R11; BUZ_PAT_TBL[]
+    00000120 65BC                   EXTU.B      R11,R5
+    00000122 D241                   MOV.L       L135+36,R2 ; _pio_BOUT
+    00000124 420B                   JSR         @R2
+    00000126 2750                   MOV.B       R5,@R7     ; buzsts.sts
+    00000128 84C1                   MOV.B       @(1,R12),R0; buzsts.cnt
+    0000012A 7001                   ADD         #1,R0
+    0000012C 80C1                   MOV.B       R0,@(1,R12); buzsts.cnt
+    0000012E              L53:
+             tskled.c        250          break;
+             tskled.c        251      // 指示なし
+             tskled.c        252      default:
+             tskled.c        253          break;
+             tskled.c        254      }
+             tskled.c        255    
+             tskled.c        256    
+             tskled.c        257      // ------------------------
+             tskled.c        258      // LED出力
+             tskled.c        259      // ------------------------
+             tskled.c        260      for( Loop = MIN_CH ; Loop <= MAX_CH ; Loop++ )// 2020/2/12 １はじまり対応
+    0000012E ED01                   MOV         #1,R13     ; H'00000001
+    00000130 ECFF                   MOV         #-1,R12    ; H'FFFFFFFF
+    00000132 DE3F                   MOV.L       L135+44,R14; H'00000001+__$ledreq
+    00000134 EB3F                   MOV         #63,R11    ; H'0000003F
+    00000136              L62:
+             tskled.c        261      {
+             tskled.c        262          switch( ledreq[Loop] )
+    00000136 35E18000               MOVU.B      @(0,R14),R5; ledreq[]
+    0000013A 2558                   TST         R5,R5
+    0000013C 8906                   BT          L64
+    0000013E 6053                   MOV         R5,R0
+    00000140 8801                   CMP/EQ      #1,R0
+    00000142 8903                   BT          L64
+    00000144 8802                   CMP/EQ      #2,R0
+    00000146 8906                   BT          L66
+    00000148 A00A                   BRA         L67
+    0000014A 0009                   NOP
+    0000014C              L64:
+             tskled.c        263          {
+             tskled.c        264          // 消灯
+             tskled.c        265          case LEDOF:
+             tskled.c        266          // 点灯
+             tskled.c        267          case LEDON:
+             tskled.c        268              pio_BOUT( Loop, ledreq[Loop] );
+    0000014C D236                   MOV.L       L135+36,R2 ; _pio_BOUT
+    0000014E 420B                   JSR         @R2
+    00000150 64D3                   MOV         R13,R4
+             tskled.c        269              ledreq[Loop] = DEFDAT;
+    00000152 A005                   BRA         L67
+    00000154 2EC0                   MOV.B       R12,@R14   ; ledreq[]
+    00000156              L66:
+             tskled.c        270              break;
+             tskled.c        271          
+             tskled.c        272          // 点滅
+             tskled.c        273          case LEDBL:
+             tskled.c        274              pio_BOUT( Loop, patsyc.sts );
+    00000156 35A18000               MOVU.B      @(0,R10),R5; patsyc.sts
+    0000015A D233                   MOV.L       L135+36,R2 ; _pio_BOUT
+    0000015C 420B                   JSR         @R2
+    0000015E 64D3                   MOV         R13,R4
+    00000160              L67:
+    00000160 7D01                   ADD         #1,R13
+    00000162 3DB7                   CMP/GT      R11,R13
+    00000164 8FE7                   BF/S        L62
+    00000166 7E01                   ADD         #1,R14
+    00000168 4AF4                   MOVMU.L     @R15+,R10
+             tskled.c        275              break;
+             tskled.c        276    
+             tskled.c        277          // 指示なし
+             tskled.c        278          default:
+             tskled.c        279              break;
+             tskled.c        280          }
+             tskled.c        281      }
+             tskled.c        282    }
+    0000016A 006B                   RTS/N
+             tskled.c        283    
+             tskled.c        284    /***********************************************************************
+             tskled.c        285    * 
+             tskled.c        286    * [概要]  交互出力要求処理
+             tskled.c        287    * [引数]  メッセージデータ
+             tskled.c        288    * [戻値]  －
+             tskled.c        289    * 
+             tskled.c        290    ***********************************************************************/
+             tskled.c        291    static void AlternateOutReq(T_CMD_MSG* mrcv)
+    0000016C              __$AlternateOutReq:              ; function: __$AlternateOutReq
+                                                           ; frame size=4
+    0000016C 4F22                   STS.L       PR,@-R15
+             tskled.c        292    {
+             tskled.c        293      UB msgid;
+             tskled.c        294    #if 1
+             tskled.c        295      msgid = mrcv->msgdata.msgid;
+             tskled.c        296      switch( msgid )
+    0000016E 3041801B               MOVU.B      @(27,R4),R0; (mrcv)->msgid
+    00000172 8832                   CMP/EQ      #50,R0
+    00000174 8903                   BT          L94
+    00000176 8833                   CMP/EQ      #51,R0
+    00000178 8964                   BT          L95
+    0000017A A088                   BRA         L96
+    0000017C 0009                   NOP
+    0000017E              L94:
+             tskled.c        297      {
+             tskled.c        298      // ------------------------
+             tskled.c        299      // ﾊﾟﾄﾗｲﾄ出力ﾘｸｴｽﾄ
+             tskled.c        300      // ------------------------
+             tskled.c        301      case ID_MSG_CBZCNT:
+             tskled.c        302          memcpy( &bzcnt, &mrcv->msgdata.data[0],sizeof(ST_BZCNT) );
+    0000017E 7424                   ADD         #36,R4
+    00000180 6543                   MOV         R4,R5
+    00000182 D425                   MOV.L       L135+20,R4 ; __$bzcnt
+    00000184 D22B                   MOV.L       L135+48,R2 ; _memcpy
+    00000186 420B                   JSR         @R2
+    00000188 E604                   MOV         #4,R6      ; H'00000004
+             tskled.c        303          
+             tskled.c        304          // パトライト制御
+             tskled.c        305          switch( bzcnt.Act )
+    0000018A D523                   MOV.L       L135+20,R5 ; __$bzcnt
+    0000018C 30518000               MOVU.B      @(0,R5),R0 ; bzcnt.Act
+    00000190 8801                   CMP/EQ      #1,R0
+    00000192 8B04                   BF          L97
+             tskled.c        306          {
+             tskled.c        307          case PATON:         // 1:点灯
+             tskled.c        308              PatLightOut( bzcnt.Colptn );
+    00000194 8451                   MOV.B       @(1,R5),R0 ; bzcnt.Colptn
+    00000196 B07C                   BSR         __$PatLightOut
+    00000198 6403                   MOV         R0,R4
+    0000019A A00D                   BRA         L99
+    0000019C 0009                   NOP
+    0000019E              L97:
+    0000019E 8802                   CMP/EQ      #2,R0
+    000001A0 8905                   BT          L101
+    000001A2 8803                   CMP/EQ      #3,R0
+    000001A4 8903                   BT          L101
+    000001A6 8804                   CMP/EQ      #4,R0
+    000001A8 8901                   BT          L101
+    000001AA 2008                   TST         R0,R0
+    000001AC 8B04                   BF          L99
+    000001AE              L101:
+             tskled.c        309              break;
+             tskled.c        310          case PATBL1:        // 2:点滅
+             tskled.c        311          case PATBL2:
+             tskled.c        312          case PATBL3:
+             tskled.c        313              // 点滅前に一瞬消灯させるため下へ続く
+             tskled.c        314              // ↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
+             tskled.c        315              
+             tskled.c        316          case PATOF:         // 0:消灯
+             tskled.c        317              PatLightOut( C_CLR );
+    000001AE B070                   BSR         __$PatLightOut
+    000001B0 E4FF                   MOV         #-1,R4     ; H'FFFFFFFF
+             tskled.c        318              rbwcnt = 0;
+    000001B2 E200                   MOV         #0,R2      ; H'00000000
+    000001B4 D620                   MOV.L       L135+52,R6 ; __$rbwcnt
+    000001B6 2620                   MOV.B       R2,@R6     ; rbwcnt
+    000001B8              L99:
+             tskled.c        319              break;
+             tskled.c        320          default:
+             tskled.c        321              // 何もしない
+             tskled.c        322              break;
+             tskled.c        323          }
+             tskled.c        324    
+             tskled.c        325    
+             tskled.c        326          // ブザー制御
+             tskled.c        327          switch( bzcnt.Buzptn )
+    000001B8 D520                   MOV.L       L135+56,R5 ; H'00000002+__$bzcnt
+    000001BA 30518000               MOVU.B      @(0,R5),R0 ; bzcnt.Buzptn
+    000001BE 2008                   TST         R0,R0
+    000001C0 8918                   BT          L105
+    000001C2 8801                   CMP/EQ      #1,R0
+    000001C4 8B07                   BF          L106
+             tskled.c        328          {
+             tskled.c        329          // 停止
+             tskled.c        330          case BUZOF:
+             tskled.c        331              buzsts.sts = OFF;
+             tskled.c        332              pio_BOUT( O_BUZZER1, OFF );
+             tskled.c        333              break;
+             tskled.c        334    
+             tskled.c        335          // ブザー1(ピー)
+             tskled.c        336          case BUZ01:
+             tskled.c        337              buzsts.sts = ON;
+    000001C6 0129                   MOVT        R1
+    000001C8 E501                   MOV         #1,R5      ; H'00000001
+    000001CA D615                   MOV.L       L135+28,R6 ; __$buzsts
+    000001CC 2610                   MOV.B       R1,@R6     ; buzsts.sts
+    000001CE E409                   MOV         #9,R4      ; H'00000009
+             tskled.c        338              pio_BOUT( O_BUZZER1, ON  );
+    000001D0 D715                   MOV.L       L135+36,R7 ; _pio_BOUT
+    000001D2 472B                   JMP         @R7
+    000001D4 4F26                   LDS.L       @R15+,PR
+    000001D6              L106:
+    000001D6 8802                   CMP/EQ      #2,R0
+    000001D8 8909                   BT          L109
+    000001DA 8803                   CMP/EQ      #3,R0
+    000001DC 8907                   BT          L109
+    000001DE 8804                   CMP/EQ      #4,R0
+    000001E0 8905                   BT          L109
+    000001E2 8805                   CMP/EQ      #5,R0
+    000001E4 8903                   BT          L109
+    000001E6 8806                   CMP/EQ      #6,R0
+    000001E8 8901                   BT          L109
+    000001EA 8807                   CMP/EQ      #7,R0
+    000001EC 8B4F                   BF          L96
+    000001EE              L109:
+             tskled.c        339              break;
+             tskled.c        340    
+             tskled.c        341          case BUZ02: //
+             tskled.c        342          case BUZ03: //
+             tskled.c        343          case BUZ04: //
+             tskled.c        344          case BUZ05: //
+             tskled.c        345          case BUZ06: //
+             tskled.c        346          case BUZ07: //
+             tskled.c        347              buzsts.cnt = 0;
+    000001EE E000                   MOV         #0,R0      ; H'00000000
+    000001F0 D613                   MOV.L       L135+60,R6 ; H'00000001+__$buzsts
+    000001F2 2600                   MOV.B       R0,@R6     ; buzsts.cnt
+    000001F4              L105:
+    000001F4 E100                   MOV         #0,R1      ; H'00000000
+    000001F6 E500                   MOV         #0,R5      ; H'00000000
+    000001F8 D609                   MOV.L       L135+28,R6 ; __$buzsts
+    000001FA 2610                   MOV.B       R1,@R6     ; buzsts.sts
+    000001FC E409                   MOV         #9,R4      ; H'00000009
+    000001FE D70A                   MOV.L       L135+36,R7 ; _pio_BOUT
+    00000200 472B                   JMP         @R7
+    00000202 4F26                   LDS.L       @R15+,PR
+    00000204              L135:
+    00000204 <00000000>             .DATA.L     _v4_trcv_mbx
+    00000208 <00000000>             .DATA.L     L137
+    0000020C <00000000>             .DATA.L     _api_rel_mpf
+    00000210 <00000000>             .DATA.L     __$ledreq
+    00000214 <00000000>             .DATA.L     _memset
+    00000218 <00000000>             .DATA.L     __$bzcnt
+    0000021C <00000000>             .DATA.L     __$ledon
+    00000220 <00000000>             .DATA.L     __$buzsts
+    00000224 <00000000>             .DATA.L     __$patsyc
+    00000228 <00000000>             .DATA.L     _pio_BOUT
+    0000022C <00000000>             .DATA.L     _BUZ_PAT_TBL
+    00000230 <00000001>             .DATA.L     H'00000001+__$ledreq
+    00000234 <00000000>             .DATA.L     _memcpy
+    00000238 <00000000>             .DATA.L     __$rbwcnt
+    0000023C <00000002>             .DATA.L     H'00000002+__$bzcnt
+    00000240 <00000001>             .DATA.L     H'00000001+__$buzsts
+    00000244              L95:
+             tskled.c        348              buzsts.sts = OFF;
+             tskled.c        349              pio_BOUT( O_BUZZER1, OFF );
+             tskled.c        350              // 鳴動前に一瞬停止させるため下へ続く
+             tskled.c        351              // ↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
+             tskled.c        352              break;
+             tskled.c        353    
+             tskled.c        354          default:
+             tskled.c        355              // 何もしない
+             tskled.c        356              break;
+             tskled.c        357          }
+             tskled.c        358          break;
+             tskled.c        359    
+             tskled.c        360    
+             tskled.c        361      // ------------------------
+             tskled.c        362      // LED出力ﾘｸｴｽﾄ
+             tskled.c        363      // ------------------------
+             tskled.c        364      case ID_MSG_CLEDON:
+             tskled.c        365          memcpy( &ledon, &mrcv->msgdata.data[0],sizeof(ST_LEDON) );
+    00000244 7424                   ADD         #36,R4
+    00000246 6543                   MOV         R4,R5
+    00000248 D423                   MOV.L       L136+2,R4  ; __$ledon
+    0000024A D124                   MOV.L       L136+6,R1  ; _memcpy
+    0000024C 410B                   JSR         @R1
+    0000024E E604                   MOV         #4,R6      ; H'00000004
+             tskled.c        366          
+             tskled.c        367          if( ledon.nn > MAX_CH )     break;
+    00000250 D121                   MOV.L       L136+2,R1  ; __$ledon
+    00000252 35118000               MOVU.B      @(0,R1),R5 ; ledon.nn
+    00000256 E73F                   MOV         #63,R7     ; H'0000003F
+    00000258 3577                   CMP/GT      R7,R5
+    0000025A 8D18                   BT/S        L96
+    0000025C 6453                   MOV         R5,R4
+    0000025E 8411                   MOV.B       @(1,R1),R0 ; ledon.act
+             tskled.c        368    
+             tskled.c        369          ledreq[ledon.nn] = ledon.act;
+    00000260 D61F                   MOV.L       L136+10,R6 ; __$ledreq
+    00000262 6203                   MOV         R0,R2
+    00000264 6053                   MOV         R5,R0
+             tskled.c        370    
+             tskled.c        371          switch( ledon.act )
+    00000266 652C                   EXTU.B      R2,R5
+    00000268 2558                   TST         R5,R5
+    0000026A 8D07                   BT/S        L116
+    0000026C 0624                   MOV.B       R2,@(R0,R6); ledreq[]
+    0000026E 6053                   MOV         R5,R0
+    00000270 8801                   CMP/EQ      #1,R0
+    00000272 8903                   BT          L116
+    00000274 8802                   CMP/EQ      #2,R0
+    00000276 8904                   BT          L118
+    00000278 A009                   BRA         L96
+    0000027A 0009                   NOP
+    0000027C              L116:
+             tskled.c        372          {
+             tskled.c        373              case LEDOF:         // 0:消灯
+             tskled.c        374              case LEDON:         // 1:点灯
+             tskled.c        375                  pio_BOUT( ledon.nn, ledon.act  );
+    0000027C D219                   MOV.L       L136+14,R2 ; _pio_BOUT
+    0000027E 422B                   JMP         @R2
+    00000280 4F26                   LDS.L       @R15+,PR
+    00000282              L118:
+             tskled.c        376                  break;
+             tskled.c        377    
+             tskled.c        378              case LEDBL:         // 2:点滅
+             tskled.c        379                  pio_BOUT( ledon.nn, patsyc.sts );
+    00000282 D619                   MOV.L       L136+18,R6 ; __$patsyc
+    00000284 35618000               MOVU.B      @(0,R6),R5 ; patsyc.sts
+    00000288 D216                   MOV.L       L136+14,R2 ; _pio_BOUT
+    0000028A 422B                   JMP         @R2
+    0000028C 4F26                   LDS.L       @R15+,PR
+    0000028E              L96:
+    0000028E 4F26                   LDS.L       @R15+,PR
+    00000290 006B                   RTS/N
+             tskled.c        380                  break;
+             tskled.c        381              default:
+             tskled.c        382                  break;
+             tskled.c        383          }
+             tskled.c        384          break;
+             tskled.c        385    
+             tskled.c        386      // 規定外
+             tskled.c        387      default:
+             tskled.c        388          break;
+             tskled.c        389      }
+             tskled.c        390    #endif
+             tskled.c        391    }
+             tskled.c        392    
+             tskled.c        393    /***********************************************************************
+             tskled.c        394    * 
+             tskled.c        395    * [概要]  パトライト出力処理
+             tskled.c        396    *
+             tskled.c        397    *    補足.  赤＋緑     → 黄
+             tskled.c        398    *           赤＋青     → 紫
+             tskled.c        399    *           緑＋青     → 水色
+             tskled.c        400    *           赤＋緑＋青 → 白
+             tskled.c        401    *
+             tskled.c        402    * [引数]  色ﾊﾟﾀｰﾝ
+             tskled.c        403    * [戻値]  －
+             tskled.c        404    * 
+             tskled.c        405    ***********************************************************************/
+             tskled.c        406    static void PatLightOut( UB col )
+    00000292              __$PatLightOut:                  ; function: __$PatLightOut
+                                                           ; frame size=0
+             tskled.c        407    {
+             tskled.c        408      switch( col )
+    00000292 604C                   EXTU.B      R4,R0
+    00000294 2008                   TST         R0,R0
+    00000296 8909                   BT          L127
+    00000298 8801                   CMP/EQ      #1,R0
+    0000029A 890C                   BT          L129
+    0000029C 8802                   CMP/EQ      #2,R0
+    0000029E 890F                   BT          L131
+    000002A0 E6FF                   MOV         #-1,R6     ; H'FFFFFFFF
+    000002A2 666C                   EXTU.B      R6,R6
+    000002A4 3060                   CMP/EQ      R6,R0
+    000002A6 8910                   BT          L132
+    000002A8 A014                   BRA         L133
+    000002AA 0009                   NOP
+    000002AC              L127:
+    000002AC E600                   MOV         #0,R6      ; H'00000000
+    000002AE E501                   MOV         #1,R5      ; H'00000001
+             tskled.c        409      {
+             tskled.c        410      case C_GRN:         // 緑
+             tskled.c        411          //           R   G    B
+             tskled.c        412          pio_PATOUT( OFF, ON, OFF );
+    000002B0 D20E                   MOV.L       L136+22,R2 ; _pio_PATOUT
+    000002B2 422B                   JMP         @R2
+    000002B4 6463                   MOV         R6,R4
+    000002B6              L129:
+    000002B6 E501                   MOV         #1,R5      ; H'00000001
+    000002B8 E600                   MOV         #0,R6      ; H'00000000
+             tskled.c        413          break;
+             tskled.c        414      case C_YEL:         // 黄
+             tskled.c        415          pio_PATOUT( ON, ON, OFF );
+    000002BA D20C                   MOV.L       L136+22,R2 ; _pio_PATOUT
+    000002BC 422B                   JMP         @R2
+    000002BE 6453                   MOV         R5,R4
+    000002C0              L131:
+    000002C0 E600                   MOV         #0,R6      ; H'00000000
+    000002C2 E401                   MOV         #1,R4      ; H'00000001
+             tskled.c        416          break;
+             tskled.c        417      case C_RED:         // 赤
+             tskled.c        418          pio_PATOUT( ON, OFF, OFF );
+    000002C4 D209                   MOV.L       L136+22,R2 ; _pio_PATOUT
+    000002C6 422B                   JMP         @R2
+    000002C8 6563                   MOV         R6,R5
+    000002CA              L132:
+    000002CA E600                   MOV         #0,R6      ; H'00000000
+             tskled.c        419          break;
+             tskled.c        420      case C_CLR:         // 消灯
+             tskled.c        421          pio_PATOUT( OFF, OFF, OFF );
+    000002CC 6563                   MOV         R6,R5
+    000002CE D207                   MOV.L       L136+22,R2 ; _pio_PATOUT
+    000002D0 422B                   JMP         @R2
+    000002D2 6463                   MOV         R6,R4
+    000002D4              L133:
+    000002D4 006B                   RTS/N
+    000002D6              L136:
+    000002D6 00000002               .RES.W      1
+    000002D8 <00000000>             .DATA.L     __$ledon
+    000002DC <00000000>             .DATA.L     _memcpy
+    000002E0 <00000000>             .DATA.L     __$ledreq
+    000002E4 <00000000>             .DATA.L     _pio_BOUT
+    000002E8 <00000000>             .DATA.L     __$patsyc
+    000002EC <00000000>             .DATA.L     _pio_PATOUT
+             tskled.c        422          break;
+             tskled.c        423      }
+             tskled.c        424    }
+             tskled.c        425    
+C   00000000              _BUZ_PAT_TBL:                    ; static: BUZ_PAT_TBL
+    00000000 0000000000             .DATA.B     H'00,H'00,H'00,H'00,H'00,H'00,H'00,H'00,H'00,H'00,H'00,H'00,H'00,H'00,H'00,H'00,
+             0000000000 +                       H'00,H'00,H'00,H'00,H'00,H'00,H'00,H'00,H'00,H'00,H'00,H'00,H'00,H'00,H'01,H'01,
+             0000000000 +                       H'01,H'01,H'01,H'01,H'01,H'01,H'01,H'01,H'01,H'01,H'01,H'01,H'01,H'01,H'01,H'01,
+             0000000000 +                       H'01,H'01,H'01,H'01,H'01,H'01,H'01,H'01,H'01,H'01,H'01,H'01,H'01,H'01,H'01,H'01,
+             0000000000 +                       H'01,H'01,H'01,H'00,H'00,H'00,H'01,H'01,H'01,H'01,H'01,H'01,H'01,H'00,H'00,H'00,
+             0000000000 +                       H'01,H'01,H'01,H'01,H'01,H'01,H'01,H'00,H'00,H'00,H'01,H'01,H'01,H'01,H'01,H'00,
+             0101010101 +                       H'00,H'00,H'00,H'00,H'01,H'01,H'01,H'01,H'01,H'00,H'00,H'00,H'00,H'00,H'01,H'01,
+             0101010101 +                       H'01,H'01,H'01,H'00,H'00,H'00,H'00,H'00,H'01,H'01,H'01,H'00,H'00,H'00,H'00,H'00,
+             0101010101 +                       H'00,H'00,H'01,H'01,H'01,H'00,H'00,H'00,H'00,H'00,H'00,H'00,H'01,H'01,H'01,H'00,
+             0101010101 +                       H'00,H'00,H'00,H'00,H'00,H'00,H'01,H'01,H'01,H'00,H'00,H'00,H'01,H'01,H'01,H'00,
+             0101010101 +                       H'00,H'00,H'01,H'01,H'01,H'00,H'00,H'00,H'01,H'01,H'01,H'00,H'00,H'00,H'01,H'01,
+             0101010101 +                       H'01,H'00,H'00,H'00,H'01,H'01,H'01,H'01,H'01,H'01,H'01,H'01,H'01,H'01,H'00,H'00,
+             0101010101 +                       H'00,H'00,H'00,H'01,H'01,H'01,H'01,H'01,H'01,H'01,H'01,H'01,H'01,H'00,H'00,H'00,
+             0101000000 +                       H'00,H'00,H'01,H'01
+             0101010101   
+             0101000000   
+             0101010101   
+             0101000000   
+             0101010101   
+             0000000000   
+             0101010101   
+             0000000000   
+             0101010101   
+             0000000000   
+             0101010000   
+             0000000000   
+             0101010000   
+             0000000000   
+             0101010000   
+             0000000000   
+             0101010000   
+             0001010100   
+             0000010101   
+             0000000101   
+             0100000001   
+             0101000000   
+             0101010101   
+             0101010101   
+             0000000000   
+             0101010101   
+             0101010101   
+             0000000000   
+             0101         
+    000000D4 0101010000             .DATA.B     H'01,H'01,H'01,H'00,H'00,H'00,H'00,H'01,H'01,H'01,H'01,H'00,H'00,H'00,H'01,H'01,
+             0000010101 +                       H'01,H'00,H'00,H'00,H'01,H'01,H'00,H'00,H'01,H'01,H'00,H'00
+             0100000001   
+             0101000000   
+             0101000001   
+             010000       
+    000000F0              L137:
+    000000F0 433A5C5573             .SDATA      "C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\tskled.c"
+             6572735C53   
+             65696A6959   
+             616D617A61   
+             6B695C446F   
+             63756D656E   
+             74735C5175   
+             69636B6765   
+             6E655C536F   
+             66745F4669   
+             726D5C5175   
+             69636B4765   
+             6E655F5072   
+             6F6A656374   
+             325C74736B   
+             6C65642E63   
+    00000140 00                     .DATA.B     H'00
+B   00000000              __$ledreq:                       ; static: __$ledreq
+    00000000 00000001               .RES.B      64
+    00000040              __$bzcnt:                        ; static: __$bzcnt
+    00000040 00000001               .RES.B      4
+    00000044              __$ledon:                        ; static: __$ledon
+    00000044 00000001               .RES.B      4
+    00000048              __$buzsts:                       ; static: __$buzsts
+    00000048 00000001               .RES.B      4
+    0000004C              __$patsyc:                       ; static: __$patsyc
+    0000004C 00000001               .RES.B      4
+    00000050              __$rbwcnt:                       ; static: __$rbwcnt
+    00000050 00000001               .RES.B      1
+    00000051              __$blptn:                        ; static: __$blptn
+    00000051 00000001               .RES.B      1
+SH SERIES C/C++ Compiler (V.9.02.00.003)                                                         08-Sep-2023 13:46:35  PAGE    1
+
+
+******** STATISTICS INFORMATION ********
+
+
+********** ERROR INFORMATION ***********
+
+NUMBER OF ERRORS:           0
+NUMBER OF WARNINGS:         0
+
+
+
+
+******* SOURCE LINE INFORMATION ********
+
+COMPILED SOURCE LINE:      425
+
+
+
+******* SECTION SIZE INFORMATION *******
+
+PROGRAM  SECTION (P):                                 000002F0 Byte(s)
+CONSTANT SECTION (C):                                 00000141 Byte(s)
+DATA     SECTION (D):                                 00000000 Byte(s)
+BSS      SECTION (B):                                 00000052 Byte(s)
+
+TOTAL PROGRAM  SECTION: 000002F0 Byte(s)
+TOTAL CONSTANT SECTION: 00000141 Byte(s)
+TOTAL DATA     SECTION: 00000000 Byte(s)
+TOTAL BSS      SECTION: 00000052 Byte(s)
+
+    TOTAL PROGRAM SIZE: 00000483 Byte(s)
+
+
+
+********** LABEL INFORMATION ***********
+
+NUMBER OF EXTERNAL REFERENCE SYMBOLS:            6
+NUMBER OF EXTERNAL DEFINITION SYMBOLS:           3
+NUMBER OF INTERNAL/EXTERNAL SYMBOLS:            46
+
+
+
+*** COMMAND PARAMETER ***
+
+-subcommand=C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\Debug\tskled.shc
+-cpu=sh2a
+-include="C:\NORTi\INC","C:\NORTi\INC\Dummy","C:\NORTi\INC","C:\NORTi\LIB"
+-object="C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\Debug\tskled.obj"
+-debug
+-listfile="C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\Debug\tskled.lst"
+-show=source,tab=4
+-gbr=auto
+-chgincpath
+-errorpath
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project2\tskled.c"
+-global_volatile=0
+-opt_range=all
+-infinite_loop=0
+-del_vacant_loop=0
+-struct_alloc=1
+-lang=c
+-nologo

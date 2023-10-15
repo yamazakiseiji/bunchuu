@@ -1,0 +1,225 @@
+SH SERIES C/C++ Compiler (V.9.04.03.000)                                                         07-Sep-2023 20:41:33  PAGE    1
+
+************ OBJECT LISTING ************
+
+FILE NAME: C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\hdrsioEx.c
+
+SCT OFFSET   CODE       C LABEL     INSTRUCTION OPERAND    COMMENT
+
+           hdrsioEx.c          1    /******************************************************************************
+           hdrsioEx.c          2    * シリアル通信拡張用ハンドラ                                                  *
+           hdrsioEx.c          3    *                                                                             *
+           hdrsioEx.c          4    * File name : hdrsioEx.c                                                      *
+           hdrsioEx.c          5    *                                                                             *
+           hdrsioEx.c          6    * Copyright (c) 2018 NICHIRYO Co., Ltd.                                       *
+           hdrsioEx.c          7    *                                                                             *
+           hdrsioEx.c          8    ******************************************************************************/
+           hdrsioEx.c          9    #include <kernel.h>
+           hdrsioEx.c         10    #include "iodefine.h"
+           hdrsioEx.c         11    #include "define.h"
+           hdrsioEx.c         12    #include "hdrsioEx.h"
+           hdrsioEx.c         13    #include "datastruct.h"
+           hdrsioEx.c         14    #include "sub.h"
+           hdrsioEx.c         15    
+           hdrsioEx.c         16    
+           hdrsioEx.c         17    /*-----------------------------------------------------------------------------
+           hdrsioEx.c         18      機能：受信エラー割り込みサービスルーチン
+           hdrsioEx.c         19     ----------------------------------------------------------------------------*/
+           hdrsioEx.c         20    void int_sio_erEx(INT portno)
+P   00000000              _int_sio_erEx:                   ; function: int_sio_erEx
+                                                           ; frame size=12
+    00000000 4EF0                   MOVMU.L     R14,@-R15
+    00000002 7FFC                   ADD         #-4,R15
+           hdrsioEx.c         21    {
+           hdrsioEx.c         22      T_COM_CHAR  dat;
+           hdrsioEx.c         23    
+           hdrsioEx.c         24      dat.byte.type = COM_MTYP_ERR;
+    00000004 E206                   MOV         #6,R2      ; H'00000006
+           hdrsioEx.c         25    
+           hdrsioEx.c         26      if( portno == SIO_EX2 )
+    00000006 6043                   MOV         R4,R0
+    00000008 8802                   CMP/EQ      #2,R0
+    0000000A 8F23                   BF/S        L12
+    0000000C 2F20                   MOV.B       R2,@R15    ; dat.byte.type
+           hdrsioEx.c         27      {
+           hdrsioEx.c         28          if( SCI2.SCSSR.BIT.ORER )           // オーバーランエラー
+    0000000E EE90                   MOV         #-112,R14  ; H'FFFFFF90
+    00000010 4E18                   SHLL8       R14
+    00000012 3E593008               BLD.B       #5,@(8,R14)
+    00000016 8B03                   BF          L14
+           hdrsioEx.c         29          {
+           hdrsioEx.c         30              dat.byte.type = COM_MTYP_ORN;
+    00000018 E201                   MOV         #1,R2      ; H'00000001
+    0000001A 2F20                   MOV.B       R2,@R15    ; dat.byte.type
+           hdrsioEx.c         31              SCI2.SCSSR.BIT.ORER = 0;
+    0000001C 3E590008               BCLR.B      #5,@(8,R14)
+    00000020              L14:
+           hdrsioEx.c         32          }
+           hdrsioEx.c         33          if( SCI2.SCSSR.BIT.FER )            // フレーミングエラー
+    00000020 3E493008               BLD.B       #4,@(8,R14)
+    00000024 8B03                   BF          L16
+           hdrsioEx.c         34          {
+           hdrsioEx.c         35              dat.byte.type = COM_MTYP_FER;
+    00000026 E202                   MOV         #2,R2      ; H'00000002
+    00000028 2F20                   MOV.B       R2,@R15    ; dat.byte.type
+           hdrsioEx.c         36              SCI2.SCSSR.BIT.FER = 0;
+    0000002A 3E490008               BCLR.B      #4,@(8,R14)
+    0000002E              L16:
+           hdrsioEx.c         37          }
+           hdrsioEx.c         38          if( SCI2.SCSSR.BIT.PER )            // パリティーエラー
+    0000002E 3E393008               BLD.B       #3,@(8,R14)
+    00000032 8B03                   BF          L18
+           hdrsioEx.c         39          {
+           hdrsioEx.c         40              dat.byte.type = COM_MTYP_PER;
+    00000034 E203                   MOV         #3,R2      ; H'00000003
+    00000036 2F20                   MOV.B       R2,@R15    ; dat.byte.type
+           hdrsioEx.c         41              SCI2.SCSSR.BIT.PER = 0;
+    00000038 3E390008               BCLR.B      #3,@(8,R14)
+    0000003C              L18:
+           hdrsioEx.c         42          }
+           hdrsioEx.c         43          dat.byte.portno = portno;
+    0000003C 6043                   MOV         R4,R0
+    0000003E 80F2                   MOV.B       R0,@(2,R15); dat.byte.portno
+           hdrsioEx.c         44          dat.byte.data = SCI2.SCRDR;
+    00000040 84EA                   MOV.B       @(10,R14),R0
+    00000042 E602                   MOV         #2,R6      ; H'00000002
+    00000044 E52D                   MOV         #45,R5     ; H'0000002D
+    00000046 80F1                   MOV.B       R0,@(1,R15); dat.byte.data
+           hdrsioEx.c         45          SndDtq( ID_DTQ_RXEX, dat.data );
+    00000048 D40F                   MOV.L       L22,R4     ; L23
+    0000004A D210                   MOV.L       L22+4,R2   ; _api_snd_dtq
+    0000004C 420B                   JSR         @R2
+    0000004E 67F2                   MOV.L       @R15,R7    ; dat.data
+           hdrsioEx.c         46    
+           hdrsioEx.c         47          SCI2.SCSSR.BIT.RDRF = 0;
+    00000050 3E690008               BCLR.B      #6,@(8,R14)
+    00000054              L12:
+    00000054 7F04                   ADD         #4,R15
+    00000056 4EF4                   MOVMU.L     @R15+,R14
+           hdrsioEx.c         48      }
+           hdrsioEx.c         49    }
+    00000058 006B                   RTS/N
+           hdrsioEx.c         50    
+           hdrsioEx.c         51    /*-----------------------------------------------------------------------------
+           hdrsioEx.c         52      機能：受信データフル割り込みサービスルーチン
+           hdrsioEx.c         53     ----------------------------------------------------------------------------*/
+           hdrsioEx.c         54    void int_sio_rxEx(INT portno)
+    0000005A              _int_sio_rxEx:                   ; function: int_sio_rxEx
+                                                           ; frame size=12
+    0000005A 4EF0                   MOVMU.L     R14,@-R15
+    0000005C 7FFC                   ADD         #-4,R15
+           hdrsioEx.c         55    {
+           hdrsioEx.c         56      T_COM_CHAR  dat;
+           hdrsioEx.c         57    
+           hdrsioEx.c         58      if( portno == SIO_EX2 )
+    0000005E 6043                   MOV         R4,R0
+    00000060 8802                   CMP/EQ      #2,R0
+    00000062 8B0E                   BF          L21
+           hdrsioEx.c         59      {
+           hdrsioEx.c         60          dat.byte.portno = portno;
+           hdrsioEx.c         61          dat.byte.type = COM_MTYP_CHR;
+           hdrsioEx.c         62          dat.byte.data = SCI2.SCRDR;
+    00000064 EE90                   MOV         #-112,R14  ; H'FFFFFF90
+    00000066 80F2                   MOV.B       R0,@(2,R15); dat.byte.portno
+    00000068 4E18                   SHLL8       R14
+    0000006A E100                   MOV         #0,R1      ; H'00000000
+    0000006C 84EA                   MOV.B       @(10,R14),R0
+    0000006E E602                   MOV         #2,R6      ; H'00000002
+    00000070 2F10                   MOV.B       R1,@R15    ; dat.byte.type
+    00000072 E53F                   MOV         #63,R5     ; H'0000003F
+    00000074 80F1                   MOV.B       R0,@(1,R15); dat.byte.data
+           hdrsioEx.c         63          SndDtq( ID_DTQ_RXEX, dat.data );
+    00000076 D404                   MOV.L       L22,R4     ; L23
+    00000078 D204                   MOV.L       L22+4,R2   ; _api_snd_dtq
+    0000007A 420B                   JSR         @R2
+    0000007C 67F2                   MOV.L       @R15,R7    ; dat.data
+           hdrsioEx.c         64          SCI2.SCSSR.BIT.RDRF = 0;
+    0000007E 3E690008               BCLR.B      #6,@(8,R14)
+    00000082              L21:
+    00000082 7F04                   ADD         #4,R15
+    00000084 4EF4                   MOVMU.L     @R15+,R14
+           hdrsioEx.c         65      }
+           hdrsioEx.c         66    }
+    00000086 006B                   RTS/N
+    00000088              L22:
+    00000088 <00000000>             .DATA.L     L23
+    0000008C <00000000>             .DATA.L     _api_snd_dtq
+C   00000000              L23:
+    00000000 433A5C576F             .SDATA      "C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\hdrsioEx.c"
+             726B537061   
+             63655C5175   
+             69636B4765   
+             6E655C536F   
+             66745F4669   
+             726D5C5175   
+             69636B4765   
+             6E655F5072   
+             6F6A656374   
+             5C68647273   
+             696F45782E   
+             63           
+    0000003D 00                     .DATA.B     H'00
+SH SERIES C/C++ Compiler (V.9.04.03.000)                                                         07-Sep-2023 20:41:33  PAGE    1
+
+
+******** STATISTICS INFORMATION ********
+
+
+********** ERROR INFORMATION ***********
+
+NUMBER OF ERRORS:           0
+NUMBER OF WARNINGS:         0
+
+
+
+
+******* SOURCE LINE INFORMATION ********
+
+COMPILED SOURCE LINE:       66
+
+
+
+******* SECTION SIZE INFORMATION *******
+
+PROGRAM  SECTION (P):                                 00000090 Byte(s)
+CONSTANT SECTION (C):                                 0000003E Byte(s)
+DATA     SECTION (D):                                 00000000 Byte(s)
+BSS      SECTION (B):                                 00000000 Byte(s)
+
+TOTAL PROGRAM  SECTION: 00000090 Byte(s)
+TOTAL CONSTANT SECTION: 0000003E Byte(s)
+TOTAL DATA     SECTION: 00000000 Byte(s)
+TOTAL BSS      SECTION: 00000000 Byte(s)
+
+    TOTAL PROGRAM SIZE: 000000CE Byte(s)
+
+
+
+********** LABEL INFORMATION ***********
+
+NUMBER OF EXTERNAL REFERENCE SYMBOLS:            1
+NUMBER OF EXTERNAL DEFINITION SYMBOLS:           2
+NUMBER OF INTERNAL/EXTERNAL SYMBOLS:            10
+
+
+
+*** COMMAND PARAMETER ***
+
+-subcommand=C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene_Hew\ROM_Big\hdrsioEx.shc
+-cpu=sh2a
+-include="C:\NORTi\INC","C:\NORTi\INC\Dummy","C:\NORTi\INC","C:\NORTi\LIB"
+-object="C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene_Hew\ROM_Big\hdrsioEx.obj"
+-debug
+-listfile="C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\SHC9\QuickGene_Hew\ROM_Big\hdrsioEx.lst"
+-show=source,tab=4
+-gbr=auto
+-chgincpath
+-errorpath
+"C:\WorkSpace\QuickGene\Soft_Firm\QuickGene_Project\hdrsioEx.c"
+-global_volatile=0
+-opt_range=all
+-infinite_loop=0
+-del_vacant_loop=0
+-struct_alloc=1
+-lang=c
+-nologo

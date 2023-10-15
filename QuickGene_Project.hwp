@@ -1,0 +1,303 @@
+[HIMDBVersion]
+2.0
+[DATABASE_VERSION]
+"2.8" 
+[PROJECT_DETAILS]
+"QuickGene_Project" "C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project" "C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\QuickGene_Project.hwp" "SuperH RISC engine" "Renesas SuperH Standard" "Application" "SH-2A" "Other" 
+[INFORMATION]
+"プロジェクト情報がありません" 
+[TOOL_CHAIN]
+"Renesas SuperH RISC engine Standard Toolchain" "9.2.0.0" 
+[CONFIGURATIONS]
+"Debug" "C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\Debug" 
+"Release" "C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\Release" 
+[BUILD_PHASES]
+"Renesas OptLinker" 1 
+"Renesas SH Assembler" 1 
+"Renesas SH C/C++ Compiler" 1 
+"Renesas SH C/C++ Library Generator" 1 
+[TOOL_ENVIRONMENT]
+[EXTENSIONS]
+"Absolute file" "ABS" 
+"Assembly include file" "INC" 
+"Assembly list file" "LIS" 
+"Assembly source file" "ASM" 
+"Assembly source file" "SRC" 
+"Binary file" "BIN" 
+"C header file" "H" 
+"C list file" "LST" 
+"C source file" "C" 
+"C++ header file" "HPP" 
+"C++ list file" "LPP" 
+"C++ source file" "CC" 
+"C++ source file" "CP" 
+"C++ source file" "CPP" 
+"CPU information file" "CPU" 
+"Calling information file" "CAL" 
+"Debug information file" "DBG" 
+"Expanded assembly source file" "EXP" 
+"Hex file" "HEX" 
+"Library file" "LIB" 
+"Library information file" "LBP" 
+"Linkage map file" "MAP" 
+"Linkage symbol file" "FSY" 
+"Object file" "OBJ" 
+"Optimize map file" "bls" 
+"Preprocessed C source file" "P" 
+"Preprocessed C++ source file" "PP" 
+"Profile file" "PRO" 
+"Relocatable file" "REL" 
+"Rts information file" "RTS" 
+"S-Record file" "MOT" 
+"Stack information file" "SNI" 
+"TD include object file" "RTI" 
+[FILE_GROUPS]
+"Absolute file" "BIN" "NONE" "" 
+"Assembly include file" "TEXT" "EDITOR" "" 
+"Assembly list file" "TEXT" "EDITOR" "" 
+"Assembly source file" "TEXT" "EDITOR" "" 
+"Binary file" "BIN" "NONE" "" 
+"C header file" "TEXT" "EDITOR" "" 
+"C list file" "TEXT" "EDITOR" "" 
+"C source file" "TEXT" "EDITOR" "" 
+"C++ header file" "TEXT" "EDITOR" "" 
+"C++ list file" "TEXT" "EDITOR" "" 
+"C++ source file" "TEXT" "EDITOR" "" 
+"CPU information file" "BIN" "NONE" "" 
+"Calling information file" "BIN" "NONE" "" 
+"Debug information file" "BIN" "NONE" "" 
+"Expanded assembly source file" "TEXT" "EDITOR" "" 
+"Hex file" "TEXT" "EDITOR" "" 
+"Library file" "BIN" "NONE" "" 
+"Library information file" "TEXT" "EDITOR" "" 
+"Linkage map file" "TEXT" "EDITOR" "" 
+"Linkage symbol file" "TEXT" "EDITOR" "" 
+"Object file" "BIN" "NONE" "" 
+"Optimize map file" "BIN" "NONE" "" 
+"Preprocessed C source file" "TEXT" "EDITOR" "" 
+"Preprocessed C++ source file" "TEXT" "EDITOR" "" 
+"Profile file" "BIN" "NONE" "" 
+"Relocatable file" "BIN" "NONE" "" 
+"Rts information file" "BIN" "NONE" "" 
+"S-Record file" "TEXT" "EDITOR" "" 
+"Stack information file" "BIN" "NONE" "" 
+"TD include object file" "BIN" "NONE" "" 
+[ASSOCIATED_APPLICATIONS]
+[TOOLCHAIN_PHASE]
+"Renesas OptLinker" 
+"Renesas SH Assembler" 
+"Renesas SH C/C++ Compiler" 
+"Renesas SH C/C++ Library Generator" 
+[UTILITY_PHASE]
+[CUSTOM_PHASES]
+[CUSTOM_PHASE_INPUT_GROUP]
+[CUSTOM_PHASE_OUTPUT_SYNTAX]
+[BUILD_ORDER]
+"Renesas SH C/C++ Library Generator" 1 
+"Renesas SH C/C++ Compiler" 1 
+"Renesas SH Assembler" 1 
+"Renesas OptLinker" 1 
+[BUILD_PHASE_DETAILS]
+"Renesas OptLinker" "Object file|Library file|Relocatable file" 0 
+"Renesas SH Assembler" "Assembly source file|Linkage symbol file" 1 
+"Renesas SH C/C++ Compiler" "C source file|C++ source file" 1 
+"Renesas SH C/C++ Library Generator" "" 0 
+[BUILD_FILE_ORDER_Assembly source file]
+"Renesas SH Assembler" 1 
+[BUILD_FILE_ORDER_C source file]
+"Renesas SH C/C++ Compiler" 1 
+[BUILD_FILE_ORDER_C++ source file]
+"Renesas SH C/C++ Compiler" 1 
+[BUILD_FILE_ORDER_Linkage symbol file]
+"Renesas SH Assembler" 1 
+[SCRAP]
+"Project Generator Setup File" "$(PROJDIR)\QuickGene_Project.pgs" 
+[MAPPINGS]
+"Assembly source file" "Renesas SH Assembler" "Renesas SH C/C++ Compiler" 
+"Library file" "Renesas OptLinker" "Renesas SH C/C++ Library Generator" 
+"Object file" "Renesas OptLinker" "Renesas SH Assembler" 
+"Object file" "Renesas OptLinker" "Renesas SH C/C++ Compiler" 
+[PROJECT_FILES]
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\apsh2a2a.c" "User" "C source file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\automachine.c" "User" "C source file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\automachine.h" "User" "C header file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\datastruct.h" "User" "C header file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\define.h" "User" "C header file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\hdrcyc.c" "User" "C source file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\hdrcyc.h" "User" "C header file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\hdrsio0.c" "User" "C source file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\hdrsio0.h" "User" "C header file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\hdrsio2.c" "User" "C source file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\hdrsio2.h" "User" "C header file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\hdrsioEx.c" "User" "C source file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\hdrsioEx.h" "User" "C header file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\initsh.c" "User" "C source file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\iodefine.h" "User" "C header file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\macro.h" "User" "C header file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\main.c" "User" "C source file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\mnet.c" "User" "C source file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\mnet.h" "User" "C header file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\n4i7237.c" "User" "C source file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\seg.c" "User" "C source file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\seg.h" "User" "C header file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\sh7237.h" "User" "C header file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\spi.c" "User" "C source file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\spi.h" "User" "C header file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\stacksct.h" "User" "C header file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\sub.c" "User" "C source file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\sub.h" "User" "C header file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tblchr.c" "User" "C source file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tblchr.h" "User" "C header file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskcmd.c" "User" "C source file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskcmd.h" "User" "C header file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskeep.c" "User" "C source file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskeep.h" "User" "C header file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskint.c" "User" "C source file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskint.h" "User" "C header file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskio.c" "User" "C source file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskio.h" "User" "C header file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskled.c" "User" "C source file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskled.h" "User" "C header file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskmotact.c" "User" "C source file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskmotact.h" "User" "C header file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskmotend.c" "User" "C source file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskmotend.h" "User" "C header file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskmotwait.c" "User" "C source file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskmotwait.h" "User" "C header file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskpunit.c" "User" "C source file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskpunit.h" "User" "C header file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskrx0.c" "User" "C source file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskrx0.h" "User" "C header file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskrxEx.c" "User" "C source file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskrxEx.h" "User" "C header file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tsktmpcnt.c" "User" "C source file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tsktmpcnt.h" "User" "C header file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tsktx0.c" "User" "C source file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tsktx0.h" "User" "C header file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tsktxEx.c" "User" "C source file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tsktxEx.h" "User" "C header file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\typedefine.h" "User" "C header file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\vec7237h.asm" "User" "Assembly source file" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\vect.h" "User" "C header file" 2 
+[FOLDER]
+"Assembly source file" "Assembly source file" 
+"C header file" "C header file" 
+"C source file" "C source file" 
+[GENERAL_DATA_PROJECT]
+"USE_CUSTOM_LINKAGE_ORDER" "0" 
+[ON_DEMAND_COMPONENTS_LOADED]
+[SYNC_SESSION_NAMES]
+[SESSIONS]
+"DefaultSession" "C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\DefaultSession.hsf" 0 
+[GENERAL_DATA_SESSION_DefaultSession]
+[OPTIONS_Debug_Renesas OptLinker]
+"Single Shot" "0d7a1f4b0b1e9d10" 5 
+[OPTIONS_Debug_Renesas SH Assembler]
+"Assembly source file" "0792070aca1e9d10" 4 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\vec7237h.asm" "0792070aca1e9d10" 4 
+"Linkage symbol file" "0792070aca1e9d10" 4 
+[OPTIONS_Debug_Renesas SH C/C++ Compiler]
+"C source file" "0792070aca1e9d10" 2 
+"C++ source file" "0792070aca1e9d10" 3 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\apsh2a2a.c" "0792070aca1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\automachine.c" "0792070aca1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\hdrcyc.c" "0792070aca1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\hdrsio0.c" "0792070aca1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\hdrsio2.c" "0792070aca1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\hdrsioEx.c" "0792070aca1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\initsh.c" "0792070aca1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\main.c" "0792070aca1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\mnet.c" "0792070aca1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\n4i7237.c" "0792070aca1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\seg.c" "0792070aca1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\spi.c" "0792070aca1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\sub.c" "0792070aca1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tblchr.c" "0792070aca1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskcmd.c" "0792070aca1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskeep.c" "0792070aca1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskint.c" "0792070aca1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskio.c" "0792070aca1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskled.c" "0792070aca1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskmotact.c" "0792070aca1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskmotend.c" "0792070aca1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskmotwait.c" "0792070aca1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskpunit.c" "0792070aca1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskrx0.c" "0792070aca1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskrxEx.c" "0792070aca1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tsktmpcnt.c" "0792070aca1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tsktx0.c" "0792070aca1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tsktxEx.c" "0792070aca1e9d10" 2 
+[OPTIONS_Debug_Renesas SH C/C++ Library Generator]
+"Single Shot" "0aba554fca1e9d10" 1 
+[OPTIONS_Debug]
+"" 0 
+"[V|VERSION|1] [B|DEBUG|1] [S|OUTPUTPATH|^"$(CONFIGDIR)\$(FILELEAF).obj^"] [S|LITERAL|POOL|BRANCH|JUMP|RETURN] [S|DISPSIZE|12] [B|LIST|1] [S|LISTPATH|^"$(CONFIGDIR)\$(FILELEAF).lis^"] [I|TAB|8] [B|ERRORPATH|1] [B|CHGINCPATH|1] [S|CPU|SH2A] [S|ENDIAN|BIG] [S|ROUND|ZERO] [B|DENORMALIZE|0] [B|SKIPDEPENDENCY|1]
+" 4 
+"[V|VERSION|6] [S|INPUTLIBRARY|^"$(NORTI)\\LIB\SH\SHC9\n4fsh2a.lib^"] [B|ENTRY|1] [S|ENTRY|^"_RESET^"] [S|PRELINK|SKIP] [S|FORM|STYPE] [S|BYTE_COUNT_VALUE|FF] [B|DEBUG|1] [S|ROM|(D,R)] [S|CRC|NONE|00000000] [B|LIST|1] [S|LIST|^"$(CONFIGDIR)\$(PROJECTNAME).map^"] [S|SHOW|SYMBOL|XREFERENCE] [S|OUTPUT|^"$(CONFIGDIR)\$(PROJECTNAME).mot^"] [I|SPACE|^"FF^"] [B|OPTIMIZE|0] [I|CACHESIZE|000000008] [I|CACHELINE|000000020] [S|START|VECT(00)|P,C,D(0600)|R,B(0FFF8000)|STACK(0FFF90000)|STACK_END(0FFF98000)] [B|SKIPDEPENDENCY|1]
+" 5 
+"[V|VERSION|7] [S|INCLUDE|^"$(NORTI)\INC^"|^"$(NORTI)\INC\Dummy^"|^"C:\NORTi\INC^"|^"C:\NORTi\LIB^"] [S|OUTPUTPATH|^"$(CONFIGDIR)\$(FILELEAF).obj^"] [B|DEBUG|1] [S|ALIGN4|ALL] [B|TBR|0] [B|STUFF|0] [S|BSS_ORDER|DECLARATION] [S|MXGEN_MEM0|00000000] [S|MXGEN_MEM1|00000000] [B|LIST|1] [S|LISTPATH|^"$(CONFIGDIR)\$(FILELEAF).lst^"] [S|SHOW|SOURCE] [S|GBR|AUTO] [S|INLINE|DEFAULT] [I|INLINE|20] [S|MISRA2004_CHECK_RULE|ALL] [S|MISRA2004_RULE|1.1|3.4|4.1|5.2|5.3|5.4|5.5|5.6|5.7|6.1|6.2|6.3|6.4|6.5|7.1|8.1|8.2|8.3|8.5|8.6|8.7|8.8|8.11|8.12|9.2|9.3|10.1|10.2|10.3|10.4|10.5|10.6|11.1|11.2|11.3|11.4|11.5|12.1|12.2|12.3|12.4|12.5|12.6|12.7|12.8|12.9|12.10|12.11|12.12|12.13|13.1|13.2|13.3|13.4|13.7|14.1|14.2|14.3|14.4|14.5|14.6|14.7|14.8|14.9|14.10|15.1|15.2|15.3|15.4|15.5|16.1|16.2|16.3|16.4|16.5|16.6|16.8|16.9|17.3|17.4|17.5|17.6|18.1|18.2|18.4|19.1|20.2|20.4|20.5|20.7|20.8|20.9|20.10|20.11|20.12] [S|MISRA1998_CHECK_RULE|ALL] [S|MISRA1998_RULE|1|5|8|12|13|14|17|18|19|20|21|22|24|28|29|31|32|33|34|35|36|37|38|39|40|42|43|44|45|46|48|49|50|51|53|54|55|56|57|58|59|60|61|62|63|64|65|68|69|70|71|72|73|74|75|76|77|78|79|80|82|83|84|85|99|101|102|103|104|105|106|108|110|111|112|113|115|118|119|121|122|123|124|125|126|127] [S|MISRA_GROUP_FILE_PATH|^"$(PROJDIR)\$(PROJECTNAME).rde^"] [S|OPT_RANGE|ALL] [I|MAX_UNROLL|1] [S|CPU|SH2A] [B|CHGINCPATH|1] [B|SKIPDEPENDENCY|1]
+" 2 
+"[V|VERSION|7] [S|INCLUDE|^"C:\NORTi\INC^"|^"C:\NORTi\LIB^"] [S|OUTPUTPATH|^"$(CONFIGDIR)\$(FILELEAF).obj^"] [B|DEBUG|1] [S|ALIGN4|ALL] [B|TBR|0] [B|STUFF|0] [S|BSS_ORDER|DECLARATION] [S|MXGEN_MEM0|00000000] [S|MXGEN_MEM1|00000000] [B|LIST|1] [S|LISTPATH|^"$(CONFIGDIR)\$(FILELEAF).lpp^"] [S|SHOW|SOURCE] [S|GBR|AUTO] [S|INLINE|DEFAULT] [I|INLINE|20] [S|MISRA2004_CHECK_RULE|ALL] [S|MISRA2004_RULE|1.1|3.4|4.1|5.2|5.3|5.4|5.5|5.6|5.7|6.1|6.2|6.3|6.4|6.5|7.1|8.1|8.2|8.3|8.5|8.6|8.7|8.8|8.11|8.12|9.2|9.3|10.1|10.2|10.3|10.4|10.5|10.6|11.1|11.2|11.3|11.4|11.5|12.1|12.2|12.3|12.4|12.5|12.6|12.7|12.8|12.9|12.10|12.11|12.12|12.13|13.1|13.2|13.3|13.4|13.7|14.1|14.2|14.3|14.4|14.5|14.6|14.7|14.8|14.9|14.10|15.1|15.2|15.3|15.4|15.5|16.1|16.2|16.3|16.4|16.5|16.6|16.8|16.9|17.3|17.4|17.5|17.6|18.1|18.2|18.4|19.1|20.2|20.4|20.5|20.7|20.8|20.9|20.10|20.11|20.12] [S|MISRA1998_CHECK_RULE|ALL] [S|MISRA1998_RULE|1|5|8|12|13|14|17|18|19|20|21|22|24|28|29|31|32|33|34|35|36|37|38|39|40|42|43|44|45|46|48|49|50|51|53|54|55|56|57|58|59|60|61|62|63|64|65|68|69|70|71|72|73|74|75|76|77|78|79|80|82|83|84|85|99|101|102|103|104|105|106|108|110|111|112|113|115|118|119|121|122|123|124|125|126|127] [S|MISRA_GROUP_FILE_PATH|^"$(PROJDIR)\$(PROJECTNAME).rde^"] [S|OPT_RANGE|ALL] [I|MAX_UNROLL|1] [S|CPU|SH2A] [B|CHGINCPATH|1] [B|SKIPDEPENDENCY|1]
+" 3 
+"[V|VERSION|7] [S|MODE|BUILD/CHANGED] [S|EXISTOUTPUTPATH|^"$(CONFIGDIR)\$(PROJECTNAME).lib^"] [B|RUNTIME|1] [B|CTYPE|1] [B|STDARG|1] [B|STDIO|1] [B|STDLIB|1] [B|STRING|1] [S|OUTPUTPATH|^"$(CONFIGDIR)\$(PROJECTNAME).lib^"] [S|ALIGN4|ALL] [B|STUFF|0] [S|BSS_ORDER|DECLARATION] [S|GBR|AUTO] [S|INLINE|DEFAULT] [I|INLINE|20] [S|OPT_RANGE|ALL] [I|MAX_UNROLL|1] [B|ECPP|1] [B|SAVE_CONT_REG|1] [S|CPU|SH2A] [B|SKIPDEPENDENCY|1]
+" 1 
+[EXCLUDED_FILES_Debug]
+[LINKAGE_ORDER_Debug]
+[GENERAL_DATA_CONFIGURATION_Debug]
+[OPTIONS_Release_Renesas OptLinker]
+"Single Shot" "0d7a1f4b0b1e9d10" 4 
+[OPTIONS_Release_Renesas SH Assembler]
+"Assembly source file" "0d0b623c0a1e9d10" 3 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\vec7237h.asm" "0152fc0b1a1e9d10" 3 
+"Linkage symbol file" "0d0b623c0a1e9d10" 3 
+[OPTIONS_Release_Renesas SH C/C++ Compiler]
+"C source file" "0d0b623c0a1e9d10" 2 
+"C++ source file" "0d0b623c0a1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\apsh2a2a.c" "0152fc0b1a1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\automachine.c" "0152fc0b1a1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\hdrcyc.c" "0152fc0b1a1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\hdrsio0.c" "0152fc0b1a1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\hdrsio2.c" "0152fc0b1a1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\hdrsioEx.c" "0152fc0b1a1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\initsh.c" "0152fc0b1a1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\main.c" "0152fc0b1a1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\mnet.c" "0152fc0b1a1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\n4i7237.c" "0152fc0b1a1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\seg.c" "0152fc0b1a1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\spi.c" "0152fc0b1a1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\sub.c" "0152fc0b1a1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tblchr.c" "0152fc0b1a1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskcmd.c" "0152fc0b1a1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskeep.c" "0152fc0b1a1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskint.c" "0152fc0b1a1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskio.c" "0152fc0b1a1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskled.c" "0152fc0b1a1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskmotact.c" "0152fc0b1a1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskmotend.c" "0152fc0b1a1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskmotwait.c" "0152fc0b1a1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskpunit.c" "0152fc0b1a1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskrx0.c" "0152fc0b1a1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tskrxEx.c" "0152fc0b1a1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tsktmpcnt.c" "0152fc0b1a1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tsktx0.c" "0152fc0b1a1e9d10" 2 
+"C:\Users\SeijiYamazaki\Documents\Quickgene\Soft_Firm\QuickGene_Project\tsktxEx.c" "0152fc0b1a1e9d10" 2 
+[OPTIONS_Release_Renesas SH C/C++ Library Generator]
+"Single Shot" "0d0b623c0a1e9d10" 1 
+[OPTIONS_Release]
+"" 0 
+"[S|OUTPUTPATH|^"$(CONFIGDIR)\$(PROJECTNAME).lib^"] [V|VERSION|7] [S|CPU|SH2A] [S|ENDIAN|BIG] [S|ROUND|ZERO] [B|DENORMALIZE|0] [B|SPEED|0] [B|RUNTIME|1] [B|NEW|1] [B|CTYPE|0] [B|MATH|0] [B|MATHF|0] [B|STDARG|0] [B|STDIO|1] [B|STDLIB|1] [B|STRING|1] [B|IOS|0] [B|COMPLEX|0] [B|CPPSTRING|0] [S|MODE|BUILD/CHANGED]" 1 
+"[V|VERSION|6] [B|DEBUG|0] [S|OUTPUTPATH|^"$(CONFIGDIR)\$(FILELEAF).obj^"] [B|LIST|0] [B|CHGINCPATH|1] [B|ERRORPATH|1] [S|CPU|SH2A] [S|ENDIAN|BIG] [S|ROUND|ZERO] [B|DENORMALIZE|0]" 3 
+"[V|VERSION|6] [B|OPTIMIZE|0] [S|OUTPUT|^"$(CONFIGDIR)\$(PROJECTNAME).abs^"] [S|ROM|(D,R)] [B|LIST|1] [S|LIST|^"$(CONFIGDIR)\$(PROJECTNAME).map^"] [S|FORM|STYPE] [S|OUTPUT|^"$(CONFIGDIR)\$(PROJECTNAME).mot^"] [S|START|DVECTTBL,DINTTBL(000000000)|PResetPRG,PIntPRG(000000800)|P,C,C$BSEC,C$DSEC,D(000001000)|B,R(0FFF80000)|S(0FFF8FC00)]" 4 
+"[V|VERSION|7] [S|OUTPUTPATH|^"$(CONFIGDIR)\$(FILELEAF).obj^"] [B|LIST|0] [B|CHGINCPATH|1] [B|ERRORPATH|1] [S|CPU|SH2A] [S|ENDIAN|BIG] [S|ROUND|ZERO] [B|DENORMALIZE|0]" 2 
+[EXCLUDED_FILES_Release]
+[LINKAGE_ORDER_Release]
+[GENERAL_DATA_CONFIGURATION_Release]
+[GENERAL_DATA_CONFIGURATION_SESSION_Debug_DefaultSession]
+[SESSION_DATA_CONFIGURATION_SESSION_Debug_DefaultSession]
+"MEMORY_MAPPING_OPTIONS" "" 
+[GENERAL_DATA_CONFIGURATION_SESSION_Release_DefaultSession]
+[SESSION_DATA_CONFIGURATION_SESSION_Release_DefaultSession]
+"MEMORY_MAPPING_OPTIONS" "" 
+[EXT_DEBUGGER_INFO]
+0 "" "" "" "" 
+[END]
